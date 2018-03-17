@@ -1,12 +1,10 @@
 Definitions.
 
-PREFIXEDNAME   = [a-zA-Z][a-zA-Z0-9_\-]*[:][a-zA-Z][a-zA-Z0-9_\-]*
 ANON           = [\[][\]]
 BLANK_NODE     = [_][:][a-zA-Z0-9_\-]+
 INT            = (\+|-)?[0-9]+
 FLOAT          = (\+|-)?[0-9]+\.[0-9]+((E|e)(\+|-)?[0-9]+)?
 ATOM           = :[a-z_]+
-NAME           = ([\s\t\r\n][a-zA-Z0-9]+)||([a-zA-Z0-9]+[\s\t\r\n])
 VARIABLE       = [?$][a-zA-Z][a-zA-Z0-9\-_]*
 DQSTRING       = [\"](.|[\n\r])+[\"]
 SSTRING        = [\'](.|[\n\r])+[\']
@@ -73,7 +71,6 @@ LANG           = [lL][aA][nN][gG]
 LANGMATCHES    = [lL][aA][nN][gG][mM][aA][tT][cC][hH][eE][sS]
 DATATYPE       = [dD][aA][tT][aA][tT][yY][pP][eE]
 BOUND          = [bB][oO][uU][nN][dD]
-URI        = [\-a-zA-Z0-9@:\%._\\\+~#=]+([:][/][/])?[-a-zA-Z0-9@:\%_\\\+.~#?&=]+
 BNODE          = [bB][nN][oO][dD][eE]
 RAND           = [rR][aA][nN][dD]
 ABS            = [aA][bB][sS]
@@ -131,11 +128,12 @@ SEPARATOR      = [sS][eE][pP][aA][rR][aA][tT][oO][rR]
 RDFTYPE        = [\^][\^]
 BOOLEAN_TRUE   = [tT][rR][uU][eE]
 BOOLEAN_FALSE  = [fF][aA][lL][sS][eE]
+PREFIXEDNAME   = [a-zA-Z][a-zA-Z0-9_\-]*[:][a-zA-Z][a-zA-Z0-9_\-]*
+NAME           = [a-zA-Z0-9]+
+URI            = [\-a-zA-Z0-9@:\%._\\\+~#=]+([:][/][/])?[-a-zA-Z0-9@:\%_\\\+.~#?&=]+
 
 Rules.
 
-{NAME}           : { token , { name, TokenLine, strip_all_whitespace(TokenChars) } } .
-{PREFIXEDNAME}   : { token , {'prefixed-name', TokenLine, prefixed_name_to_atoms(TokenChars) } } .
 {BLANK_NODE}     : { token , {'blank-node', TokenLine , blank_node_to_atom(TokenChars) } } .
 {INT}            : { token , { int , TokenLine, TokenChars } } .
 {FLOAT}          : { token , { float, TokenLine, TokenChars } } .
@@ -157,7 +155,6 @@ Rules.
 {LANGMATCHES}    : { token , { 'langmatches', TokenLine } } .
 {DATATYPE}       : { token , { 'datatype', TokenLine } } .
 {BOUND}          : { token , { 'bound', TokenLine } } .
-{URI}            : { token , { 'uri', TokenLine , TokenChars } } .
 {BNODE}          : { token , { 'bnode', TokenLine } } .
 {RAND}           : { token , { 'rand', TokenLine } } .
 {ABS}            : { token , { 'abs', TokenLine } } .
@@ -282,6 +279,9 @@ Rules.
 {LAND}           : { token, { 'logical-and', TokenLine } } .
 {LOR}            : { token, { 'logical-or', TokenLine } } .
 {LNOT}           : { token, { 'logical-not'}} .
+{NAME}           : { token , { name, TokenLine, strip_all_whitespace(TokenChars) } } .
+{PREFIXEDNAME}   : { token , {'prefixed-name', TokenLine, prefixed_name_to_atoms(TokenChars) } } .
+{URI}            : { token , { 'uri', TokenLine , TokenChars } } .
 
 Erlang code.
 
