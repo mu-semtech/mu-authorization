@@ -1,9 +1,18 @@
-Nonterminals sparql statement whereBlock block statementElems statementElem statementList.
-Terminals variable '\.' '\{' '\}' where.
+Nonterminals sparql statement whereBlock block statementElems statementElem statementList iri uri_symbol prefixed_name_symbol.
+Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' where name uri 'prefixed-name'.
 Rootsymbol sparql.
 
 sparql -> whereBlock : {sparql, '$1' }.
 
+%% IRI
+%% foaf:Person -> {:iri, {:"prefixed-name", {:prefix "foaf"} {:name "Person"}}}
+%% <http://www.example.com/example/1> -> {:iri, {:uri "http://www.example.com/example/1"}}
+iri -> '\<' uri_symbol '\>' : {iri, '$2'}.
+iri -> prefixed_name_symbol : {iri, '$1'}.
+uri_symbol -> uri : {uri, extract_token('$1')}.
+prefixed_name_symbol -> 'prefixed-name' : {'prefixed-name', {prefix, extract_prefix_from_prefixed_name('$1')}, {name, extract_name_from_prefixed_name('$1')}}.
+
+%% Where block
 whereBlock -> where '\{' block '\}' : {where, '$3'}.
 
 block -> statementList : '$1'.
@@ -45,3 +54,5 @@ statementElem -> variable : {variable, extract_token('$1') }.
 Erlang code.
 
 extract_token({_Token, _Line, Value}) -> Value.
+extract_prefix_from_prefixed_name({_Token, _line, {Prefix, _Name}}) -> Prefix.
+extract_name_from_prefixed_name({_Token, _line, {_Prefix, Name}}) -> Name.
