@@ -35,8 +35,8 @@ To tokenize queries you can
 
 To parse the tokenizers produce first load the parser
 ```
-> :yecc.file('sparql-parser.yrl')
-> c("sparql-parser.erl")
+> :yecc.file('parser-generator/sparql-parser.yrl')
+> c("parser-generator/sparql-parser.erl")
 ```
 
 Extract the tokenized query
