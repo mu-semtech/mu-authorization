@@ -5,7 +5,7 @@ Rootsymbol sparql.
 sparql -> whereBlock : {sparql, '$1' }.
 
 %% IRI
-%% foaf:Person -> {:iri, {:"prefixed-name", {:prefix "foaf"} {:name "Person"}}}
+%% foaf:Person -> {:iri, {:"prefixed-name", {:prefix :foaf} {:name :Person}}}
 %% <http://www.example.com/example/1> -> {:iri, {:uri "http://www.example.com/example/1"}}
 iri -> '\<' uri_symbol '\>' : {iri, '$2'}.
 iri -> prefixed_name_symbol : {iri, '$1'}.
