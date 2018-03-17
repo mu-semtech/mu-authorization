@@ -1,6 +1,7 @@
 Definitions.
 
-BLANK_NODE     = [_]
+ANON           = [\[][\]]
+BLANK_NODE     = [_][:][a-zA-Z0-9_\-]+
 INT            = (\+|-)?[0-9]+
 FLOAT          = (\+|-)?[0-9]+\.[0-9]+((E|e)(\+|-)?[0-9]+)?
 ATOM           = :[a-z_]+
@@ -55,7 +56,8 @@ ALL            = [aA][lL][lL]
 OPTIONAL       = [oO][pP][tT][iI][oO][nN][aA][lL]
 SERVICE        = [sS][eE][rR][vV][iI][cC][eE]
 BIND           = [bB][iI][nN][dD]
-NIL            = [nN][iI][lL]
+NIL            = ([nN][iI][lL])||([\(][\)])
+%% NIL            = [nN][iI][lL]
 UNDEF          = [uU][nN][dD][eE][fF]
 MINUS          = [mM][iI][nN][uU][sS]
 UNION          = [uU][nN][iI][oO][nN]
@@ -135,7 +137,7 @@ BOOLEAN_FALSE  = [fF][aA][lL][sS][eE]
 
 Rules.
 
-{BLANK_NODE}     : { token , {'blank-node', TokenLine } } .
+{BLANK_NODE}     : { token , {'blank-node', TokenLine , blank_node_to_atom(TokenChars) } } .
 {INT}            : { token , { int , TokenLine, TokenChars } } .
 {FLOAT}          : { token , { float, TokenLine, TokenChars } } .
 {DQSTRING}       : { token , { 'double-quoted-string', TokenLine, TokenChars } } .
@@ -213,6 +215,7 @@ Rules.
 {SERVICE}        : { token, { service, TokenLine } } .
 {BIND}           : { token, { bind, TokenLine } } .
 {NIL}            : { token, { nil, TokenLine } } .
+{ANON}           : { token, { anon, TokenLine } } .
 {UNDEF}          : { token, { undef, TokenLine } } .
 {MINUS}          : { token, { minus, TokenLine } } .
 {UNION}          : { token, { union, TokenLine } } .
@@ -286,13 +289,14 @@ Rules.
 
 Erlang code.
 
-to_atom([$:|Chars]) ->
-    list_to_atom(Chars).
+%% to_atom([$:|Chars]) ->
+%%     list_to_atom(Chars).
 
-tail([H|T]) ->
+tail([_H|T]) ->
     T.
 
 variable_to_atom(FullName) ->
     list_to_atom(tail(FullName)).
 
-
+blank_node_to_atom(BlackNode) ->
+    list_to_atom(tail(tail(BlackNode))).
