@@ -1,16 +1,15 @@
 Definitions.
 
+PREFIXEDNAME   = [a-zA-Z][a-zA-Z0-9_\-]*[:][a-zA-Z][a-zA-Z0-9_\-]*
 ANON           = [\[][\]]
 BLANK_NODE     = [_][:][a-zA-Z0-9_\-]+
 INT            = (\+|-)?[0-9]+
 FLOAT          = (\+|-)?[0-9]+\.[0-9]+((E|e)(\+|-)?[0-9]+)?
 ATOM           = :[a-z_]+
-NAME           = [a-zA-Z0-9]+
+NAME           = ([\s\t\r\n][a-zA-Z0-9]+)||([a-zA-Z0-9]+[\s\t\r\n])
 VARIABLE       = [?$][a-zA-Z][a-zA-Z0-9\-_]*
 DQSTRING       = [\"](.|[\n\r])+[\"]
 SSTRING        = [\'](.|[\n\r])+[\']
-REAL_URI       = [a-zA-Z0-9.:]+[:][/][/][.a-zA-Z0-9\/\-]+
-                      %% REAL_URI = ^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?
 WHITESPACE     = [\s\t\r\n]
 STAR           = [*]
 SELECT         = [sS][eE][lL][eE][cC][tT]
@@ -56,8 +55,7 @@ ALL            = [aA][lL][lL]
 OPTIONAL       = [oO][pP][tT][iI][oO][nN][aA][lL]
 SERVICE        = [sS][eE][rR][vV][iI][cC][eE]
 BIND           = [bB][iI][nN][dD]
-NIL            = ([nN][iI][lL])||([\(][\)])
-%% NIL            = [nN][iI][lL]
+NIL            = [\(][\)]
 UNDEF          = [uU][nN][dD][eE][fF]
 MINUS          = [mM][iI][nN][uU][sS]
 UNION          = [uU][nN][iI][oO][nN]
@@ -75,8 +73,7 @@ LANG           = [lL][aA][nN][gG]
 LANGMATCHES    = [lL][aA][nN][gG][mM][aA][tT][cC][hH][eE][sS]
 DATATYPE       = [dD][aA][tT][aA][tT][yY][pP][eE]
 BOUND          = [bB][oO][uU][nN][dD]
-IRI            = [iI][rR][iI]
-URI            = [uU][rR][iI]
+URI        = [\-a-zA-Z0-9@:\%._\\\+~#=]+([:][/][/])?[-a-zA-Z0-9@:\%_\\\+.~#?&=]+
 BNODE          = [bB][nN][oO][dD][eE]
 RAND           = [rR][aA][nN][dD]
 ABS            = [aA][bB][sS]
@@ -137,12 +134,13 @@ BOOLEAN_FALSE  = [fF][aA][lL][sS][eE]
 
 Rules.
 
+{NAME}           : { token , { name, TokenLine, strip_all_whitespace(TokenChars) } } .
+{PREFIXEDNAME}   : { token , {'prefixed-name', TokenLine, prefixed_name_to_atoms(TokenChars) } } .
 {BLANK_NODE}     : { token , {'blank-node', TokenLine , blank_node_to_atom(TokenChars) } } .
 {INT}            : { token , { int , TokenLine, TokenChars } } .
 {FLOAT}          : { token , { float, TokenLine, TokenChars } } .
 {DQSTRING}       : { token , { 'double-quoted-string', TokenLine, TokenChars } } .
 {SQSTRING}       : { token , { 'single-quoted-string', TokenLine, TokenChars } } .
-{REAL_URI}       : { token , { uri, TokenLine, TokenChars } } .
 {BOOLEAN_TRUE}   : { token , { 'true', TokenLine } } .
 {BOOLEAN_FALSE}  : { token , { 'false', TokenLine } } .
 {RDFTYPE}        : { token , { 'rdf-type', TokenLine } } .
@@ -159,8 +157,7 @@ Rules.
 {LANGMATCHES}    : { token , { 'langmatches', TokenLine } } .
 {DATATYPE}       : { token , { 'datatype', TokenLine } } .
 {BOUND}          : { token , { 'bound', TokenLine } } .
-{IRI}            : { token , { 'iri', TokenLine } } .
-{URI}            : { token , { 'uri', TokenLine } } .
+{URI}            : { token , { 'uri', TokenLine , TokenChars } } .
 {BNODE}          : { token , { 'bnode', TokenLine } } .
 {RAND}           : { token , { 'rand', TokenLine } } .
 {ABS}            : { token , { 'abs', TokenLine } } .
@@ -214,7 +211,7 @@ Rules.
 {OPTIONAL}       : { token, { optional, TokenLine } } .
 {SERVICE}        : { token, { service, TokenLine } } .
 {BIND}           : { token, { bind, TokenLine } } .
-{NIL}            : { token, { nil, TokenLine } } .
+{NIL}            : { token, { 'nil', TokenLine } } .
 {ANON}           : { token, { anon, TokenLine } } .
 {UNDEF}          : { token, { undef, TokenLine } } .
 {MINUS}          : { token, { minus, TokenLine } } .
@@ -285,18 +282,39 @@ Rules.
 {LAND}           : { token, { 'logical-and', TokenLine } } .
 {LOR}            : { token, { 'logical-or', TokenLine } } .
 {LNOT}           : { token, { 'logical-not'}} .
-{NAME}           : { token , { name, TokenLine, TokenChars } } .
 
 Erlang code.
 
 %% to_atom([$:|Chars]) ->
 %%     list_to_atom(Chars).
 
+%% helper function used to remove the first element from a list
 tail([_H|T]) ->
     T.
 
+%% takes a variable and returns an atom representation
 variable_to_atom(FullName) ->
     list_to_atom(tail(FullName)).
 
+%% takes a blank node and returns only the name as an atom
 blank_node_to_atom(BlackNode) ->
     list_to_atom(tail(tail(BlackNode))).
+
+%% takes a string and removes all whitespaces
+strip_all_whitespace(SomeString) ->
+    re:replace(SomeString, "\\s+", "", [global,{return,list}]).
+
+
+%% takes a prefixed name and returns a data structure
+%% "foaf:Person" -> {:foaf :Person}
+get_prefix_out_of_prefixed_name(PrefixedName) ->
+    re:replace(PrefixedName, ":.+", "", [global,{return,list}]).
+
+get_name_out_of_prefixed_name(PrefixedName) ->
+    re:replace(PrefixedName, ".+:", "", [global,{return,list}]).
+
+prefixed_name_to_atoms( PrefixName ) ->
+    {
+     list_to_atom(get_prefix_out_of_prefixed_name(PrefixName)),
+     list_to_atom(get_name_out_of_prefixed_name(PrefixName))
+    }.
