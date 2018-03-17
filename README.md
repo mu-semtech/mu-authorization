@@ -10,15 +10,27 @@ This module offers a SPARQL parser for elixir.
 ## Usage
 To use in iex simply run
 ```
-> :leex.file('../sparql-tokenizer.xrl')
-> c("../sparql-ebnf/sparql-tokenizer.erl")
+> :leex.file('parser-generator/sparql-tokenizer.xrl')
+> c("parser-generator/sparql-tokenizer.erl")
 ```
 
 To tokenize queries you can
 ```
-> :sparql-tokenizer.string('select * where load graph named ?test insert delete data') 
+> :"sparql-tokenizer".string('select ?s ?p ?o where { ?s ?p ?o }')
 >
-> :sparql-tokenizer.string('select * where load graph named ?test insert delete data http://www.google.com/test \"test 12@3\ntest2\" 1.234 123.443 -123') 
+> {:ok,
+  [
+    {:select, 1},
+    {:variable, 1, :s},
+    {:variable, 1, :p},
+    {:variable, 1, :o},
+    {:where, 1},
+    {:"{", 1},
+    {:variable, 1, :s},
+    {:variable, 1, :p},
+    {:variable, 1, :o},
+    {:"}", 1}
+  ], 1}
 ```
 
 To parse the tokenizers produce first load the parser
