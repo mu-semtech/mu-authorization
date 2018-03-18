@@ -1,12 +1,81 @@
-Nonterminals sparql statement whereBlock block statementElems statementElem statementList iri uri_symbol prefixed_name_symbol boolean_literal numerical_literal lang_tag rdf_literal.
-Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' where name uri 'prefixed-name' true false int float 'lang-tag' 'rdf-literal' 'double-quoted-string' 'rdf-type'.
-Rootsymbol sparql.
+Nonterminals sparql statement whereBlock block statementElems statementElem statementList iri uri_symbol prefixed_name_symbol boolean_literal numerical_literal lang_tag rdf_literal variable_symbol object blank_node nil_symbol subject predicate sameSubjectPath predicateList predicateExpression objectList.
+Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' ';' ',' where name uri 'prefixed-name' true false int float 'lang-tag' 'rdf-literal' 'double-quoted-string' 'rdf-type' nil 'blank-node'.
+Rootsymbol sameSubjectPath.
 
 %% How to read this file?
-%% I have tried to put the blocks as 'logically' consistent as possible
-%% all parsable things also have examples. Look at these before modifying
+%% I have tried to put the blocks as 'logically' consistent as possible.
+%% All parsable things also have examples. Look at these before modifying.
 
 sparql -> whereBlock : {sparql, '$1' }.
+
+%% SameSubjectPath
+%% a same subject path is a series of expressions connected to the same subject
+%% examples of this are:
+%%  ?s ?p ?o                    -> 
+%%     {:same-subject-path, {:subject, {:variable, :s}}, {:predicate-list, [{:predicate, {:variable, :p}, {:object-list [{:object, {:variable, :o}}}]}}}]}}}
+%%  ?s ?p ?o , ?o2              ->
+%%     {:"same-subject-path", {:subject, {:variable, :s}},
+%%     {:"predicate-list",
+%%     [
+%%     {{:predicate, {:variable, :p}},
+%%     {:"object-list", [object: {:variable, :o},
+%%                       object: {:variable, :o2}]}}
+%%     ]}}
+%%  ?s ?p ?o ; ?p2 ?o2 , ?o3    ->
+%%     {:"same-subject-path", {:subject, {:variable, :s}},
+%%     {:"predicate-list",
+%%     [
+%%       { {:predicate, {:variable, :p}},
+%%         {:"object-list", [
+%%                  object: {:variable, :o}
+%%         ]}
+%%       },
+%%       { {:predicate, {:variable, :p2}},
+%%         {:"object-list", [
+%%                  object: {:variable, :o2},
+%%                  object: {:variable, :o3}
+%%         ]}
+%%       }
+%%     ]}}
+
+sameSubjectPath -> subject predicateList : {'same-subject-path', '$1', {'predicate-list', '$2'}}.
+
+predicateList -> predicateExpression : ['$1'].
+predicateList -> predicateExpression ';' predicateList : ['$1'|'$3'].
+
+predicateExpression -> predicate objectList :  {'$1', {'object-list', '$2'}}.
+
+objectList -> object : ['$1'].
+objectList -> object ',' objectList : ['$1'|'$3'].
+
+%% Subject
+%% IRI | BlankNode | Variable
+subject -> iri : {subject, '$1'}.
+subject -> blank_node : {subject, '$1'}.
+subject -> variable_symbol : {subject, '$1'}.
+
+%% Predicate
+%% IRI | Variable
+predicate -> iri : {predicate, '$1'}.
+predicate -> variable_symbol : {predicate, '$1'}.
+
+%% Object
+%% IRI | RDFLiteral | NumericalLiteral | BooleanLiteral | BlankNode | NIL | Variable
+object -> iri : {object, '$1'}.
+object -> rdf_literal : {object, '$1'}.
+object -> numerical_literal : {object, '$1'}.
+object -> boolean_literal : {object, '$1'}.
+object -> nil_symbol : {object, '$1'}.
+object -> blank_node : {object, '$1'}.
+object -> variable_symbol : {object, '$1'}.
+
+%% nil
+%% () -> {:nil}
+nil_symbol -> nil : {nil}.
+
+%% blank_node
+%% _:exampleNode -> {:"blank-node", {:name, :exampleNode}}
+blank_node -> 'blank-node' : {'blank-node', {name, extract_token('$1')}}.
 
 %% RDFLiteral
 %% "test" -> {:"rdf-literal", {:value, "test"}}
@@ -46,16 +115,21 @@ whereBlock -> where '\{' block '\}' : {where, '$3'}.
 
 block -> statementList : '$1'.
 
-statementList -> statement: ['$1'].
-statementList -> statement '\.': ['$1'].
-statementList -> statement '\.' statementList : ['$1'|'$3'].
+%% statementList -> statement: ['$1'].
+%% statementList -> statement '\.': ['$1'].
+%% statementList -> statement '\.' statementList : ['$1'|'$3'].
 
-statement ->  statementElems : {statement, '$1'}.
+%% statement ->  statementElems : {statement, '$1'}.
 
-statementElems -> statementElem : ['$1'].
-statementElems -> statementElem statementElems : ['$1'|'$2'].
+%% statementElems -> statementElem : ['$1'].
+%% statementElems -> statementElem statementElems : ['$1'|'$2'].
 
-statementElem -> variable : {variable, extract_token('$1') }.
+%% statementElem -> variable_symbol : '$1'.
+
+%% variable
+%% ?s -> {:variable, :s}
+%% $other-variable -> {:variable, :"other-variable"}
+variable_symbol -> variable : {variable, extract_token('$1') }.
 
 %% {INT}         : {token, {int,  TokenLine, list_to_integer(TokenChars)}}.
 %% {ATOM}        : {token, {atom, TokenLine, to_atom(TokenChars)}}.

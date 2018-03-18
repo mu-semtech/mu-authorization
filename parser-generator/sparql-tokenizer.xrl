@@ -277,6 +277,7 @@ Rules.
 \<               : { token, { '<', TokenLine } } .
 \:               : { token, { ':', TokenLine } } .
 \.               : { token, { '.', TokenLine } } .
+\;               : { token, { ';', TokenLine } } .
 {A}              : { token, { a, TokenLine } } .
 {LAND}           : { token, { 'logical-and', TokenLine } } .
 {LOR}            : { token, { 'logical-or', TokenLine } } .
