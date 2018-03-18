@@ -1,6 +1,6 @@
 Nonterminals sparql statement whereBlock block statementElems statementElem statementList iri uri_symbol prefixed_name_symbol boolean_literal numerical_literal lang_tag rdf_literal.
 Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' where name uri 'prefixed-name' true false int float 'lang-tag' 'rdf-literal' 'double-quoted-string' 'rdf-type'.
-Rootsymbol rdf_literal.
+Rootsymbol sparql.
 
 %% How to read this file?
 %% I have tried to put the blocks as 'logically' consistent as possible
@@ -13,9 +13,9 @@ sparql -> whereBlock : {sparql, '$1' }.
 %% "test"@en -> {:"rdf-literal", {:value, "test"}, {:"lang-tag", :en}}
 %% "test"^^xsd:string -> {:"rdf-literal", {:value, "test"}, {"type", {:iri, {:"prefixed-name", {:prefix :xsd} {:name :string}} }}}
 rdf_literal -> 'double-quoted-string' : {'rdf-literal', {value, extract_token('$1')}}.
-rdf_literal -> 'double-quoted-string' 'lang-tag' : {'rdf-literal', {value, extract_token('$1')}, {'lang-tag', extract_token('$2')}}.
-rdf_literal -> 'double-quoted-string' 'rdf-type' 'prefixed-name' : {'rdf-literal', {value, extract_token('$1')}, {type, {iri, {'prefixed-name', {prefix, extract_prefix_from_prefixed_name('$3')}, {name, extract_name_from_prefixed_name('$3')}}}}}.
-rdf_literal -> 'double-quoted-string' 'rdf-type' 'uri' : {'rdf-literal', {value, extract_token('$1')}, {type, {uri, {iri, extract_token('$3')}}}}.
+rdf_literal -> 'double-quoted-string' lang_tag : {'rdf-literal', {value, extract_token('$1')}, '$2'}.
+rdf_literal -> 'double-quoted-string' 'rdf-type' iri : {'rdf-literal', {value, extract_token('$1')}, {type, '$3'}}.
+rdf_literal -> 'double-quoted-string' 'rdf-type' uri_symbol : {'rdf-literal', {value, extract_token('$1')}, {type, {iri, '$3'}}}.
 
 %% Language Tag
 %% @en -> {:"lang-tag", :en}
