@@ -1,8 +1,14 @@
-Nonterminals sparql statement whereBlock block statementElems statementElem statementList iri uri_symbol prefixed_name_symbol.
-Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' where name uri 'prefixed-name'.
-Rootsymbol sparql.
+Nonterminals sparql statement whereBlock block statementElems statementElem statementList iri uri_symbol prefixed_name_symbol boolean_literal.
+Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' where name uri 'prefixed-name' true false.
+Rootsymbol boolean_literal.
 
 sparql -> whereBlock : {sparql, '$1' }.
+
+%% Boolean literals
+%% true -> {:"boolean-literal", :true}
+%% false -> {:"boolean-literal", :false}
+boolean_literal -> true : {'boolean-literal', true}.
+boolean_literal -> false : {'boolean-literal', false}.
 
 %% IRI
 %% foaf:Person -> {:iri, {:"prefixed-name", {:prefix :foaf} {:name :Person}}}

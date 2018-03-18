@@ -41,7 +41,7 @@ To parse the tokenizers produce first load the parser
 
 Extract the tokenized query
 ```
-> {:ok, ps, 1} = :sparql-tokenizer.string('?s ?p ?o.')
+> {:ok, ps, 1} = :"sparql-tokenizer".string('?s ?p ?o.')
 ```
 
 And the parse it

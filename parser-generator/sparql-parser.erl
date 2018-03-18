@@ -1,6 +1,6 @@
 -module('sparql-parser').
 -export([parse/1, parse_and_scan/1, format_error/1]).
--file("parser-generator/sparql-parser.yrl", 54).
+-file("parser-generator/sparql-parser.yrl", 60).
 
 extract_token({_Token, _Line, Value}) -> Value.
 extract_prefix_from_prefixed_name({_Token, _line, {Prefix, _Name}}) -> Prefix.
@@ -186,225 +186,54 @@ yeccpars2(0=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_0(S, Cat, Ss, Stack, T, Ts, Tzr);
 %% yeccpars2(1=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %%  yeccpars2_1(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(2=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_2(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(2=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_2(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(3=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_3(S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccpars2(4=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_4(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(5=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_5(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(6=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_6(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(7=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_7(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(8=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_8(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(9=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_9(S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccpars2(10=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_10(S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccpars2(11=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_11(S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccpars2(12=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_12(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(13=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_13(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(14=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_14(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(Other, _, _, _, _, _, _) ->
  erlang:error({yecc_bug,"1.4",{missing_state_in_action_table, Other}}).
 
 -dialyzer({nowarn_function, yeccpars2_0/7}).
-yeccpars2_0(S, where, Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_0(S, false, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 2, Ss, Stack, T, Ts, Tzr);
+yeccpars2_0(S, true, Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 3, Ss, Stack, T, Ts, Tzr);
 yeccpars2_0(_, _, _, _, T, _, _) ->
  yeccerror(T).
 
-yeccpars2_1(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- NewStack = yeccpars2_1_(Stack),
- yeccgoto_sparql(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
-
--dialyzer({nowarn_function, yeccpars2_2/7}).
-yeccpars2_2(_S, '$end', _Ss, Stack, _T, _Ts, _Tzr) ->
+-dialyzer({nowarn_function, yeccpars2_1/7}).
+yeccpars2_1(_S, '$end', _Ss, Stack, _T, _Ts, _Tzr) ->
  {ok, hd(Stack)};
-yeccpars2_2(_, _, _, _, T, _, _) ->
+yeccpars2_1(_, _, _, _, T, _, _) ->
  yeccerror(T).
 
--dialyzer({nowarn_function, yeccpars2_3/7}).
-yeccpars2_3(S, '{', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 4, Ss, Stack, T, Ts, Tzr);
-yeccpars2_3(_, _, _, _, T, _, _) ->
- yeccerror(T).
+yeccpars2_2(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ NewStack = yeccpars2_2_(Stack),
+ yeccgoto_boolean_literal(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
--dialyzer({nowarn_function, yeccpars2_4/7}).
-yeccpars2_4(S, variable, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 10, Ss, Stack, T, Ts, Tzr);
-yeccpars2_4(_, _, _, _, T, _, _) ->
- yeccerror(T).
+yeccpars2_3(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ NewStack = yeccpars2_3_(Stack),
+ yeccgoto_boolean_literal(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
-yeccpars2_5(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccgoto_block(hd(Ss), Cat, Ss, Stack, T, Ts, Tzr).
+-dialyzer({nowarn_function, yeccgoto_boolean_literal/7}).
+yeccgoto_boolean_literal(0, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_1(1, Cat, Ss, Stack, T, Ts, Tzr).
 
-yeccpars2_6(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- NewStack = yeccpars2_6_(Stack),
- yeccgoto_statement(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
-
-yeccpars2_7(S, variable, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 10, Ss, Stack, T, Ts, Tzr);
-yeccpars2_7(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- NewStack = yeccpars2_7_(Stack),
- yeccgoto_statementElems(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
-
-yeccpars2_8(S, '.', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 12, Ss, Stack, T, Ts, Tzr);
-yeccpars2_8(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- NewStack = yeccpars2_8_(Stack),
- yeccgoto_statementList(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
-
--dialyzer({nowarn_function, yeccpars2_9/7}).
-yeccpars2_9(S, '}', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 11, Ss, Stack, T, Ts, Tzr);
-yeccpars2_9(_, _, _, _, T, _, _) ->
- yeccerror(T).
-
-yeccpars2_10(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- NewStack = yeccpars2_10_(Stack),
- yeccgoto_statementElem(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
-
-yeccpars2_11(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_,_,_|Nss] = Ss,
- NewStack = yeccpars2_11_(Stack),
- yeccgoto_whereBlock(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
-
-yeccpars2_12(S, variable, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 10, Ss, Stack, T, Ts, Tzr);
-yeccpars2_12(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
- NewStack = yeccpars2_12_(Stack),
- yeccgoto_statementList(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
-
-yeccpars2_13(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_,_|Nss] = Ss,
- NewStack = yeccpars2_13_(Stack),
- yeccgoto_statementList(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
-
-yeccpars2_14(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
- NewStack = yeccpars2_14_(Stack),
- yeccgoto_statementElems(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
-
--dialyzer({nowarn_function, yeccgoto_block/7}).
-yeccgoto_block(4, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_9(9, Cat, Ss, Stack, T, Ts, Tzr).
-
--dialyzer({nowarn_function, yeccgoto_sparql/7}).
-yeccgoto_sparql(0, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_2(2, Cat, Ss, Stack, T, Ts, Tzr).
-
--dialyzer({nowarn_function, yeccgoto_statement/7}).
-yeccgoto_statement(4, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_8(8, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_statement(12, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_8(8, Cat, Ss, Stack, T, Ts, Tzr).
-
--dialyzer({nowarn_function, yeccgoto_statementElem/7}).
-yeccgoto_statementElem(4, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_7(7, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_statementElem(7, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_7(7, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_statementElem(12, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_7(7, Cat, Ss, Stack, T, Ts, Tzr).
-
--dialyzer({nowarn_function, yeccgoto_statementElems/7}).
-yeccgoto_statementElems(4=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_6(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_statementElems(7=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_14(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_statementElems(12=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_6(_S, Cat, Ss, Stack, T, Ts, Tzr).
-
--dialyzer({nowarn_function, yeccgoto_statementList/7}).
-yeccgoto_statementList(4=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_5(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_statementList(12=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_13(_S, Cat, Ss, Stack, T, Ts, Tzr).
-
--dialyzer({nowarn_function, yeccgoto_whereBlock/7}).
-yeccgoto_whereBlock(0=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_1(_S, Cat, Ss, Stack, T, Ts, Tzr).
-
--compile({inline,yeccpars2_1_/1}).
--file("parser-generator/sparql-parser.yrl", 1).
-yeccpars2_1_(__Stack0) ->
+-compile({inline,yeccpars2_2_/1}).
+-file("parser-generator/sparql-parser.yrl", 7).
+yeccpars2_2_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
-   { sparql , __1 }
+   { 'boolean-literal' , false }
   end | __Stack].
 
--compile({inline,yeccpars2_6_/1}).
--file("parser-generator/sparql-parser.yrl", 20).
-yeccpars2_6_(__Stack0) ->
+-compile({inline,yeccpars2_3_/1}).
+-file("parser-generator/sparql-parser.yrl", 6).
+yeccpars2_3_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
-   { statement , __1 }
-  end | __Stack].
-
--compile({inline,yeccpars2_7_/1}).
--file("parser-generator/sparql-parser.yrl", 22).
-yeccpars2_7_(__Stack0) ->
- [__1 | __Stack] = __Stack0,
- [begin
-   [ __1 ]
-  end | __Stack].
-
--compile({inline,yeccpars2_8_/1}).
--file("parser-generator/sparql-parser.yrl", 16).
-yeccpars2_8_(__Stack0) ->
- [__1 | __Stack] = __Stack0,
- [begin
-   [ __1 ]
-  end | __Stack].
-
--compile({inline,yeccpars2_10_/1}).
--file("parser-generator/sparql-parser.yrl", 25).
-yeccpars2_10_(__Stack0) ->
- [__1 | __Stack] = __Stack0,
- [begin
-   { variable , extract_token ( __1 ) }
-  end | __Stack].
-
--compile({inline,yeccpars2_11_/1}).
--file("parser-generator/sparql-parser.yrl", 12).
-yeccpars2_11_(__Stack0) ->
- [__4,__3,__2,__1 | __Stack] = __Stack0,
- [begin
-   { where , __3 }
-  end | __Stack].
-
--compile({inline,yeccpars2_12_/1}).
--file("parser-generator/sparql-parser.yrl", 17).
-yeccpars2_12_(__Stack0) ->
- [__2,__1 | __Stack] = __Stack0,
- [begin
-   [ __1 ]
-  end | __Stack].
-
--compile({inline,yeccpars2_13_/1}).
--file("parser-generator/sparql-parser.yrl", 18).
-yeccpars2_13_(__Stack0) ->
- [__3,__2,__1 | __Stack] = __Stack0,
- [begin
-   [ __1 | __3 ]
-  end | __Stack].
-
--compile({inline,yeccpars2_14_/1}).
--file("parser-generator/sparql-parser.yrl", 23).
-yeccpars2_14_(__Stack0) ->
- [__2,__1 | __Stack] = __Stack0,
- [begin
-   [ __1 | __2 ]
+   { 'boolean-literal' , true }
   end | __Stack].
 
 
--file("parser-generator/sparql-parser.yrl", 59).
+-file("parser-generator/sparql-parser.yrl", 65).
