@@ -1,10 +1,21 @@
 -module('sparql-parser').
 -export([parse/1, parse_and_scan/1, format_error/1]).
--file("parser-generator/sparql-parser.yrl", 60).
+-file("parser-generator/sparql-parser.yrl", 66).
 
 extract_token({_Token, _Line, Value}) -> Value.
 extract_prefix_from_prefixed_name({_Token, _line, {Prefix, _Name}}) -> Prefix.
 extract_name_from_prefixed_name({_Token, _line, {_Prefix, Name}}) -> Name.
+
+extract_int_token(FullToken) ->
+    StringValue = extract_token(FullToken),
+    {IntValue, RestValue} = string:to_integer(StringValue),
+    IntValue.
+
+extract_float_token(FullToken) ->
+    StringValue = extract_token(FullToken),
+    {IntValue, RestValue} = string:to_float(StringValue),
+    IntValue.
+
 
 -file("/usr/lib/erlang/lib/parsetools-2.1.6/include/yeccpre.hrl", 0).
 %%
@@ -179,7 +190,7 @@ yecctoken2string(Other) ->
 
 
 
--file("parser-generator/sparql-parser.erl", 182).
+-file("parser-generator/sparql-parser.erl", 193).
 
 -dialyzer({nowarn_function, yeccpars2/7}).
 yeccpars2(0=S, Cat, Ss, Stack, T, Ts, Tzr) ->
@@ -194,9 +205,9 @@ yeccpars2(Other, _, _, _, _, _, _) ->
  erlang:error({yecc_bug,"1.4",{missing_state_in_action_table, Other}}).
 
 -dialyzer({nowarn_function, yeccpars2_0/7}).
-yeccpars2_0(S, false, Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_0(S, float, Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 2, Ss, Stack, T, Ts, Tzr);
-yeccpars2_0(S, true, Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_0(S, int, Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 3, Ss, Stack, T, Ts, Tzr);
 yeccpars2_0(_, _, _, _, T, _, _) ->
  yeccerror(T).
@@ -209,31 +220,31 @@ yeccpars2_1(_, _, _, _, T, _, _) ->
 
 yeccpars2_2(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_2_(Stack),
- yeccgoto_boolean_literal(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
+ yeccgoto_numerical_literal(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
 yeccpars2_3(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_3_(Stack),
- yeccgoto_boolean_literal(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
+ yeccgoto_numerical_literal(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
--dialyzer({nowarn_function, yeccgoto_boolean_literal/7}).
-yeccgoto_boolean_literal(0, Cat, Ss, Stack, T, Ts, Tzr) ->
+-dialyzer({nowarn_function, yeccgoto_numerical_literal/7}).
+yeccgoto_numerical_literal(0, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_1(1, Cat, Ss, Stack, T, Ts, Tzr).
 
 -compile({inline,yeccpars2_2_/1}).
--file("parser-generator/sparql-parser.yrl", 7).
+-file("parser-generator/sparql-parser.yrl", 13).
 yeccpars2_2_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
-   { 'boolean-literal' , false }
+   { 'numerical-literal' , { type , float } , { value , extract_float_token ( __1 ) } }
   end | __Stack].
 
 -compile({inline,yeccpars2_3_/1}).
--file("parser-generator/sparql-parser.yrl", 6).
+-file("parser-generator/sparql-parser.yrl", 12).
 yeccpars2_3_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
-   { 'boolean-literal' , true }
+   { 'numerical-literal' , { type , int } , { value , extract_int_token ( __1 ) } }
   end | __Stack].
 
 
--file("parser-generator/sparql-parser.yrl", 65).
+-file("parser-generator/sparql-parser.yrl", 82).

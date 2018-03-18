@@ -1,6 +1,6 @@
-Nonterminals sparql statement whereBlock block statementElems statementElem statementList iri uri_symbol prefixed_name_symbol boolean_literal.
-Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' where name uri 'prefixed-name' true false.
-Rootsymbol boolean_literal.
+Nonterminals sparql statement whereBlock block statementElems statementElem statementList iri uri_symbol prefixed_name_symbol boolean_literal numerical_literal.
+Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' where name uri 'prefixed-name' true false int float.
+Rootsymbol numerical_literal.
 
 sparql -> whereBlock : {sparql, '$1' }.
 
@@ -9,6 +9,12 @@ sparql -> whereBlock : {sparql, '$1' }.
 %% false -> {:"boolean-literal", :false}
 boolean_literal -> true : {'boolean-literal', true}.
 boolean_literal -> false : {'boolean-literal', false}.
+
+%% Numerical literals
+%% -1 -> {:"numerical-literal", {:type, :int}, {:value, -1}}
+%% 3.14 -> {:"numerical-literal", {:type, :float}, {:value, 3.14}}
+numerical_literal -> int : {'numerical-literal', {type, int}, {value, extract_int_token('$1')}}.
+numerical_literal -> float : {'numerical-literal', {type, float}, {value, extract_float_token('$1')}}.
 
 %% IRI
 %% foaf:Person -> {:iri, {:"prefixed-name", {:prefix :foaf} {:name :Person}}}
@@ -62,3 +68,14 @@ Erlang code.
 extract_token({_Token, _Line, Value}) -> Value.
 extract_prefix_from_prefixed_name({_Token, _line, {Prefix, _Name}}) -> Prefix.
 extract_name_from_prefixed_name({_Token, _line, {_Prefix, Name}}) -> Name.
+
+extract_int_token(FullToken) ->
+    StringValue = extract_token(FullToken),
+    {IntValue, RestValue} = string:to_integer(StringValue),
+    IntValue.
+
+extract_float_token(FullToken) ->
+    StringValue = extract_token(FullToken),
+    {IntValue, RestValue} = string:to_float(StringValue),
+    IntValue.
+
