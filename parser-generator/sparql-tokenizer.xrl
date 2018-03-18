@@ -130,7 +130,7 @@ BOOLEAN_TRUE   = [tT][rR][uU][eE]
 BOOLEAN_FALSE  = [fF][aA][lL][sS][eE]
 PREFIXEDNAME   = [a-zA-Z][a-zA-Z0-9_\-]*[:][a-zA-Z][a-zA-Z0-9_\-]*
 NAME           = [a-zA-Z0-9]+
-URI            = [\-a-zA-Z0-9@:\%._\\\+~#=]+([:][/][/])?[-a-zA-Z0-9@:\%_\\\+.~#?&=]+
+URI            = [\-a-zA-Z0-9@:\%._\\\+~#=]+([:][/][/])?[-a-zA-Z0-9@:\%_\\\+.~#?&=\/]+
 
 Rules.
 
