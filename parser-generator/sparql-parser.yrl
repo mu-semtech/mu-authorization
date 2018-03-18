@@ -2,6 +2,10 @@ Nonterminals sparql statement whereBlock block statementElems statementElem stat
 Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' where name uri 'prefixed-name' true false int float 'lang-tag' 'rdf-literal' 'double-quoted-string' 'rdf-type'.
 Rootsymbol rdf_literal.
 
+%% How to read this file?
+%% I have tried to put the blocks as 'logically' consistent as possible
+%% all parsable things also have examples. Look at these before modifying
+
 sparql -> whereBlock : {sparql, '$1' }.
 
 %% RDFLiteral
@@ -78,17 +82,28 @@ statementElem -> variable : {variable, extract_token('$1') }.
 
 Erlang code.
 
+%% extracts the exact value of the token
+%% {:name, 45, "\"Jonathan\""} -> "\"Jonathan\""
 extract_token({_Token, _Line, Value}) -> Value.
+
+%% extracts the prefix from a prefixed name
+%% {'prefixed-name', 1, {:foaf :Person}} -> :foaf
 extract_prefix_from_prefixed_name({_Token, _line, {Prefix, _Name}}) -> Prefix.
+
+%% extracts the name from a prefixed name
+%% {'prefixed-name', 1, {:foaf :Person}} -> :Person
 extract_name_from_prefixed_name({_Token, _line, {_Prefix, Name}}) -> Name.
 
+%% extracts the value of a token as an integer
+%% {'int', 1, '-1'} -> -1
 extract_int_token(FullToken) ->
     StringValue = extract_token(FullToken),
     {IntValue, RestValue} = string:to_integer(StringValue),
     IntValue.
 
+%% extracts the value of a token as a float
+%% {'float', 1, '3.14'} -> 3.14
 extract_float_token(FullToken) ->
     StringValue = extract_token(FullToken),
     {IntValue, RestValue} = string:to_float(StringValue),
     IntValue.
-
