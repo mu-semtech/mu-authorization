@@ -1,8 +1,12 @@
-Nonterminals sparql statement whereBlock block statementElems statementElem statementList iri uri_symbol prefixed_name_symbol boolean_literal numerical_literal.
-Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' where name uri 'prefixed-name' true false int float.
-Rootsymbol numerical_literal.
+Nonterminals sparql statement whereBlock block statementElems statementElem statementList iri uri_symbol prefixed_name_symbol boolean_literal numerical_literal lang_tag.
+Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' where name uri 'prefixed-name' true false int float 'lang-tag'.
+Rootsymbol lang_tag.
 
 sparql -> whereBlock : {sparql, '$1' }.
+
+%% Language Tag
+%% @en -> {:"lang-tag", :en}
+lang_tag -> 'lang-tag' : {'lang-tag', extract_token('$1')}.
 
 %% Boolean literals
 %% true -> {:"boolean-literal", :true}

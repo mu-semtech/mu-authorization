@@ -1,6 +1,6 @@
 -module('sparql-parser').
 -export([parse/1, parse_and_scan/1, format_error/1]).
--file("parser-generator/sparql-parser.yrl", 66).
+-file("parser-generator/sparql-parser.yrl", 70).
 
 extract_token({_Token, _Line, Value}) -> Value.
 extract_prefix_from_prefixed_name({_Token, _line, {Prefix, _Name}}) -> Prefix.
@@ -199,16 +199,12 @@ yeccpars2(0=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %%  yeccpars2_1(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(2=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_2(S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccpars2(3=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_3(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(Other, _, _, _, _, _, _) ->
  erlang:error({yecc_bug,"1.4",{missing_state_in_action_table, Other}}).
 
 -dialyzer({nowarn_function, yeccpars2_0/7}).
-yeccpars2_0(S, float, Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_0(S, 'lang-tag', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 2, Ss, Stack, T, Ts, Tzr);
-yeccpars2_0(S, int, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 3, Ss, Stack, T, Ts, Tzr);
 yeccpars2_0(_, _, _, _, T, _, _) ->
  yeccerror(T).
 
@@ -220,31 +216,19 @@ yeccpars2_1(_, _, _, _, T, _, _) ->
 
 yeccpars2_2(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_2_(Stack),
- yeccgoto_numerical_literal(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
+ yeccgoto_lang_tag(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
-yeccpars2_3(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- NewStack = yeccpars2_3_(Stack),
- yeccgoto_numerical_literal(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
-
--dialyzer({nowarn_function, yeccgoto_numerical_literal/7}).
-yeccgoto_numerical_literal(0, Cat, Ss, Stack, T, Ts, Tzr) ->
+-dialyzer({nowarn_function, yeccgoto_lang_tag/7}).
+yeccgoto_lang_tag(0, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_1(1, Cat, Ss, Stack, T, Ts, Tzr).
 
 -compile({inline,yeccpars2_2_/1}).
--file("parser-generator/sparql-parser.yrl", 13).
+-file("parser-generator/sparql-parser.yrl", 5).
 yeccpars2_2_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
-   { 'numerical-literal' , { type , float } , { value , extract_float_token ( __1 ) } }
-  end | __Stack].
-
--compile({inline,yeccpars2_3_/1}).
--file("parser-generator/sparql-parser.yrl", 12).
-yeccpars2_3_(__Stack0) ->
- [__1 | __Stack] = __Stack0,
- [begin
-   { 'numerical-literal' , { type , int } , { value , extract_int_token ( __1 ) } }
+   { 'lang-tag' , extract_token ( __1 ) }
   end | __Stack].
 
 
--file("parser-generator/sparql-parser.yrl", 82).
+-file("parser-generator/sparql-parser.yrl", 86).

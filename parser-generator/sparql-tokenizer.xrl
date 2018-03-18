@@ -1,5 +1,6 @@
 Definitions.
 
+LANGTAG        = [@][a-zA-Z]+
 ANON           = [\[][\]]
 BLANK_NODE     = [_][:][a-zA-Z0-9_\-]+
 INT            = (\+|-)?[0-9]+
@@ -134,6 +135,7 @@ URI            = [\-a-zA-Z0-9@:\%._\\\+~#=]+([:][/][/])?[-a-zA-Z0-9@:\%_\\\+.~#?
 
 Rules.
 
+{LANGTAG}        : { token , {'lang-tag' , TokenLine, lang_tag_to_atom(TokenChars) } } .
 {BLANK_NODE}     : { token , {'blank-node', TokenLine , blank_node_to_atom(TokenChars) } } .
 {INT}            : { token , { int , TokenLine, TokenChars } } .
 {FLOAT}          : { token , { float, TokenLine, TokenChars } } .
@@ -318,3 +320,7 @@ prefixed_name_to_atoms( PrefixName ) ->
      list_to_atom(get_prefix_out_of_prefixed_name(PrefixName)),
      list_to_atom(get_name_out_of_prefixed_name(PrefixName))
     }.
+
+%% takes a language tag and returns the language
+lang_tag_to_atom(LangTag) ->
+    list_to_atom(tail(LangTag)).
