@@ -1,6 +1,6 @@
 -module('sparql-parser').
 -export([parse/1, parse_and_scan/1, format_error/1]).
--file("parser-generator/sparql-parser.yrl", 70).
+-file("parser-generator/sparql-parser.yrl", 79).
 
 extract_token({_Token, _Line, Value}) -> Value.
 extract_prefix_from_prefixed_name({_Token, _line, {Prefix, _Name}}) -> Prefix.
@@ -199,11 +199,19 @@ yeccpars2(0=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %%  yeccpars2_1(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(2=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_2(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(3=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_3(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(4=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_4(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(5=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_5(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(6=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_6(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(Other, _, _, _, _, _, _) ->
  erlang:error({yecc_bug,"1.4",{missing_state_in_action_table, Other}}).
 
 -dialyzer({nowarn_function, yeccpars2_0/7}).
-yeccpars2_0(S, 'lang-tag', Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_0(S, 'double-quoted-string', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 2, Ss, Stack, T, Ts, Tzr);
 yeccpars2_0(_, _, _, _, T, _, _) ->
  yeccerror(T).
@@ -214,21 +222,72 @@ yeccpars2_1(_S, '$end', _Ss, Stack, _T, _Ts, _Tzr) ->
 yeccpars2_1(_, _, _, _, T, _, _) ->
  yeccerror(T).
 
+yeccpars2_2(S, 'lang-tag', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 3, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'rdf-type', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 4, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_2_(Stack),
- yeccgoto_lang_tag(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
+ yeccgoto_rdf_literal(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
--dialyzer({nowarn_function, yeccgoto_lang_tag/7}).
-yeccgoto_lang_tag(0, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_3(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_|Nss] = Ss,
+ NewStack = yeccpars2_3_(Stack),
+ yeccgoto_rdf_literal(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_4/7}).
+yeccpars2_4(S, 'prefixed-name', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 5, Ss, Stack, T, Ts, Tzr);
+yeccpars2_4(S, uri, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 6, Ss, Stack, T, Ts, Tzr);
+yeccpars2_4(_, _, _, _, T, _, _) ->
+ yeccerror(T).
+
+yeccpars2_5(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_|Nss] = Ss,
+ NewStack = yeccpars2_5_(Stack),
+ yeccgoto_rdf_literal(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+yeccpars2_6(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_|Nss] = Ss,
+ NewStack = yeccpars2_6_(Stack),
+ yeccgoto_rdf_literal(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccgoto_rdf_literal/7}).
+yeccgoto_rdf_literal(0, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_1(1, Cat, Ss, Stack, T, Ts, Tzr).
 
 -compile({inline,yeccpars2_2_/1}).
--file("parser-generator/sparql-parser.yrl", 5).
+-file("parser-generator/sparql-parser.yrl", 7).
 yeccpars2_2_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
-   { 'lang-tag' , extract_token ( __1 ) }
+   { 'rdf-literal' , { value , extract_token ( __1 ) } }
+  end | __Stack].
+
+-compile({inline,yeccpars2_3_/1}).
+-file("parser-generator/sparql-parser.yrl", 8).
+yeccpars2_3_(__Stack0) ->
+ [__2,__1 | __Stack] = __Stack0,
+ [begin
+   { 'rdf-literal' , { value , extract_token ( __1 ) } , { 'lang-tag' , extract_token ( __2 ) } }
+  end | __Stack].
+
+-compile({inline,yeccpars2_5_/1}).
+-file("parser-generator/sparql-parser.yrl", 9).
+yeccpars2_5_(__Stack0) ->
+ [__3,__2,__1 | __Stack] = __Stack0,
+ [begin
+   { 'rdf-literal' , { value , extract_token ( __1 ) } , { type , { iri , { 'prefixed-name' , { prefix , extract_prefix_from_prefixed_name ( __3 ) } , { name , extract_name_from_prefixed_name ( __3 ) } } } } }
+  end | __Stack].
+
+-compile({inline,yeccpars2_6_/1}).
+-file("parser-generator/sparql-parser.yrl", 10).
+yeccpars2_6_(__Stack0) ->
+ [__3,__2,__1 | __Stack] = __Stack0,
+ [begin
+   { 'rdf-literal' , { value , extract_token ( __1 ) } , { type , { uri , { iri , extract_token ( __3 ) } } } }
   end | __Stack].
 
 
--file("parser-generator/sparql-parser.yrl", 86).
+-file("parser-generator/sparql-parser.yrl", 95).
