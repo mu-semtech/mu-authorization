@@ -1,12 +1,23 @@
-Nonterminals sparql statement whereBlock block statementElems statementElem statementList iri uri_symbol prefixed_name_symbol boolean_literal numerical_literal lang_tag rdf_literal variable_symbol object blank_node nil_symbol subject predicate sameSubjectPath predicateList predicateExpression objectList.
+Nonterminals sparql statement whereBlock block sameSubjectPathList iri uri_symbol prefixed_name_symbol boolean_literal numerical_literal lang_tag rdf_literal variable_symbol object blank_node nil_symbol subject predicate sameSubjectPath predicateList predicateExpression objectList.
 Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' ';' ',' where name uri 'prefixed-name' true false int float 'lang-tag' 'rdf-literal' 'double-quoted-string' 'rdf-type' nil 'blank-node'.
-Rootsymbol sameSubjectPath.
+Rootsymbol whereBlock.
 
 %% How to read this file?
 %% I have tried to put the blocks as 'logically' consistent as possible.
 %% All parsable things also have examples. Look at these before modifying.
 
 sparql -> whereBlock : {sparql, '$1' }.
+
+%% Where block
+%% a where block is typically
+%% where { ?s ?p ?o }
+whereBlock -> where '\{' block '\}' : {where, '$3'}.
+
+block -> sameSubjectPathList : '$1'.
+
+sameSubjectPathList -> sameSubjectPath : ['$1'].
+sameSubjectPathList -> sameSubjectPath '\.' : ['$1'].
+sameSubjectPathList -> sameSubjectPath '\.' sameSubjectPathList: ['$1'|'$3'].
 
 %% SameSubjectPath
 %% a same subject path is a series of expressions connected to the same subject
@@ -110,49 +121,10 @@ iri -> prefixed_name_symbol : {iri, '$1'}.
 uri_symbol -> uri : {uri, extract_token('$1')}.
 prefixed_name_symbol -> 'prefixed-name' : {'prefixed-name', {prefix, extract_prefix_from_prefixed_name('$1')}, {name, extract_name_from_prefixed_name('$1')}}.
 
-%% Where block
-whereBlock -> where '\{' block '\}' : {where, '$3'}.
-
-block -> statementList : '$1'.
-
-%% statementList -> statement: ['$1'].
-%% statementList -> statement '\.': ['$1'].
-%% statementList -> statement '\.' statementList : ['$1'|'$3'].
-
-%% statement ->  statementElems : {statement, '$1'}.
-
-%% statementElems -> statementElem : ['$1'].
-%% statementElems -> statementElem statementElems : ['$1'|'$2'].
-
-%% statementElem -> variable_symbol : '$1'.
-
 %% variable
 %% ?s -> {:variable, :s}
 %% $other-variable -> {:variable, :"other-variable"}
 variable_symbol -> variable : {variable, extract_token('$1') }.
-
-%% {INT}         : {token, {int,  TokenLine, list_to_integer(TokenChars)}}.
-%% {ATOM}        : {token, {atom, TokenLine, to_atom(TokenChars)}}.
-%% \[            : {token, {'[',  TokenLine}}.
-%% \]            : {token, {']',  TokenLine}}.
-%% ,             : {token, {',',  TokenLine}}.
-
-
-%% Nonterminals list elems elem.
-%% Terminals '[' ']' ',' int atom.
-%% Rootsymbol list.
-
-
-%% query -> {:}
-%% list -> '[' ']'       : [].
-%% list -> '[' elems ']' : '$2'.
-
-%% elems -> elem           : ['$1'].
-%% elems -> elem ',' elems : ['$1'|'$3'].
-
-%% elem -> int  : extract_token('$1').
-%% elem -> atom : extract_token('$1').
-%% elem -> list : '$1'.
 
 Erlang code.
 
