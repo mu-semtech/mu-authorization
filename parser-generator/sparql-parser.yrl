@@ -1,12 +1,29 @@
-Nonterminals sparql statement whereBlock block sameSubjectPathList iri uri_symbol prefixed_name_symbol boolean_literal numerical_literal lang_tag rdf_literal variable_symbol object blank_node nil_symbol subject predicate sameSubjectPath predicateList predicateExpression objectList.
-Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' ';' ',' where name uri 'prefixed-name' true false int float 'lang-tag' 'rdf-literal' 'double-quoted-string' 'rdf-type' nil 'blank-node'.
-Rootsymbol whereBlock.
+Nonterminals sparql statement whereBlock block sameSubjectPathList iri uri_symbol prefixed_name_symbol boolean_literal numerical_literal lang_tag rdf_literal variableSymbol object blank_node nil_symbol subject predicate sameSubjectPath predicateList predicateExpression objectList selectClause varList selectQuery.
+Terminals variable '\:' '\.' '\{' '\}' '\<' '\>' ';' ',' where name uri 'prefixed-name' true false int float 'lang-tag' 'rdf-literal' 'double-quoted-string' 'rdf-type' nil 'blank-node' select asterisk distinct reduced.
+Rootsymbol sparql.
 
 %% How to read this file?
 %% I have tried to put the blocks as 'logically' consistent as possible.
 %% All parsable things also have examples. Look at these before modifying.
 
-sparql -> whereBlock : {sparql, '$1' }.
+sparql -> selectQuery : {sparql, '$1' }.
+
+%% SelectQuery
+%% for now we try to support
+%% select * where { ?s ?p ?o }
+selectQuery -> selectClause whereBlock : {select, '$1', '$2'}.
+
+selectClause -> select varList : {'select-clause', {'var-list', '$2'}}.
+selectClause -> select distinct varList : {'select-clause', distinct, {'var-list', '$3'}}.
+selectClause -> select reduced varList : {'select-clause', reduced, {'var-list', '$3'}}.
+selectClause -> select asterisk : {'select-clause', {'var-list', asterisk}}.
+
+%% a varList is... a list of variables
+%% ?s ?p -> [variable: :s, variable: :p]
+varList -> variableSymbol : ['$1'].
+varList -> variableSymbol varList : ['$1'|'$2'].
+
+%%SelectClause ::= 'SELECT' WS* ( 'DISTINCT' | 'REDUCED' )? WS* ( ( Var WS* | ( '(' Expression 'AS' Var ')' WS* ) )+ | '*' ) WS*
 
 %% Where block
 %% a where block is typically
@@ -17,7 +34,7 @@ block -> sameSubjectPathList : '$1'.
 
 sameSubjectPathList -> sameSubjectPath : ['$1'].
 sameSubjectPathList -> sameSubjectPath '\.' : ['$1'].
-sameSubjectPathList -> sameSubjectPath '\.' sameSubjectPathList: ['$1'|'$3'].
+sameSubjectPathList -> sameSubjectPath '\.' sameSubjectPathList : ['$1'|'$3'].
 
 %% SameSubjectPath
 %% a same subject path is a series of expressions connected to the same subject
@@ -63,12 +80,12 @@ objectList -> object ',' objectList : ['$1'|'$3'].
 %% IRI | BlankNode | Variable
 subject -> iri : {subject, '$1'}.
 subject -> blank_node : {subject, '$1'}.
-subject -> variable_symbol : {subject, '$1'}.
+subject -> variableSymbol : {subject, '$1'}.
 
 %% Predicate
 %% IRI | Variable
 predicate -> iri : {predicate, '$1'}.
-predicate -> variable_symbol : {predicate, '$1'}.
+predicate -> variableSymbol : {predicate, '$1'}.
 
 %% Object
 %% IRI | RDFLiteral | NumericalLiteral | BooleanLiteral | BlankNode | NIL | Variable
@@ -78,7 +95,7 @@ object -> numerical_literal : {object, '$1'}.
 object -> boolean_literal : {object, '$1'}.
 object -> nil_symbol : {object, '$1'}.
 object -> blank_node : {object, '$1'}.
-object -> variable_symbol : {object, '$1'}.
+object -> variableSymbol : {object, '$1'}.
 
 %% nil
 %% () -> {:nil}
@@ -124,7 +141,7 @@ prefixed_name_symbol -> 'prefixed-name' : {'prefixed-name', {prefix, extract_pre
 %% variable
 %% ?s -> {:variable, :s}
 %% $other-variable -> {:variable, :"other-variable"}
-variable_symbol -> variable : {variable, extract_token('$1') }.
+variableSymbol -> variable : {variable, extract_token('$1') }.
 
 Erlang code.
 
@@ -144,12 +161,12 @@ extract_name_from_prefixed_name({_Token, _line, {_Prefix, Name}}) -> Name.
 %% {'int', 1, '-1'} -> -1
 extract_int_token(FullToken) ->
     StringValue = extract_token(FullToken),
-    {IntValue, RestValue} = string:to_integer(StringValue),
+    {IntValue, _RestValue} = string:to_integer(StringValue),
     IntValue.
 
 %% extracts the value of a token as a float
 %% {'float', 1, '3.14'} -> 3.14
 extract_float_token(FullToken) ->
     StringValue = extract_token(FullToken),
-    {IntValue, RestValue} = string:to_float(StringValue),
+    {IntValue, _RestValue} = string:to_float(StringValue),
     IntValue.
