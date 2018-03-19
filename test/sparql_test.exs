@@ -23,7 +23,7 @@ defmodule SparqlTest do
   
   test "parse a wrong SPARQL query" do
     simple_query = 'SELECT * WHERE '
-    {response_code,_,_} = simple_query |> Sparql.parse
+    {response_code,_} = simple_query |> Sparql.parse
     assert :error == response_code
   end
 
