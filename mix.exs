@@ -13,6 +13,13 @@ defmodule Sparql.MixProject do
       docs: [
         main: "readme",
         extras: ["README.md", "CHANGELOG.md"]
+      ],
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        "coveralls": :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
       ]
     ]
   end
@@ -39,7 +46,9 @@ defmodule Sparql.MixProject do
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
       {:ex_doc, "~> 0.18", only: :dev, runtime: false},
-      {:junit_formatter, "~> 2.1", only: :test}
+      {:junit_formatter, "~> 2.1", only: :test},
+      {:credo, "~> 0.8", only: [:dev, :test]},
+      {:excoveralls, "~> 0.8", only: :test}
     ]
   end
 end
