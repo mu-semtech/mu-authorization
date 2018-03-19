@@ -31,7 +31,6 @@ config :sparqlex, author: :flowofcontrol
 #     import_config "#{Mix.env}.exs"
 
 if Mix.env == :test do
-  config :junit_formatter, 
+  config :junit_formatter,
   report_dir: "/tmp/repo-example-test-results/exunit"
 end
-

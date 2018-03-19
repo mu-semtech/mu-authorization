@@ -78,19 +78,20 @@ defmodule Sparql do
        [
          {{:subject, {:variable, :s}}, {:predicate, {:variable, :p}}, {:object, {:object, {:variable, :o}}}}
        ]
-
-
   """
   def convert_to_simple_triples({:"same-subject-path", {:subject, subject}, {:"predicate-list", predicate_list}})do
     convert_to_simple_triples(subject, predicate_list)
   end
 
   defp convert_to_simple_triples(subject, predicate_list) do
-    Enum.map(predicate_list, fn({{:predicate, predicate}, {:"object-list", object_list}}) -> convert_to_simple_triples(subject, predicate, object_list) end)
-    |> Enum.reduce(fn(x,acc) -> Enum.into(x, acc, fn(x) -> x end) end)
+    predicate_list
+    |> Enum.map(fn({{:predicate, predicate}, {:"object-list", object_list}}) ->
+        convert_to_simple_triples(subject, predicate, object_list) end)
+    |> Enum.reduce(fn(x, acc) -> Enum.into(x, acc, fn(x) -> x end) end)
   end
 
   defp convert_to_simple_triples(subject, predicate, object_list) do
-    Enum.map(object_list, fn(object) -> {{:subject, subject}, {:predicate, predicate}, {:object, object}} end)
+    Enum.map(object_list, fn(object) ->
+      {{:subject, subject}, {:predicate, predicate}, {:object, object}} end)
   end
 end
