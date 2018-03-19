@@ -10,8 +10,8 @@ use Mix.Config
 
 # You can configure your application as:
 #
-#     config :sparql, key: :value
-config :sparql, author: :flowofcontrol
+#     config :sparqlex, key: :value
+config :sparqlex, author: :flowofcontrol
 #
 # and access this configuration in your application as:
 #
