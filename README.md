@@ -1,8 +1,8 @@
-# Sparql
 [![Hex version badge](https://img.shields.io/hexpm/v/sparqlex.svg)](https://hex.pm/packages/sparqlex)
 [![License badge](https://img.shields.io/hexpm/l/sparqlex.svg)](https://github.com/langens-jonathan/sparql/blob/master/LICENSE)
 [![Build status badge](https://img.shields.io/circleci/project/github/langens-jonathan/sparql/master.svg)](https://circleci.com/gh/langens-jonathan/sparql/tree/master)
 [![Code coverage badge](https://img.shields.io/codecov/c/github/langens-jonathan/sparql/master.svg)](https://codecov.io/gh/langens-jonathan/sparql/branch/master)
+# Sparql
 This module offers a SPARQL parser for elixir.
 
 ## Parsing SPARQL queries
@@ -39,7 +39,7 @@ The SPARQL spec defines something that is a SameSubjectPath, in terms of SPARQL 
 ```
 ?s ?p ?o; ?p2 ?o2
 ```
-which would of course expand to 2 SimpleSubjectPaths
+which would expand to 2 SimpleSubjectPaths
 ```
 ?s ?p ?o .
 ?s ?p2 ?o2 .
