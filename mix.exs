@@ -2,10 +2,10 @@ defmodule Sparql.MixProject do
   use Mix.Project
 
   @github_url "https://github.com/langens-jonathan/sparql"
-  
+
   def project do
     [
-      app: :sparql,
+      app: :"sparqlex",
       version: "0.1.0",
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
@@ -22,7 +22,7 @@ defmodule Sparql.MixProject do
         "coveralls.post": :test,
         "coveralls.html": :test
       ],
-      name: "SPARQL",
+      name: "sparqlex",
       description: "An elixir library for parsing and handling SPARQL queries.",
       source_url: @github_url,
       homepage_url: @github_url,
