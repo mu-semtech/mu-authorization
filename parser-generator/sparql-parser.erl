@@ -1,6 +1,6 @@
 -module('sparql-parser').
 -export([parse/1, parse_and_scan/1, format_error/1]).
--file("parser-generator/sparql-parser.yrl", 141).
+-file("parser-generator/sparql-parser.yrl", 146).
 
 %% extracts the exact value of the token
 %% {:name, 45, "\"Jonathan\""} -> "\"Jonathan\""
@@ -852,7 +852,7 @@ yeccpars2_2_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_5_/1}).
--file("parser-generator/sparql-parser.yrl", 14).
+-file("parser-generator/sparql-parser.yrl", 19).
 yeccpars2_5_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -860,7 +860,7 @@ yeccpars2_5_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_6_/1}).
--file("parser-generator/sparql-parser.yrl", 9).
+-file("parser-generator/sparql-parser.yrl", 12).
 yeccpars2_6_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -868,7 +868,7 @@ yeccpars2_6_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_7_/1}).
--file("parser-generator/sparql-parser.yrl", 12).
+-file("parser-generator/sparql-parser.yrl", 15).
 yeccpars2_7_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -876,7 +876,7 @@ yeccpars2_7_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_10_/1}).
--file("parser-generator/sparql-parser.yrl", 135).
+-file("parser-generator/sparql-parser.yrl", 140).
 yeccpars2_10_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -884,7 +884,7 @@ yeccpars2_10_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_11_/1}).
--file("parser-generator/sparql-parser.yrl", 11).
+-file("parser-generator/sparql-parser.yrl", 14).
 yeccpars2_11_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -892,7 +892,7 @@ yeccpars2_11_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_12_/1}).
--file("parser-generator/sparql-parser.yrl", 10).
+-file("parser-generator/sparql-parser.yrl", 13).
 yeccpars2_12_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -900,7 +900,7 @@ yeccpars2_12_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_13_/1}).
--file("parser-generator/sparql-parser.yrl", 15).
+-file("parser-generator/sparql-parser.yrl", 20).
 yeccpars2_13_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -908,7 +908,7 @@ yeccpars2_13_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_14_/1}).
--file("parser-generator/sparql-parser.yrl", 7).
+-file("parser-generator/sparql-parser.yrl", 10).
 yeccpars2_14_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -916,7 +916,7 @@ yeccpars2_14_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_17_/1}).
--file("parser-generator/sparql-parser.yrl", 74).
+-file("parser-generator/sparql-parser.yrl", 79).
 yeccpars2_17_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -924,7 +924,7 @@ yeccpars2_17_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_20_/1}).
--file("parser-generator/sparql-parser.yrl", 26).
+-file("parser-generator/sparql-parser.yrl", 31).
 yeccpars2_20_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -932,7 +932,7 @@ yeccpars2_20_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_21_/1}).
--file("parser-generator/sparql-parser.yrl", 128).
+-file("parser-generator/sparql-parser.yrl", 133).
 yeccpars2_21_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -940,7 +940,7 @@ yeccpars2_21_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_22_/1}).
--file("parser-generator/sparql-parser.yrl", 72).
+-file("parser-generator/sparql-parser.yrl", 77).
 yeccpars2_22_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -948,7 +948,7 @@ yeccpars2_22_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_24_/1}).
--file("parser-generator/sparql-parser.yrl", 73).
+-file("parser-generator/sparql-parser.yrl", 78).
 yeccpars2_24_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -956,7 +956,7 @@ yeccpars2_24_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_26_/1}).
--file("parser-generator/sparql-parser.yrl", 97).
+-file("parser-generator/sparql-parser.yrl", 102).
 yeccpars2_26_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -964,7 +964,7 @@ yeccpars2_26_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_27_/1}).
--file("parser-generator/sparql-parser.yrl", 130).
+-file("parser-generator/sparql-parser.yrl", 135).
 yeccpars2_27_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -972,7 +972,7 @@ yeccpars2_27_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_29_/1}).
--file("parser-generator/sparql-parser.yrl", 129).
+-file("parser-generator/sparql-parser.yrl", 134).
 yeccpars2_29_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -980,7 +980,7 @@ yeccpars2_29_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_30_/1}).
--file("parser-generator/sparql-parser.yrl", 127).
+-file("parser-generator/sparql-parser.yrl", 132).
 yeccpars2_30_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -988,7 +988,7 @@ yeccpars2_30_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_31_/1}).
--file("parser-generator/sparql-parser.yrl", 22).
+-file("parser-generator/sparql-parser.yrl", 27).
 yeccpars2_31_(__Stack0) ->
  [__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -996,7 +996,7 @@ yeccpars2_31_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_32_/1}).
--file("parser-generator/sparql-parser.yrl", 27).
+-file("parser-generator/sparql-parser.yrl", 32).
 yeccpars2_32_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -1004,7 +1004,7 @@ yeccpars2_32_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_33_/1}).
--file("parser-generator/sparql-parser.yrl", 28).
+-file("parser-generator/sparql-parser.yrl", 33).
 yeccpars2_33_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -1012,7 +1012,7 @@ yeccpars2_33_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_34_/1}).
--file("parser-generator/sparql-parser.yrl", 79).
+-file("parser-generator/sparql-parser.yrl", 84).
 yeccpars2_34_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1020,7 +1020,7 @@ yeccpars2_34_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_35_/1}).
--file("parser-generator/sparql-parser.yrl", 60).
+-file("parser-generator/sparql-parser.yrl", 65).
 yeccpars2_35_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -1028,7 +1028,7 @@ yeccpars2_35_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_36_/1}).
--file("parser-generator/sparql-parser.yrl", 62).
+-file("parser-generator/sparql-parser.yrl", 67).
 yeccpars2_36_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1036,7 +1036,7 @@ yeccpars2_36_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_38_/1}).
--file("parser-generator/sparql-parser.yrl", 78).
+-file("parser-generator/sparql-parser.yrl", 83).
 yeccpars2_38_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1044,7 +1044,7 @@ yeccpars2_38_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_39_/1}).
--file("parser-generator/sparql-parser.yrl", 89).
+-file("parser-generator/sparql-parser.yrl", 94).
 yeccpars2_39_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1052,7 +1052,7 @@ yeccpars2_39_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_40_/1}).
--file("parser-generator/sparql-parser.yrl", 84).
+-file("parser-generator/sparql-parser.yrl", 89).
 yeccpars2_40_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1060,7 +1060,7 @@ yeccpars2_40_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_41_/1}).
--file("parser-generator/sparql-parser.yrl", 65).
+-file("parser-generator/sparql-parser.yrl", 70).
 yeccpars2_41_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -1068,7 +1068,7 @@ yeccpars2_41_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_42_/1}).
--file("parser-generator/sparql-parser.yrl", 67).
+-file("parser-generator/sparql-parser.yrl", 72).
 yeccpars2_42_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1076,7 +1076,7 @@ yeccpars2_42_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_43_/1}).
--file("parser-generator/sparql-parser.yrl", 85).
+-file("parser-generator/sparql-parser.yrl", 90).
 yeccpars2_43_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1084,7 +1084,7 @@ yeccpars2_43_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_44_/1}).
--file("parser-generator/sparql-parser.yrl", 87).
+-file("parser-generator/sparql-parser.yrl", 92).
 yeccpars2_44_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1092,7 +1092,7 @@ yeccpars2_44_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_45_/1}).
--file("parser-generator/sparql-parser.yrl", 83).
+-file("parser-generator/sparql-parser.yrl", 88).
 yeccpars2_45_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1100,7 +1100,7 @@ yeccpars2_45_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_46_/1}).
--file("parser-generator/sparql-parser.yrl", 86).
+-file("parser-generator/sparql-parser.yrl", 91).
 yeccpars2_46_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1108,7 +1108,7 @@ yeccpars2_46_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_47_/1}).
--file("parser-generator/sparql-parser.yrl", 88).
+-file("parser-generator/sparql-parser.yrl", 93).
 yeccpars2_47_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1116,7 +1116,7 @@ yeccpars2_47_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_48_/1}).
--file("parser-generator/sparql-parser.yrl", 103).
+-file("parser-generator/sparql-parser.yrl", 108).
 yeccpars2_48_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1124,7 +1124,7 @@ yeccpars2_48_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_49_/1}).
--file("parser-generator/sparql-parser.yrl", 116).
+-file("parser-generator/sparql-parser.yrl", 121).
 yeccpars2_49_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1132,7 +1132,7 @@ yeccpars2_49_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_50_/1}).
--file("parser-generator/sparql-parser.yrl", 122).
+-file("parser-generator/sparql-parser.yrl", 127).
 yeccpars2_50_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1140,7 +1140,7 @@ yeccpars2_50_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_51_/1}).
--file("parser-generator/sparql-parser.yrl", 121).
+-file("parser-generator/sparql-parser.yrl", 126).
 yeccpars2_51_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1148,7 +1148,7 @@ yeccpars2_51_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_52_/1}).
--file("parser-generator/sparql-parser.yrl", 93).
+-file("parser-generator/sparql-parser.yrl", 98).
 yeccpars2_52_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1156,7 +1156,7 @@ yeccpars2_52_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_53_/1}).
--file("parser-generator/sparql-parser.yrl", 115).
+-file("parser-generator/sparql-parser.yrl", 120).
 yeccpars2_53_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1164,7 +1164,7 @@ yeccpars2_53_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_54_/1}).
--file("parser-generator/sparql-parser.yrl", 104).
+-file("parser-generator/sparql-parser.yrl", 109).
 yeccpars2_54_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -1172,7 +1172,7 @@ yeccpars2_54_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_55_/1}).
--file("parser-generator/sparql-parser.yrl", 110).
+-file("parser-generator/sparql-parser.yrl", 115).
 yeccpars2_55_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -1180,7 +1180,7 @@ yeccpars2_55_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_57_/1}).
--file("parser-generator/sparql-parser.yrl", 106).
+-file("parser-generator/sparql-parser.yrl", 111).
 yeccpars2_57_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -1188,7 +1188,7 @@ yeccpars2_57_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_58_/1}).
--file("parser-generator/sparql-parser.yrl", 105).
+-file("parser-generator/sparql-parser.yrl", 110).
 yeccpars2_58_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -1196,7 +1196,7 @@ yeccpars2_58_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_60_/1}).
--file("parser-generator/sparql-parser.yrl", 68).
+-file("parser-generator/sparql-parser.yrl", 73).
 yeccpars2_60_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -1204,7 +1204,7 @@ yeccpars2_60_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_62_/1}).
--file("parser-generator/sparql-parser.yrl", 63).
+-file("parser-generator/sparql-parser.yrl", 68).
 yeccpars2_62_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -1212,4 +1212,4 @@ yeccpars2_62_(__Stack0) ->
   end | __Stack].
 
 
--file("parser-generator/sparql-parser.yrl", 168).
+-file("parser-generator/sparql-parser.yrl", 173).

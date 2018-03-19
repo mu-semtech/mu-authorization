@@ -1,6 +1,34 @@
 # Sparql
 This module offers a SPARQL parser for elixir.
 
+## Parsing SPARQL queries
+
+### the simplest case
+The most simple SPARQL query (which returns you your entire database) is:
+```
+SELECT * WHERE { ?s ?p ?o }
+```
+
+To parse this with our SPARQL parser you can type this inside your elixir module:
+```
+'SELECT * WHERE { ?s ?p ?o }' |> Sparql.parse
+```
+The response of this function will be
+```
+{:ok,
+ {:sparql,
+  {:select, {:"select-clause", {:"var-list", :asterisk}},
+   {:where,
+    [
+      {:"same-subject-path", {:subject, {:variable, :s}},
+       {:"predicate-list",
+        [
+          {{:predicate, {:variable, :p}},
+           {:"object-list", [object: {:variable, :o}]}}
+        ]}}
+    ]}}}}
+```
+
 ## Files
 
 * sparql.xrl: contains the rules for tokenizing queries, can be transformed into a sparql.erl file by using :leex

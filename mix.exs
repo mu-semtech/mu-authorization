@@ -8,6 +8,7 @@ defmodule Sparql.MixProject do
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
       package: package(),
+      erlc_paths: ["parser-generator"],
       deps: deps()
     ]
   end
