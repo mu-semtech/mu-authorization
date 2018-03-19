@@ -1,34 +1,97 @@
 defmodule Sparql do
   @moduledoc """
-  Documentation for Sparql.
+  This module offers some functionality to parse SPARQL queries. To do this I
+  have build a parser with the :leex and :yecc erlang libraries.
+
+  You can find the source files as well as the compiled erlang files
+  for this under ../parser-generator/
+
+  Since this uses raw erlang libraries under the hood all queries that get send
+  are assumed to be single quoted strings
+
+  TODO add a function to remove all graph statements
+  TODO add a function to override all graph statements with a set of graph statements
   """
 
   @doc """
-  Hello world.
+  Parses a SPARQL query that gets passed in a single quoted string
+  (see erlang documentation on the issues with double quoted strings)
 
   ## Examples
 
-      iex> Sparql.hello
-      :world
-
+       iex> Sparql.parse('SELECT ?s ?p ?o WHERE { ?s ?p ?o }')
+       {:ok,
+         {:sparql,
+           {:select,
+             {:"select-clause", {:"var-list", [variable: :s, variable: :p, variable: :o]}},
+             {:where,
+               [
+                 {:"same-subject-path", {:subject, {:variable, :s}},
+                   {:"predicate-list",
+                   [
+                     {{:predicate, {:variable, :p}},
+                       {:"object-list", [object: {:variable, :o}]}}
+             ]}}
+           ]}}
+         }
+       }
   """
-  def hello do
-    :world
-  end
-
   def parse(raw_query) do
     raw_query |> tokenize |> do_parse
   end
 
-  def tokenize(raw_query) do
+  defp tokenize(raw_query) do
     :"sparql-tokenizer".string(raw_query)
   end
 
-  def do_parse({:ok, tokenized_query, _}) do
+  defp do_parse({:ok, tokenized_query, _}) do
     :"sparql-parser".parse(tokenized_query)
   end
 
-  def do_parse({:error, _, _} = error_message) do
+  defp do_parse({:error, _, _} = error_message) do
     error_message
+  end
+
+  @doc """
+  converts all same-subject-paths into simple subject paths
+  in SPARQL itself this is the equivalent of converting
+    ?s ?p ?o ; ?p2 ?o2 , ?o3 .
+  to
+    ?s ?p ?o .
+    ?s ?p2 ?o2 .
+    ?s ?p2 ?o3 .
+
+  In terms of a SPARQL query that follows our implementation this means that:
+  {:"same-subject-path", {:subject, {:variable, :s}},
+  {:"predicate-list",
+  [
+  {{:predicate, {:variable, :p}},
+  {:"object-list", [object: {:variable, :o}]}}
+  ]}}
+
+  ## Examples
+  convert_to_simple_triples({:"same-subject-path", {:subject, {:variable, :s}},
+  {:"predicate-list",
+  [
+  {{:predicate, {:variable, :p}},
+  {:"object-list", [object: {:variable, :o}]}}
+  ]}})
+  [
+    {{:subject, {:variable, :s}}, {:predicate, {:variable, :p}}, {:object, {:object, {:variable, :o}}}}
+  ]
+
+
+  """
+  def convert_to_simple_triples({:"same-subject-path", {:subject, subject}, {:"predicate-list", predicate_list}})do
+    convert_to_simple_triples(subject, predicate_list)
+  end
+
+  defp convert_to_simple_triples(subject, predicate_list) do
+    Enum.map(predicate_list, fn({{:predicate, predicate}, {:"object-list", object_list}}) -> convert_to_simple_triples(subject, predicate, object_list) end)
+    |> Enum.reduce(fn(x,acc) -> Enum.into(x, acc, fn(x) -> x end) end)
+  end
+
+  defp convert_to_simple_triples(subject, predicate, object_list) do
+    Enum.map(object_list, fn(object) -> {{:subject, subject}, {:predicate, predicate}, {:object, object}} end)
   end
 end

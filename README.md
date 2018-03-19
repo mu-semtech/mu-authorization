@@ -29,6 +29,38 @@ The response of this function will be
     ]}}}}
 ```
 
+
+## SameSubjectPath
+The SPARQL spec defines something that is a SameSubjectPath, in terms of SPARQL itself this could be for instance:
+```
+?s ?p ?o; ?p2 ?o2
+```
+which would of course expand to 2 SimpleSubjectPaths
+```
+?s ?p ?o .
+?s ?p2 ?o2 .
+```
+We provide a helper function that converts these SameSubjectPath's into an array of SimpleSubjectPaths:
+```
+same_subject_path = {:"same-subject-path", {:subject, {:variable, :s}},
+       {:"predicate-list",
+        [
+          {{:predicate, {:variable, :p}},
+           {:"object-list", [object: {:variable, :o}]}},
+          {{:predicate, {:variable, :p2}},
+           {:"object-list",
+            [object: {:variable, :o2}, object: {:variable, :o3}]}}
+        ]}}
+simple_subject_path = Sparql.convert_to_simple_triples(same_subject_path)
+```
+which results in:
+```
+simple_subject_path = [
+  {{:subject, {:variable, :s}}, {:predicate, {:variable, :p}}, {:object, {:object, {:variable, :o}}}},
+  {{:subject, {:variable, :s}}, {:predicate, {:variable, :p2}},{:object, {:object, {:variable, :o2}}}},
+  {{:subject, {:variable, :s}}, {:predicate, {:variable, :p2}},{:object, {:object, {:variable, :o3}}}}
+]
+```
 ## Files
 
 * sparql.xrl: contains the rules for tokenizing queries, can be transformed into a sparql.erl file by using :leex

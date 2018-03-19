@@ -20,4 +20,35 @@ defmodule SparqlTest do
 
     assert parsed_simple_query == standard_simple_query
   end
+
+  test "reduce a same-subject-path to an array of simple-subject-path object" do
+    same_subject_path = {:"same-subject-path", {:subject, {:variable, :s}},
+                         {:"predicate-list",
+                          [
+                            {{:predicate, {:variable, :p}},
+                             {:"object-list", [object: {:variable, :o}]}}
+                          ]}}
+    simple_subject_path = [{{:subject, {:variable, :s}}, {:predicate, {:variable, :p}}, {:object, {:object, {:variable, :o}}}}]
+
+    assert simple_subject_path == Sparql.convert_to_simple_triples(same_subject_path)
+  end
+
+  test "a more complex same-subject-path test where we test this 3 levels deep" do
+    same_subject_path = {:"same-subject-path", {:subject, {:variable, :s}},
+                         {:"predicate-list",
+                          [
+                            {{:predicate, {:variable, :p}},
+                             {:"object-list", [object: {:variable, :o}]}},
+                            {{:predicate, {:variable, :p2}},
+                             {:"object-list",
+                              [object: {:variable, :o2}, object: {:variable, :o3}]}}
+                          ]}}
+    simple_subject_path = [
+      {{:subject, {:variable, :s}}, {:predicate, {:variable, :p}},{:object, {:object, {:variable, :o}}}},
+      {{:subject, {:variable, :s}}, {:predicate, {:variable, :p2}},{:object, {:object, {:variable, :o2}}}},
+      {{:subject, {:variable, :s}}, {:predicate, {:variable, :p2}},{:object, {:object, {:variable, :o3}}}}
+    ]
+
+    assert simple_subject_path == Sparql.convert_to_simple_triples(same_subject_path)
+  end
 end
