@@ -1,8 +1,8 @@
 # Sparql
-[![Hex version badge](https://img.shields.io/hexpm/v/repo_example.svg)](https://hex.pm/packages/sparqlex)
-[![License badge](https://img.shields.io/hexpm/l/repo_example.svg)](https://github.com/langens-jonathan/sparql/blob/master/LICENSE)
-[![Build status badge](https://img.shields.io/circleci/project/github/surgeventures/repo-example-elixir/master.svg)](https://circleci.com/gh/surgeventures/repo-example-elixir/tree/master)
-[![Code coverage badge](https://img.shields.io/codecov/c/github/surgeventures/repo-example-elixir/master.svg)](https://codecov.io/gh/surgeventures/repo-example-elixir/branch/master)
+[![Hex version badge](https://img.shields.io/hexpm/v/sparqlex.svg)](https://hex.pm/packages/sparqlex)
+[![License badge](https://img.shields.io/hexpm/l/sparqlex.svg)](https://github.com/langens-jonathan/sparql/blob/master/LICENSE)
+[![Build status badge](https://img.shields.io/circleci/project/github/langens-jonathan/sparql/master.svg)](https://circleci.com/gh/langens-jonathan/sparql/tree/master)
+[![Code coverage badge](https://img.shields.io/codecov/c/github/langens-jonathan/sparql/master.svg)](https://codecov.io/gh/langens-jonathan/sparql/branch/master)
 This module offers a SPARQL parser for elixir.
 
 ## Parsing SPARQL queries
