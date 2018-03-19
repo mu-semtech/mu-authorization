@@ -20,6 +20,12 @@ defmodule SparqlTest do
 
     assert parsed_simple_query == standard_simple_query
   end
+  
+  test "parse a wrong SPARQL query" do
+    simple_query = 'SELECT * WHERE '
+    {response_code,_,_} = simple_query |> Sparql.parse
+    assert :error == response_code
+  end
 
   test "reduce a same-subject-path to an array of simple-subject-path object" do
     same_subject_path = {:"same-subject-path", {:subject, {:variable, :s}},
