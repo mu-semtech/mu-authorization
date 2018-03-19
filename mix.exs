@@ -1,13 +1,14 @@
 defmodule Sparql.MixProject do
   use Mix.Project
 
+  @github_url "https://github.com/langens-jonathan/sparql"
+  
   def project do
     [
       app: :sparql,
       version: "0.1.0",
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
-      package: package(),
       erlc_paths: ["parser-generator"],
       deps: deps(),
       docs: [
@@ -20,6 +21,18 @@ defmodule Sparql.MixProject do
         "coveralls.detail": :test,
         "coveralls.post": :test,
         "coveralls.html": :test
+      ],
+      name: "SPARQL",
+      description: "An elixir library for parsing and handling SPARQL queries.",
+      source_url: @github_url,
+      homepage_url: @github_url,
+      files: ~w(mix.exs lib LICENSE.md README.md CHANGELOG.md),
+      package: [
+        maintainers: ["Langens Jonathan"],
+        licenses: ["MIT"],
+        links: %{
+          "GitHub" => @github_url,
+        }
       ]
     ]
   end
@@ -30,15 +43,6 @@ defmodule Sparql.MixProject do
       extra_applications: [:logger]
     ]
   end
-
-  def package do
-    [
-      maintainers: ["Langens Jonathan"],
-      licenses: ["MIT"],
-      links: ["https://github.com/langens-jonathan/ebnf.git"]
-    ]
-  end
-
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
