@@ -1,14 +1,17 @@
 defmodule Sparql do
   @moduledoc """
+  ## Overview
   This module offers some functionality to parse SPARQL queries. To do this I
   have build a parser with the :leex and :yecc erlang libraries.
 
+  ## :leex and :yecc
   You can find the source files as well as the compiled erlang files
   for this under ../parser-generator/
 
   Since this uses raw erlang libraries under the hood all queries that get send
   are assumed to be single quoted strings
 
+  ## TODOs
   TODO add a function to remove all graph statements
   TODO add a function to override all graph statements with a set of graph statements
   """
@@ -53,32 +56,28 @@ defmodule Sparql do
   end
 
   @doc """
-  converts all same-subject-paths into simple subject paths
-  in SPARQL itself this is the equivalent of converting
+  Converts all same-subject-paths into simple subject paths
+  in SPARQL itself this is the equivalent of converting.
+  ```
     ?s ?p ?o ; ?p2 ?o2 , ?o3 .
+  ```
   to
+  ```
     ?s ?p ?o .
     ?s ?p2 ?o2 .
     ?s ?p2 ?o3 .
-
-  In terms of a SPARQL query that follows our implementation this means that:
-  {:"same-subject-path", {:subject, {:variable, :s}},
-  {:"predicate-list",
-  [
-  {{:predicate, {:variable, :p}},
-  {:"object-list", [object: {:variable, :o}]}}
-  ]}}
+  ```
 
   ## Examples
-  convert_to_simple_triples({:"same-subject-path", {:subject, {:variable, :s}},
-  {:"predicate-list",
-  [
-  {{:predicate, {:variable, :p}},
-  {:"object-list", [object: {:variable, :o}]}}
-  ]}})
-  [
-    {{:subject, {:variable, :s}}, {:predicate, {:variable, :p}}, {:object, {:object, {:variable, :o}}}}
-  ]
+       iex> Sparql.convert_to_simple_triples({:"same-subject-path", {:subject, {:variable, :s}},
+       iex> {:"predicate-list",
+       iex> [
+       iex> {{:predicate, {:variable, :p}},
+       iex> {:"object-list", [object: {:variable, :o}]}}
+       iex> ]}})
+       [
+         {{:subject, {:variable, :s}}, {:predicate, {:variable, :p}}, {:object, {:object, {:variable, :o}}}}
+       ]
 
 
   """

@@ -29,3 +29,9 @@ config :sparql, author: :flowofcontrol
 # here (which is why it is important to import them last).
 #
 #     import_config "#{Mix.env}.exs"
+
+if Mix.env == :test do
+  config :junit_formatter, 
+  report_dir: "/tmp/repo-example-test-results/exunit"
+end
+
