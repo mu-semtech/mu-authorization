@@ -15,7 +15,7 @@ defmodule EbnfParser.Tokenizer do
   @doc """
   ## Examples
        iex> Parser.ebnf_tokenizer( {:default}, String.codepoints("FOO") )
-       [ {:symbol, "FOO" } ]
+       [ {:symbol, :FOO } ]
   """
   def ebnf_tokenizer( {:default} , [ char | rest ] ) when ("a" <= char and char <= "z") or ("A" <= char and char <= "Z") do
     ebnf_tokenizer( {:symbol, [ char ] }, rest )
@@ -26,7 +26,13 @@ defmodule EbnfParser.Tokenizer do
   end
 
   def ebnf_tokenizer( {:symbol, characters}, rest ) do
-    [ { :symbol, to_string( Enum.reverse( characters ) ) } | ebnf_tokenizer( {:default}, rest ) ]
+    symbol =
+      characters
+      |> Enum.reverse
+      |> to_string
+      |> String.to_atom
+
+    [ { :symbol, symbol } | ebnf_tokenizer( {:default}, rest ) ]
   end
 
   # A?
@@ -111,7 +117,6 @@ defmodule EbnfParser.Tokenizer do
   end
 
   def ebnf_tokenizer( { :hex_char, prev_mode, hex_values }, rest ) do
-    IO.inspect( hex_values )
     { encoded_value, _} =
       hex_values
       |> Enum.reverse
