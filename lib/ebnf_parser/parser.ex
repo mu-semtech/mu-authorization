@@ -1,5 +1,21 @@
 defmodule EbnfParser.Parser do
 
+  def ebnf_parser_reverse_order( { name, [ a | rest ]  } ) do
+    updated_content =
+      [ a | rest ]
+      |> Enum.reverse
+      |> (Enum.map &ebnf_parser_reverse_order/1 )
+    { name, updated_content}
+  end
+
+  def ebnf_parser_reverse_order( { name, content } ) do
+    { name, content}
+  end
+
+  def ebnf_parser_reverse_order( item ) do
+    item
+  end
+
   def ebnf_parser_append_to_parent( content, [ { parent_group, parent_content } | other_parents ] ) do
     [ { parent_group, [ content | parent_content ] } | other_parents ]
   end
