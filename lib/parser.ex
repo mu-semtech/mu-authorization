@@ -14,7 +14,9 @@ defmodule Parser do
   end
 
   def parse_sparql() do
-    split_forms( EbnfParser.Forms.sparql )
+    EbnfParser.Forms.sparql
+    |> Enum.map( &split_single_form/1 )
+    |> Enum.into( %{} )
   end
 
 
@@ -44,6 +46,16 @@ defmodule Parser do
     |> ( Enum.map &EbnfParser.Parser.ebnf_parser_reverse_order/1 )
   end
 
+  def make_rule_map( rule_strings ) do
+    rule_strings
+    |> Enum.map( &split_single_form/1 )
+    |> Enum.into( %{} )
+  end
 
+  def parse_and_match( rule, str, prev\\[]) do
+    rule = Parser.full_parse( rule )
+    chars = String.codepoints( str )
+    EbnfInterpreter.eagerly_match_rule( chars, %{}, rule, prev )
+  end
 
 end
