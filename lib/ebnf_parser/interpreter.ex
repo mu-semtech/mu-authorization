@@ -192,46 +192,46 @@ defmodule EbnfInterpreter do
   ## [TODO] :symbol
 
   """
-  def eagerly_match_rule( chars, _syntax, {quote_type, string}, matched_rule_info ) when quote_type in [:single_quoted_string, :double_quoted_string] do
+  def eagerly_match_rule( chars, _syntax, {quote_type, string}, _ ) when quote_type in [:single_quoted_string, :double_quoted_string] do
     if string == to_string( Enum.take( chars, String.length( string ) ) ) do
       chars = Enum.drop( chars, String.length( string ) )
-      { :ok, chars, string, matched_rule_info }
+      { :ok, chars, string, [] }
     else
       { :fail }
     end
   end
 
   # :maybe
-  def eagerly_match_rule( chars, syntax, {:maybe, [ matcher ]}, matched_rule_info ) do
-    case eagerly_match_rule( chars, syntax, matcher, matched_rule_info ) do
+  def eagerly_match_rule( chars, syntax, {:maybe, [ matcher ]}, _ ) do
+    case eagerly_match_rule( chars, syntax, matcher, [] ) do
       { :ok, leftover, matched_portion, matched_rule_info } -> { :ok, leftover, matched_portion, matched_rule_info }
-      { _ } -> { :ok, chars, "", matched_rule_info }
+      { _ } -> { :ok, chars, "", [] }
     end
   end
 
   # :maybe_many
-  def eagerly_match_rule( chars, syntax, {:maybe_many, [ matcher ]}, matched_rule_info ) do
+  def eagerly_match_rule( chars, syntax, {:maybe_many, [ matcher ]}, _ ) do
     case eagerly_match_rule( chars, syntax, matcher, [] ) do
       { :ok, leftover, matched_portion, matched_rule_info } ->
         if leftover == chars do
           { :ok, chars, "", matched_rule_info }
         else
           case eagerly_match_rule( leftover, syntax, {:maybe_many, [matcher]}, [] ) do
-            { :ok, new_leftover, new_matched_portion, new_matched_rule_info } ->
-              { :ok, new_leftover, matched_portion <> new_matched_portion, matched_rule_info ++ new_matched_rule_info }
+            { :ok, new_leftover, new_matched_portion, next_matched_rule_info } ->
+              { :ok, new_leftover, matched_portion <> new_matched_portion, matched_rule_info ++ next_matched_rule_info  }
             { _ } -> { :ok, leftover, matched_portion, matched_rule_info }
           end
         end
-      { _ } -> { :ok, chars, "", matched_rule_info }
+      { _ } -> { :ok, chars, "", [] }
     end
   end
 
   # :one_or_more
-  def eagerly_match_rule( chars, syntax, {:one_or_more, [ matcher ]}, matched_rule_info ) do
-    case eagerly_match_rule( chars, syntax, matcher, matched_rule_info ) do
+  def eagerly_match_rule( chars, syntax, {:one_or_more, [ matcher ]}, _ ) do
+    case eagerly_match_rule( chars, syntax, matcher, [] ) do
       { :ok, leftover, matched_portion, matched_rule_info } ->
-        { :ok, new_leftover, next_matched_portion, next_matched_rule_info } = eagerly_match_rule( leftover, syntax, {:maybe_many, [matcher]}, matched_rule_info )
-        { :ok, new_leftover, matched_portion <> next_matched_portion, next_matched_rule_info }
+        { :ok, new_leftover, next_matched_portion, last_matched_rule_info } = eagerly_match_rule( leftover, syntax, {:maybe_many, [matcher]}, [] )
+        { :ok, new_leftover, matched_portion <> next_matched_portion, matched_rule_info ++ last_matched_rule_info }
       { _ } -> {:fail}
     end
   end
@@ -242,7 +242,7 @@ defmodule EbnfInterpreter do
     eagerly_match_rule( chars, syntax, contents, matched_rule_info )
   end
 
-  def eagerly_match_rule( chars, syntax, [ first | rest ], _matched_rule_info ) do
+  def eagerly_match_rule( chars, syntax, [ first | rest ], _ ) do
     case eagerly_match_rule( chars, syntax, first, [] ) do
       { :ok, first_leftover, first_matched_portion, first_rule_info } ->
         case eagerly_match_rule( first_leftover, syntax, rest, [] ) do
@@ -257,9 +257,9 @@ defmodule EbnfInterpreter do
   end
 
   # :one_of
-  def eagerly_match_rule( chars, syntax, {:one_of, options}, matched_rule_info ) do
+  def eagerly_match_rule( chars, syntax, {:one_of, options}, _ ) do
     # In case of options, we should pick the longest solution
-    matched_info = Enum.map( options, fn option ->  eagerly_match_rule chars, syntax, option, matched_rule_info end )
+    matched_info = Enum.map( options, fn option ->  eagerly_match_rule chars, syntax, option, [] end )
     best_option = Enum.max_by( matched_info,
       fn
         { :ok, _, rest_matched_portion, _ } -> String.length( rest_matched_portion )
@@ -270,9 +270,9 @@ defmodule EbnfInterpreter do
   end
 
   # :range
-  def eagerly_match_rule( [char | chars], _syntax, {:range, [from_char, to_char]}, matched_rule_info ) do
+  def eagerly_match_rule( [char | chars], _syntax, {:range, [from_char, to_char]}, _ ) do
     if char_for_code( from_char ) <= char and char <= char_for_code( to_char ) do
-      { :ok, chars, char, matched_rule_info }
+      { :ok, chars, char, [] }
     else
       { :fail }
     end
@@ -282,12 +282,12 @@ defmodule EbnfInterpreter do
   end
 
   # :bracket_selector
-  def eagerly_match_rule( chars, syntax, {:bracket_selector, [ current_option | options ]}, rule_info ) do
-    case eagerly_match_rule( chars, syntax, current_option, rule_info ) do
+  def eagerly_match_rule( chars, syntax, {:bracket_selector, [ current_option | options ]}, _ ) do
+    case eagerly_match_rule( chars, syntax, current_option, [] ) do
       { :ok, left_chars, matched_portion, matched_rule_info } ->
         { :ok, left_chars, matched_portion, matched_rule_info }
       { _ } ->
-        eagerly_match_rule( chars, syntax, {:bracket_selector, options}, rule_info )
+        eagerly_match_rule( chars, syntax, {:bracket_selector, options}, [] )
     end
   end
   def eagerly_match_rule( _, _, {:bracket_selector, [] }, _ ) do
@@ -295,36 +295,36 @@ defmodule EbnfInterpreter do
   end
 
   # :not_bracket_selector
-  def eagerly_match_rule( [], _syntax, {:not_bracket_selector, _}, _rule_info ) do
+  def eagerly_match_rule( [], _syntax, {:not_bracket_selector, _}, _ ) do
     { :fail }
   end
-  def eagerly_match_rule( chars, syntax, {:not_bracket_selector, [ current_option | options ]}, rule_info ) do
-    case eagerly_match_rule( chars, syntax, {:bracket_selector, [current_option]}, rule_info ) do
+  def eagerly_match_rule( chars, syntax, {:not_bracket_selector, [ current_option | options ]}, _ ) do
+    case eagerly_match_rule( chars, syntax, {:bracket_selector, [current_option]}, [] ) do
       { :ok, _, _, _ } -> { :fail }
-      { :fail } -> eagerly_match_rule( chars, syntax, {:not_bracket_selector, options}, rule_info )
+      { :fail } -> eagerly_match_rule( chars, syntax, {:not_bracket_selector, options}, [] )
     end
   end
-  def eagerly_match_rule( [first_char | rest_chars], _syntax, {:not_bracket_selector, []}, rule_info ) do
-    { :ok, rest_chars, first_char, rule_info }
+  def eagerly_match_rule( [first_char | rest_chars], _syntax, {:not_bracket_selector, []}, _ ) do
+    { :ok, rest_chars, first_char, [] }
   end
 
   # :character :hex_character
-  def eagerly_match_rule( [char | chars ], _syntax, {character_type, character}, rule_info ) when character_type in [:hex_character, :character] do
+  def eagerly_match_rule( [char | chars ], _syntax, {character_type, character}, _ ) when character_type in [:hex_character, :character] do
     if char == char_for_code( {character_type, character} ) do
-      { :ok, chars, char, rule_info }
+      { :ok, chars, char, [] }
     else
       { :fail }
     end
   end
-  def eagerly_match_rule( [], _syntax, {character_type, _character}, _rule_info ) when character_type in [:hex_character, :character] do
+  def eagerly_match_rule( [], _, {character_type, _}, _ ) when character_type in [:hex_character, :character] do
     { :fail }
   end
 
   # :minus
-  def eagerly_match_rule( chars, syntax, {:minus, [first, second]}, rule_info ) do
-    case eagerly_match_rule( chars, syntax, first, rule_info ) do
+  def eagerly_match_rule( chars, syntax, {:minus, [first, second]}, [] ) do
+    case eagerly_match_rule( chars, syntax, first, [] ) do
       { :ok, leftover, matched_portion, matched_rules } ->
-        case eagerly_match_rule( chars, syntax, second, rule_info ) do
+        case eagerly_match_rule( chars, syntax, second, [] ) do
           { :ok, _, _, _ } -> { :fail }
           { _ } -> { :ok, leftover, matched_portion, matched_rules }
         end
