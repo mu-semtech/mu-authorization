@@ -333,11 +333,16 @@ defmodule EbnfInterpreter do
   end
 
   # :symbol
-  def eagerly_match_rule( chars, syntax, {:symbol, name}, _matched_rule_info ) do
+  def eagerly_match_rule( chars, syntax, {:symbol, name}, _ ) do
     # Strip spaces from front
-    stripped_chars = Enum.drop_while( chars, fn x -> x in [" ","\t","\n"] end )
     # Match rule
-    rule = Map.get( syntax, name )
+    { terminal, rule } = Map.get( syntax, name )
+    stripped_chars = if terminal do
+      chars
+    else
+      Enum.drop_while( chars, fn x -> x in [" ","\t","\n"] end )
+    end
+
     case eagerly_match_rule( stripped_chars, syntax, rule, [] ) do
       {:ok, leftover, matched_portion, matched_rules } -> { :ok, leftover, matched_portion, [{ name, matched_portion, matched_rules }] }
       { _ } -> { :fail }

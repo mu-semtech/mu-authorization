@@ -3,10 +3,10 @@ defmodule Parser do
   Parser for the W3C EBNF syntax.
   """
 
-  def split_single_form( string ) do
+  def split_single_form( string, terminal\\nil ) do
     split_string = String.split( string , "::=", parts: 2 )
     [name, clause] = Enum.map( split_string , &String.trim/1 )
-    { String.to_atom( name ), full_parse( clause ) }
+    { String.to_atom( name ), {terminal, full_parse( clause )} }
   end
 
   def split_forms( forms ) do
@@ -14,9 +14,16 @@ defmodule Parser do
   end
 
   def parse_sparql() do
-    EbnfParser.Forms.sparql
-    |> Enum.map( &split_single_form/1 )
-    |> Enum.into( %{} )
+    %{non_terminal: non_terminal_forms, terminal: terminal_forms} = EbnfParser.Forms.sparql
+
+    my_map =
+      non_terminal_forms
+      |> Enum.map( fn x -> split_single_form( x, false ) end )
+      |> Enum.into( %{} )
+
+    terminal_forms
+    |> Enum.map( fn x -> split_single_form( x, true ) end )
+    |> Enum.into( my_map )
   end
 
 
