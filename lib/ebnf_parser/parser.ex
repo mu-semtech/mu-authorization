@@ -296,12 +296,6 @@ defmodule EbnfParser.Parser do
     end
   end
 
-  # def smart_parse_infixes( [ left, { :minus }, right | rest ] ) do
-  #   [new_left] = smart_parse_infixes( [left] )
-  #   [new_right] = smart_parse_infixes( [right] )
-  #   smart_parse_infixes( [ { :minus, [ new_left, new_right ] } | rest ] )
-  # end
-
   def smart_parse_infixes( [ { token, items } | rest ] ) when token in [ :paren_group, :maybe_many, :one_or_more, :maybe  ] do
     [ { token, smart_parse_infixes( items ) } | smart_parse_infixes( rest ) ]
   end
