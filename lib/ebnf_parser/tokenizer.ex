@@ -6,6 +6,17 @@ defmodule EbnfParser.Tokenizer do
 
   # def ebnf_tokenizer( {:state}, content_array )
 
+  @doc """
+  ## Examples
+
+      iex> EbnfParser.Tokenizer.tokenize( "iri | 'a' | ( '!' PathNegatedPropertySet ) | '(' Path ')'" )
+      [ {:symbol, :iri}, {:pipe}, {:single_quote, "a"}, {:pipe}, {:open_paren}, {:single_quote, "!"}, {:symbol, :PathNegatedPropertySet}, {:close_paren}, {:pipe}, {:single_quote, "("}, {:symbol, :Path}, {:single_quote, ")"} ]
+
+  """
+  def tokenize( string ) do
+    ebnf_tokenizer( { :default }, String.graphemes( string ) )
+  end
+
   # whitespace
   def ebnf_tokenizer( { :default }, [ symbol | rest ] ) when symbol in [" ", "\n", "\t"] do
     ebnf_tokenizer( { :default }, rest )
@@ -14,7 +25,7 @@ defmodule EbnfParser.Tokenizer do
   # Symbol
   @doc """
   ## Examples
-       iex> Parser.ebnf_tokenizer( {:default}, String.codepoints("FOO") )
+       iex> EbnfParser.Tokenizer.ebnf_tokenizer( {:default}, String.codepoints("FOO") )
        [ {:symbol, :FOO } ]
   """
   def ebnf_tokenizer( {:default} , [ char | rest ] ) when ("a" <= char and char <= "z") or ("A" <= char and char <= "Z") do

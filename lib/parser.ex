@@ -26,6 +26,10 @@ defmodule Parser do
     |> Enum.into( my_map )
   end
 
+  def parse_query( string, rule\\:QueryUnit ) do
+    EbnfInterpreter.match_sparql_rule( rule, string )
+  end
+
 
   @doc """
   ## Examples
@@ -46,11 +50,7 @@ defmodule Parser do
 
   """
   def full_parse( string ) do
-    code_string = String.codepoints( string )
-    EbnfParser.Tokenizer.ebnf_tokenizer( { :default }, code_string )
-    |> EbnfParser.Parser.ebnf_parser
-    |> Enum.reverse
-    |> ( Enum.map &EbnfParser.Parser.ebnf_parser_reverse_order/1 )
+    EbnfParser.Parser.tokenize_and_parse( string )
   end
 
   def make_rule_map( rule_strings ) do
