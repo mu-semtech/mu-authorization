@@ -358,13 +358,389 @@ defmodule EbnfInterpreter do
   end
 
   def match_named_rule( rule_name, chars, syntax ) do
+    # # Try to match a named rule.  This needs to update matched_rule_info
+    # eagerly_match_rule( chars, syntax, {:symbol, rule_name}, %{terminal: false} )
+
     # Try to match a named rule.  This needs to update matched_rule_info
-    eagerly_match_rule( chars, syntax, {:symbol, rule_name}, %{terminal: false} )
+    make_generator( { :symbol, rule_name }, chars, syntax, %{terminal: false} )
+    |> emit
   end
 
 
-  def match_sparql_rule( rule_name, string ) do
-    match_named_rule( rule_name, String.codepoints( string ), Parser.parse_sparql)
+  def match_sparql_rule( rule_name, string, include_generator\\false ) do
+    response = match_named_rule( rule_name, String.codepoints( string ), Parser.parse_sparql )
+    if include_generator do
+      response
+    else
+      case response do
+        { _, result } -> result
+        _ -> { :fail }
+      end
+    end
+  end
+
+
+  @doc """
+    Builds a generator for the supplied selector, characters and options.
+  """
+
+  # array
+  def make_generator( [first_item | rest], chars, syntax, options ) do
+    # The list generator will have to generate a result for its first
+    # option.  For each of the solutions in the first element of the
+    # list, it will have to try all solutions of the child elements.
+
+    IO.puts "Making generator for list"
+    IO.inspect { first_item, rest }
+    first_item_generator = make_generator( first_item, chars, syntax, options )
+
+    { :list, {first_item_generator, rest, syntax, options} }
+  end
+
+  def make_generator( [], _chars, _syntax, _options ) do
+    IO.puts "Not making generator for empty list"
+
+    { :no_next_step, {} }
+  end
+
+  def make_generator( { :paren_group, items }, chars, syntax, options ) do
+    IO.puts "Making generator for paren_group"
+    make_generator( items, chars, syntax, options )
+  end
+
+  # :symbol
+  def make_generator( { :symbol, name }, chars, syntax, options ) do
+    IO.puts "Making generator for symbol"
+    IO.inspect name
+
+    # Match rule
+    { terminal, rule } = Map.get( syntax, name )
+
+    # Strip spaces from front
+    chars = if( ( ! Map.get(options, :terminal) ) and terminal ) do
+      Enum.drop_while( chars, fn x -> x in [" ","\t","\n"] end )
+    else
+      chars
+    end
+    
+    # Override terminal option
+    new_options = Map.put( options, :terminal, terminal )
+
+    child_generator = make_generator( rule, chars, syntax, new_options )
+
+    { :sub_rule, { name, child_generator } }
+  end
+
+  # :one_of
+  # def make_generator( { :one_of, choices }, chars, syntax, options ) do
+  #   IO.puts "Making :one_of generator"
+  #   IO.inspect choices
+  #   # create a generator for each of the options
+  #   { :one_of, Enum.map( choices, &(make_generator( &1, chars, syntax, options )) ) }
+  # end
+
+  def make_generator( { :one_of, [] }, _, _, _ ) do
+    raise "Can't build :one_of without options"
+  end
+
+  def make_generator( { :one_of, [ choice | choices ] }, chars, syntax, options ) do
+    IO.puts "Making :one_of generator"
+    IO.inspect choices
+    # create a generator for each of the options
+    generator = make_generator( choice, chars, syntax, options )
+    { :one_of, generator, choices, { chars, syntax, options } }
+  end
+
+  # :maybe
+  def make_generator( { :maybe, [ item ] }, chars, syntax, options ) do
+    IO.puts "Making :maybe generator"
+    IO.inspect item
+
+    { :maybe, make_generator( item, chars, syntax, options ), chars }
+  end
+
+  # :one_or_more
+  def make_generator( { :one_or_more, [ item ] }, chars, syntax, options ) do
+    IO.puts "Making :maybe_many generator"
+    IO.inspect item
+
+    # A: We build a generator for <item>
+    #      for each result of generator
+    #         Cycle through A
+    #      if no result is found
+    #        emit result & pop stack
+
+    generator = make_generator( item, chars, syntax, options )
+    case emit( generator ) do
+      { top_state, { leftover, matched_portion, matched_rules } } ->
+        # share enough state to emit further options
+        { :one_or_more, :go_deeper,
+          [ { top_state, leftover, matched_portion, matched_rules } ],
+          { item, syntax, options } }
+      _ ->
+        # no solution possible
+        { :no_next_step, [] }
+    end
+  end
+
+  # :maybe_many
+  def make_generator( { :maybe_many, [ item ] }, chars, syntax, options ) do
+    IO.puts "Making maybe_many generator"
+    IO.inspect item
+
+    # A: We build a generator for <item>
+    #      for each result of generator
+    #         Cycle through A
+    #      if no result is found
+    #        emit result & pop stack
+
+    { :maybe_many, :go_deeper, [], { item, chars, syntax, options } }
+  end
+
+  # this is the standard generator.  if we have no clue what to do,
+  # this will give us a standard solution of running
+  # eagerly_match_rule.
+  def make_generator( rule, chars, syntax, options ) do
+    IO.puts "Making eager generator"
+    IO.inspect rule
+    { :eagerly_match, { rule, chars, syntax, options } }
+  end
+
+
+  @doc """
+    Emits a result from the generator.  {:fail} is sent if no further results
+    are available.
+
+    The output consists of { :new_state, :emitted_result }
+  """
+
+  def emit( { :list, { generator, [], _syntax, _options } } ) do
+    emit( generator )
+  end
+
+
+  def emit( { :list, { generator, following_rules, syntax, options } } ) do
+    build_child_generator = fn (chars) ->
+      make_generator( following_rules, chars, syntax, options )
+    end
+
+    # get the result from the first generator
+    case emit( generator ) do
+      { new_first_state, { leftover, matched_portion, matched_rules } } ->
+        # for this result
+        # => build a generator for all future steps
+        child_generator = build_child_generator.( leftover )
+        # => try to emit as many results as possible
+        emit( { :list_loop, { { new_first_state, child_generator},
+                              { matched_portion, matched_rules },
+                              { following_rules, syntax, options } } } )
+      _ -> { :fail }
+    end
+  end
+
+  def emit( { :list_loop, { { top_generator, bottom_generator },
+                            { top_matched_portion, top_rule_info },
+                            { following_rules , syntax, options } } } ) do
+    build_child_generator = fn (chars) ->
+      make_generator( following_rules, chars, syntax, options )
+    end
+
+    # try to get a result from the bottom generator
+    case emit( bottom_generator ) do
+      { new_bottom_state, { leftover, matched_portion, matched_rules } } ->
+        # if we have one, we yield it
+        # => adopt our current result and yield a new result
+        { { :list_loop, { { top_generator, new_bottom_state }, 
+                          { top_matched_portion, top_rule_info },
+                          { following_rules, syntax, options } } },
+          { leftover, top_matched_portion <> matched_portion, top_rule_info ++ matched_rules } }
+      _ -> 
+        # if there is no result, try to get a new top_generator result
+        case emit( top_generator ) do
+          { new_top_state, { leftover, top_matched_portion, top_matched_rules } } ->
+            # if there is a top_generator result, build a new child generator
+            child_generator = build_child_generator.(leftover)
+            # call ourselves with the new child generator
+            emit( { :list_loop, { { new_top_state, child_generator },
+                                  { top_matched_portion, top_matched_rules },
+                                  { following_rules, syntax, options } } } )
+          _ -> 
+            # if there is no top_generator result, fail
+            { :fail }
+        end
+    end
+  end
+
+  # def emit( { :one_of, [] } ) do
+  #   {:fail}
+  # end
+
+  # def emit( { :one_of, [current|rest] } ) do
+  #   case emit( current ) do
+  #     { new_state, response } ->
+  #       { { :one_of, [ new_state | rest ] },
+  #         response }
+  #     _ -> emit( { :one_of, rest } )
+  #   end
+  # end
+    
+  def emit( { :one_of, generator, [], _ } ) do
+    emit( generator )
+  end
+
+  def emit( { :one_of, generator, [ choice | rest ], { chars, syntax, options } } ) do
+    case emit( generator ) do
+      { new_state, result } ->
+        { { :one_of, new_state, [ choice | rest ], { chars, syntax, options } },
+          result }
+      _ ->
+        generator = make_generator( choice, chars, syntax, options )
+        emit( { :one_of, generator, rest, { chars, syntax, options } } )
+    end
+  end
+
+  def emit( { :maybe, generator, characters } ) do
+    case emit( generator ) do
+      { new_state, response } ->
+        { { :maybe, new_state, characters }, response }
+      _ ->
+        { { :no_next_step, {} },
+          { characters, "", [] } }
+    end
+  end
+
+  def emit( { :one_or_more, :recycle, [], _ } ) do
+    { :fail }
+  end
+
+  def emit( { :one_or_more, :go_deeper,
+              [ { top_state, leftover, matched_portion, matched_rules } | rest ],
+              { item, syntax, options } } ) do
+    generator = make_generator( item, leftover, syntax, options )
+    case emit( generator ) do
+      { new_state, new_leftover, new_matched_portion, new_matched_rules } ->
+        emit( { :one_or_more, :go_deeper,
+                [ { new_state, { new_leftover, matched_portion <> new_matched_portion, matched_rules ++ new_matched_rules } }, { top_state, leftover, matched_portion, matched_rules } | rest ],
+                { item, syntax, options } } )
+      _ ->
+        { { :one_or_more, :recycle,
+            [ { top_state, leftover, matched_portion, matched_rules } | rest ],
+            { item, syntax, options } },
+          { leftover, matched_portion, matched_rules } }
+    end
+  end
+
+  def emit( { :one_or_more, :recycle,
+              [ { top_state, _leftover, _matched_portion, _matched_rules } | rest ],
+              { item, syntax, options } } ) do
+    case emit( top_state ) do
+      { new_state, new_leftover, new_matched_portion, new_matched_rules } ->
+        emit( { :one_or_more, :go_deeper,
+                # new_matched_portion is supposedly incorrect still.
+                # It needs to take the previously matched portion into
+                # account of one level higher up the stack.
+                [ { new_state, new_leftover, new_matched_portion, new_matched_rules } | rest ],
+                { item, syntax, options } } )
+      _ ->
+        { :one_or_more, :recycle,
+          rest,
+          { item, syntax, options } }
+    end
+  end
+
+  def emit( { :maybe_many, :recycle, [], { _item, chars, _syntax, _options } } ) do
+    { { :no_next_step, {} },
+      { chars, "", [] } }
+  end
+
+  def emit( { :maybe_many, :go_deeper, [], { item, chars, syntax, options } } ) do
+    generator = make_generator( item, chars, syntax, options )
+    case emit( generator ) do
+      { top_state, top_leftover, matched_portion, matched_rules } ->
+        emit( { :maybe_many, :go_deeper,
+                [ { top_state, { top_leftover, matched_portion, matched_rules } } ],
+                { item, chars, syntax, options } } )
+      _ ->
+        { { :no_next_step, {} },
+          { chars, "", [] } }
+    end
+  end
+
+  def emit( { :maybe_many, :go_deeper,
+              [ { top_state, { top_leftover, matched_portion, matched_rules } } | rest ],
+              { item, chars, syntax, options } } ) do
+    generator = make_generator( item, top_leftover, syntax, options )
+    case emit( generator ) do
+      { state, leftover, new_match, new_rules } ->
+        emit( { :maybe_many, :go_deeper,
+                # new_matched_portion is supposedly incorrect still.
+                # It needs to take the previously matched portion into
+                # account of one level higher up the stack.
+                [ { state, leftover, matched_portion <> new_match, matched_rules ++ new_rules },
+                  { top_state, { top_leftover, matched_portion, matched_rules } }
+                  | rest ],
+                { item, chars, syntax, options } } )
+      _ ->
+        { { :maybe_many, :recycle,
+            [ { top_state, { top_leftover, matched_portion, matched_rules } } | rest ],
+            { item, chars, syntax, options } },
+          { top_leftover, matched_portion, matched_rules } }
+    end
+  end
+
+  def emit( { :maybe_many, :recycle,
+              [ { top_state, { top_leftover, matched_portion, matched_rules } } | rest ],
+              { item, chars, syntax, options } } ) do
+    case emit( top_state ) do
+      { state, leftover, new_match, new_rules } ->
+        emit( { :maybe_many, :go_deeper,
+                # new_matched_portion is supposedly incorrect still.
+                # It needs to take the previously matched portion into
+                # account of one level higher up the stack.
+                [ { state, leftover, matched_portion <> new_match, matched_rules ++ new_rules },
+                  { top_state, { top_leftover, matched_portion, matched_rules } }
+                  | rest ],
+                { item, chars, syntax, options } } )
+      _ ->
+        { { :maybe_many, :recycle,
+            [ { top_state, { top_leftover, matched_portion, matched_rules } } | rest ],
+            { item, chars, syntax, options } },
+          { top_leftover, matched_portion, matched_rules } }
+    end
+  end
+
+
+    
+  # The simplest emission is that what eagerly_match_rule returned
+  def emit( { :eagerly_match, { rule, chars, syntax, options} } ) do
+    case eagerly_match_rule( chars, syntax, rule, options ) do
+      { :ok, leftover, matched_portion, matched_rules } ->
+        IO.puts "Matched " <> matched_portion
+        IO.inspect leftover
+        { { :no_next_step, {} }, { leftover, matched_portion, matched_rules } }
+      _ ->
+        IO.puts "-- jump out of rule --"
+        IO.inspect rule
+        IO.puts "-- jumped --"
+        { :fail }
+    end
+  end
+
+  def emit( { :sub_rule, { name, child_generator } } ) do
+    case emit(child_generator) do
+      { next_generator_state, { leftover, matched_portion, matched_rules } } ->
+        { { :sub_rule, { name, next_generator_state } },
+          { leftover, matched_portion, [{ name, matched_portion, matched_rules }] }
+        }
+      _ ->
+        IO.puts "-- jump out of sub-rule --"
+        IO.inspect { :sub_rule, name }
+        { :fail }
+    end
+  end
+
+  def emit( { :no_next_step, _ } ) do
+    { :fail }
   end
 
 end

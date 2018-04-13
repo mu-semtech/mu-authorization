@@ -30,7 +30,6 @@ defmodule Parser do
     EbnfInterpreter.match_sparql_rule( rule, string )
   end
 
-
   @doc """
   ## Examples
   iex> Parser.full_parse( "FOO" )
