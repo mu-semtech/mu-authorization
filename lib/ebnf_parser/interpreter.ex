@@ -22,6 +22,40 @@ defmodule EbnfInterpreter do
     String.codepoints( str )
   end
 
+  def generate_all_options( generator, results\\[] ) do
+    case EbnfInterpreter.emit( generator ) do
+      { new_state , answer } ->
+        generate_all_options( new_state, [ answer | results ] )
+      _ -> results
+    end
+  end
+
+  def smart_all_options( rule, chars, options\\%{} ) do
+    rule = Parser.full_parse( rule )
+    chars = String.codepoints( chars )
+    all_options( rule, chars, options )
+  end
+
+  def all_options( rule, chars, options\\%{} ) do
+    generator = EbnfInterpreter.make_generator( rule, chars, [], options )
+    generate_all_options( generator )
+  end
+
+  def longest_match( rule, chars, options\\%{} ) do
+    all_options( rule, chars, options )
+    |> Enum.max_by( fn({_, matched, _}) -> String.length(matched) end )
+  end
+
+  def first_match( rule, chars, options\\%{} ) do
+    rule = Parser.full_parse( rule )
+    chars = String.graphemes( chars )
+    generator = EbnfInterpreter.make_generator( rule, chars, [], options )
+    case emit( generator ) do
+      { _, result } -> result
+      other -> other
+    end
+  end
+
   @doc """
 
   ## Examples
