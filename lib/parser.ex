@@ -3,7 +3,10 @@ defmodule Parser do
   Parser for the W3C EBNF syntax.
   """
 
-  def split_single_form( string, terminal\\nil ) do
+  @type syntax :: %{ optional( atom ) => any }
+
+  @spec split_single_form(String.t, boolean) :: { atom, { boolean, any } }
+  def split_single_form( string, terminal\\false ) do
     split_string = String.split( string , "::=", parts: 2 )
     [name, clause] = Enum.map( split_string , &String.trim/1 )
     { String.to_atom( name ), {terminal, full_parse( clause )} }
@@ -13,6 +16,7 @@ defmodule Parser do
     Enum.map( forms, &split_single_form/1 )
   end
 
+  @spec parse_sparql() :: syntax
   def parse_sparql() do
     %{non_terminal: non_terminal_forms, terminal: terminal_forms} = EbnfParser.Forms.sparql
 

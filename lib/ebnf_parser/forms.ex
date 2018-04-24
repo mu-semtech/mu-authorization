@@ -1,4 +1,5 @@
 defmodule EbnfParser.Forms do
+  @spec sparql :: %{ non_terminal: [String.t], terminal: [String.t] }
   def sparql do
     %{non_terminal: [
         "QueryUnit	  ::=  	Query",
@@ -12,6 +13,7 @@ defmodule EbnfParser.Forms do
         "SelectQuery	  ::=  	SelectClause DatasetClause* WhereClause SolutionModifier",
         "SubSelect	  ::=  	SelectClause WhereClause SolutionModifier ValuesClause",
         "SelectClause	  ::=  	'SELECT' ( 'DISTINCT' | 'REDUCED' )? ( ( Var | ( '(' Expression 'AS' Var ')' ) )+ | '*' )",
+        "DebugSelectMatch ::= ( Var | ( '(' Expression 'AS' Var ')' ) )+ | '*'",
         "ConstructQuery	  ::=  	'CONSTRUCT' ( ConstructTemplate DatasetClause* WhereClause SolutionModifier | DatasetClause* 'WHERE' '{' TriplesTemplate? '}' SolutionModifier )",
         "DescribeQuery	  ::=  	'DESCRIBE' ( VarOrIri+ | '*' ) DatasetClause* WhereClause? SolutionModifier",
         "AskQuery	  ::=  	'ASK' DatasetClause* WhereClause SolutionModifier",
@@ -97,7 +99,7 @@ defmodule EbnfParser.Forms do
         "PathElt	  ::=  	PathPrimary PathMod?",
         "PathEltOrInverse	  ::=  	PathElt | '^' PathElt",
         "PathMod	  ::=  	'?' | '*' | '+'",
-        "PathPrimary	  ::=  	iri | 'a' | '!' PathNegatedPropertySet | '(' Path ')'",
+        "PathPrimary	  ::=  	iri | 'a' | ( '!' PathNegatedPropertySet ) | ( '(' Path ')' )", # added parens
         "PathNegatedPropertySet	  ::=  	PathOneInPropertySet | '(' ( PathOneInPropertySet ( '|' PathOneInPropertySet )* )? ')'",
         "PathOneInPropertySet	  ::=  	iri | 'a' | '^' ( iri | 'a' )",
         "Integer	  ::=  	INTEGER",
