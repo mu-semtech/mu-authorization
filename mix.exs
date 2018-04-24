@@ -50,7 +50,8 @@ defmodule Sparqlex.MixProject do
       {:ex_doc, "~> 0.18", only: :dev, runtime: false},
       {:junit_formatter, "~> 2.1", only: :test},
       {:credo, "~> 0.8", only: [:dev, :test]},
-      {:excoveralls, "~> 0.8", only: :test}
+      {:excoveralls, "~> 0.8", only: :test},
+      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
     ]
   end
 end
