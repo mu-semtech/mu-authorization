@@ -4,7 +4,7 @@ alias InterpreterTerms.Symbol.Interpreter, as: SymbolEmitter
 # import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
 
 defmodule SymbolEmitter do
-  defstruct [ :generator, :symbol, :state ]
+  defstruct [ :generator, :symbol, :state, {:whitespace, ""} ]
 
   def emit( alpha ) do
     EbnfParser.Generator.emit( alpha )
@@ -12,16 +12,16 @@ defmodule SymbolEmitter do
 
   # Generator protocol implementation dispatches to walk
   defimpl EbnfParser.Generator do
-    def emit( %SymbolEmitter{ generator: gen, symbol: sym } = emitter ) do
+    def emit( %SymbolEmitter{ generator: gen, symbol: sym, whitespace: whitespace } = emitter ) do
       case SymbolEmitter.emit( gen ) do
         { :ok, gen, %Result{ match_construct: construct, matched_string: str } = result } ->
           { :ok,
             %{ emitter | generator: gen },
-            %{ result | match_construct: [{ sym, str, construct }] } }
+            %{ result |
+               match_construct: [{ sym, whitespace <> str, construct }],
+               matched_string: whitespace <> str               
+            } }
         _ -> { :fail }
-        # { :ok, gen, result } ->
-        #   { :ok, %{ emitter | generator: gen }, result }
-        # _ -> {:fail}
       end
     end
   end

@@ -19,10 +19,10 @@ defmodule InterpreterTerms.Word do
   defimpl EbnfParser.Generator do
     def emit( %Word{ word: word, state: state } ) do
       # Drop spaces if allowed
-      state = if is_terminal( state ) do
-        state
+      { state, whitespace } = if is_terminal( state ) do
+        { state, "" }
       else
-        drop_spaces( state )
+        Generator.State.split_off_whitespace( state )
       end
 
       # Check if we start with the right word
@@ -30,7 +30,7 @@ defmodule InterpreterTerms.Word do
       if word == to_string( Enum.take( chars, String.length( word ) ) ) do
         result = %Result{
           leftover: Enum.drop( chars, String.length( word ) ),
-          matched_string: word
+          matched_string: whitespace <> word
         }
         { :ok, %Nothing{}, result }
       else
