@@ -26,7 +26,7 @@ defmodule Bracket do
 
   def check( %Bracket{ options: [ {:range, [ start_char, end_char ] } | _ ],
                        state: %State{ chars: [ char | _ ] } } = bracket ) do
-    if char_for_code( start_char ) < char && char < char_for_code( end_char ) do
+    if char_for_code( start_char ) <= char && char <= char_for_code( end_char ) do
       bracket
       |> emit_result
     else
