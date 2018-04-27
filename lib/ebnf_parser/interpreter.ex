@@ -396,8 +396,14 @@ defmodule EbnfInterpreter do
     # eagerly_match_rule( chars, syntax, {:symbol, rule_name}, %{terminal: false} )
 
     # Try to match a named rule.  This needs to update matched_rule_info
-    make_generator( { :symbol, rule_name }, chars, syntax, %{terminal: false} )
-    |> emit
+    # make_generator( { :symbol, rule_name }, chars, syntax, %{terminal: false} )
+    # |> emit
+
+    rule = {:symbol, rule_name}
+    state = %Generator.State{ chars: chars, syntax: syntax }
+
+    EbnfParser.GeneratorConstructor.dispatch_generation( rule, state )
+    |> EbnfParser.Generator.emit
   end
 
 
@@ -407,7 +413,7 @@ defmodule EbnfInterpreter do
       response
     else
       case response do
-        { _, result } -> result
+        { :ok, _, result } -> result
         _ -> { :fail }
       end
     end

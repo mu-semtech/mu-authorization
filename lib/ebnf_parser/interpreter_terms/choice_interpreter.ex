@@ -30,13 +30,11 @@ defmodule ChoiceEmitter do
   end
 
   defp remove_empty_solutions( solutions ) do
-    IO.inspect(
-      solutions
-      |> Enum.reject( fn
+    solutions
+    |> Enum.reject( fn
         ( { :fail } ) -> true
         ( _ ) -> false
       end )
-    )
   end
 
   defp sort_solutions( solutions ) do

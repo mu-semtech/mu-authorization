@@ -1,11 +1,20 @@
 alias Generator.State, as: State
 alias Generator.Result, as: Result
 alias InterpreterTerms.Array.Interpreter, as: ArrayEmitter
-import EbnfParser.Generator, only: [emit: 1]
-import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
+# import EbnfParser.Generator, only: [emit: 1]
+# import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
 
 defmodule ArrayEmitter do
   defstruct [ elements: [], state: %State{}, child_generator: :none, rest_generator: :none, last_child_result: %Result{} ]
+
+  defp emit( alpha ) do
+    EbnfParser.Generator.emit( alpha )
+  end
+
+  defp dispatch_generation( alpha , beta ) do
+    EbnfParser.GeneratorConstructor.dispatch_generation( alpha, beta )
+  end
+  
 
   # Generator protocol implementation dispatches to walk
   defimpl EbnfParser.Generator do
@@ -34,44 +43,42 @@ defmodule ArrayEmitter do
   end
 
   def walk( %ArrayEmitter{ child_generator: generator, elements: [_] } = emitter ) do
-    # 1. Get a result from the generator
     case emit( generator ) do
       { :ok, new_generator, result } ->
-        # 2. emit the result with our new state
         new_state = %{ emitter | child_generator: new_generator }
         { :ok, new_state, result }
       _ -> { :fail }
     end
   end
 
+  # there are many elements
+  # -> build a child generator
   def walk( %ArrayEmitter{ rest_generator: :none,
                            child_generator: :none,
                            elements: [e|_],
                            state: state } = emitter ) do
-    # 1. make child generator
     child_generator = dispatch_generation( e, state )
-    # 2. disptach to regular circuit for rebuilding children
     walk( %{ emitter | child_generator: child_generator } )
   end
 
+  # -> build a rest_generator
   def walk( %ArrayEmitter{ rest_generator: :none,
                            child_generator: child_generator,
                            elements: [_|es],
                            state: state } = emitter ) do
-    # 2. get result from our child generator
     case emit( child_generator ) do
-      # 3. is there a result?
       { :ok, new_child_generator, %Result{ leftover: leftover } = child_result } ->
-        # 3.y.1 construct ArrayEmitter generator for children
         rest_generator =
           %ArrayEmitter{
             elements: es,
-            state: %{ state | chars: leftover },
-            last_child_result: child_result
+            state: %{ state | chars: leftover }# ,
+            # last_child_result: child_result
           }
-        walk( %{ emitter | rest_generator: rest_generator, child_generator: new_child_generator } )
+        walk( %{ emitter |
+                 rest_generator: rest_generator,
+                 child_generator: new_child_generator,
+                 last_child_result: child_result } )
       _ ->
-        # 3.n there are no more results in this branch
         { :fail }
     end
   end
@@ -98,14 +105,7 @@ defmodule ArrayEmitter do
   The first supplied result is the one that was generated earlier.
   """
   defp combine_results( base_result, new_result ) do
-    %Result{ matched_string: base_str, match_construct: base_match } = base_result
-    %Result{ matched_string: new_str, match_construct: new_match, leftover: leftover } = new_result
-
-    %Result{
-      matched_string: base_str <> new_str,
-      match_construct: base_match ++ new_match,
-      leftover: leftover
-    }
+    Generator.Result.combine_results( base_result, new_result )
   end
 
 end

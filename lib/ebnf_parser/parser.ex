@@ -30,6 +30,19 @@ defmodule EbnfParser.Parser do
     # |> ( Enum.map &EbnfParser.Parser.ebnf_parser_reverse_order/1 )
   end
 
+  def by_protocol( ebnf_string, match_string ) do
+    ebnf = tokenize_and_parse( ebnf_string )
+    state = %Generator.State{ chars: String.graphemes(match_string) }
+    EbnfParser.GeneratorConstructor.dispatch_generation( ebnf, state )
+  end
+
+  def all_results( generator, prev_results \\ [] ) do
+    case EbnfParser.Generator.emit( generator ) do
+      { :ok, gen, res } -> all_results( gen, [ res | prev_results ] )
+      _ -> prev_results
+    end
+  end
+
   def ebnf_parser_reverse_order( { name, [ a | rest ]  } ) do
     updated_content =
       [ a | rest ]
