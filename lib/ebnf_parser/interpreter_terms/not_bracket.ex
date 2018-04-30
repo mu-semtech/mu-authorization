@@ -3,6 +3,16 @@ alias Generator.Result, as: Result
 alias InterpreterTerms.NotBracket, as: NotBracket
 alias InterpreterTerms.Bracket, as: Bracket
 
+defmodule InterpreterTerms.NotBracketResult do
+  defstruct [ :character ]
+
+  defimpl String.Chars do
+    def to_string( %InterpreterTerms.NotBracketResult{ character: char } ) do
+      {:"#", char}
+    end
+  end
+end
+
 defmodule NotBracket do
   defstruct [:options, {:state, %State{}}]
 
@@ -36,7 +46,8 @@ defmodule NotBracket do
       %InterpreterTerms.Nothing{},
       %Result{
         leftover: chars,
-        matched_string: char
+        matched_string: char,
+        match_construct: [%InterpreterTerms.NotBracketResult{character: char}]
       }
     }    
   end

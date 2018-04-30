@@ -5,6 +5,16 @@ alias InterpreterTerms.Bracket, as: Bracket
 # defmodule InterpreterTerms.Bracket.Interpreter do
 # end
 
+defmodule InterpreterTerms.BracketResult do
+  defstruct [ :character ]
+
+  defimpl String.Chars do
+    def to_string( %InterpreterTerms.BracketResult{ character: char } ) do
+      {:"#", char}
+    end
+  end
+end
+
 defmodule Bracket do
   defstruct [:options, {:state, %State{}}]
 
@@ -63,7 +73,8 @@ defmodule Bracket do
       %InterpreterTerms.Nothing{},
       %Result{
         leftover: chars,
-        matched_string: char
+        matched_string: char,
+        match_construct: [%InterpreterTerms.BracketResult{ character: char }]
       }
     }    
   end

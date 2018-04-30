@@ -3,6 +3,16 @@ alias InterpreterTerms.Symbol.Interpreter, as: SymbolEmitter
 # import EbnfParser.Generator, only: [emit: 1]
 # import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
 
+defmodule InterpreterTerms.SymbolMatch do
+  defstruct [ :string, :symbol, :submatches ]
+
+  defimpl String.Chars do
+    def to_string( %InterpreterTerms.SymbolMatch{ string: str, symbol: symbol, submatches: sub } ) do
+      { :symbol, "::#{symbol}::#{str}", Enum.map( sub, &String.Chars.to_string/1 ) }
+    end
+  end
+end
+
 defmodule SymbolEmitter do
   defstruct [ :generator, :symbol, :state, {:whitespace, ""} ]
 
@@ -18,7 +28,10 @@ defmodule SymbolEmitter do
           { :ok,
             %{ emitter | generator: gen },
             %{ result |
-               match_construct: [{ sym, whitespace <> str, construct }],
+               match_construct: [%InterpreterTerms.SymbolMatch{
+                                    symbol: sym,
+                                    string: whitespace <> str,
+                                    submatches: construct }],
                matched_string: whitespace <> str               
             } }
         _ -> { :fail }

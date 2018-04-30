@@ -2,6 +2,16 @@ alias Generator.State, as: State
 alias Generator.Result, as: Result
 alias InterpreterTerms.HexCharacter, as: HexCharacter
 
+defmodule InterpreterTerms.HexCharacterResult do
+  defstruct [ :character ]
+
+  defimpl String.Chars do
+    def to_string( %InterpreterTerms.HexCharacterResult{ character: char } ) do
+      {:"#", char}
+    end
+  end
+end
+
 defmodule HexCharacter do
   defstruct [:number, {:state, %State{}}]
 
@@ -22,7 +32,8 @@ defmodule HexCharacter do
           %InterpreterTerms.Nothing{},
           %Result{
             leftover: chars,
-            matched_string: char
+            matched_string: char,
+            match_construct: [%InterpreterTerms.HexCharacterResult{ character: char }]
           }
         }
       else

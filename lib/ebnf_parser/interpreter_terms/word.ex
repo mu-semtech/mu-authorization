@@ -5,6 +5,16 @@ alias InterpreterTerms.Nothing, as: Nothing
 
 import Generator.State, only: [ drop_spaces: 1, is_terminal: 1 ]
 
+defmodule InterpreterTerms.WordMatch do
+  defstruct [:word]
+
+  defimpl String.Chars do
+    def to_string( %InterpreterTerms.WordMatch{ word: word } ) do
+      { :word, word }
+    end
+  end
+end
+
 defmodule InterpreterTerms.Word do
   defstruct [word: "", state: %State{}]
 
@@ -30,7 +40,8 @@ defmodule InterpreterTerms.Word do
       if word == to_string( Enum.take( chars, String.length( word ) ) ) do
         result = %Result{
           leftover: Enum.drop( chars, String.length( word ) ),
-          matched_string: whitespace <> word
+          matched_string: whitespace <> word,
+          match_construct: [%InterpreterTerms.WordMatch{word: word}]
         }
         { :ok, %Nothing{}, result }
       else
