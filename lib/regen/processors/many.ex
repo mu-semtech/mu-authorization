@@ -5,12 +5,6 @@ alias Regen.Status, as: State
 defmodule Many do
   defstruct [ :element, { :state, %State{} }, { :self_generator, :none }, { :rest_generator, :none } ]
 
-  defimpl Regen.Protocol.Generator do
-    def make_generator( %Many{} = many ) do
-      many
-    end
-  end
-
   defimpl Regen.Protocol do
     def emit( %Many{} = many ) do
       Many.walk( many )
@@ -50,7 +44,6 @@ defmodule Many do
           %Some{}
           |> Map.put( :element, elt )
           |> Map.put( :state, result )
-          |> Regen.Protocol.Generator.make_generator
         { :ok, %{ many |
                   rest_generator: rest_generator,
                   self_generator: new_self_gen } }

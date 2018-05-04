@@ -1,5 +1,4 @@
 defmodule Regen.Result do
-  defstruct [ :status ]
 
   def all( generator, emitter \\ &Regen.Protocol.emit/1, results \\ [] ) do
     case emitter.(generator) do
@@ -8,7 +7,6 @@ defmodule Regen.Result do
       { _ } ->
         Enum.reverse( results )
     end
-
   end
 
 end

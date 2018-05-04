@@ -15,12 +15,6 @@ defmodule Some do
     { :locked_states, [] } ] 
   
 
-  defimpl Regen.Protocol.Generator do
-    def make_generator( %Some{} = some ) do
-      some
-    end
-  end
-
   defimpl Regen.Protocol do
     def emit( %Some{} = some ) do
       Some.walk( some )

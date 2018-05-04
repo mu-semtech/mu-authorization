@@ -13,12 +13,6 @@ alias Regen.Result, as: Result
 defmodule Choice do
   defstruct [ options: [], state: %State{}, option_generators: :none, generated_options: [] ]
 
-  defimpl Regen.Protocol.Generator do
-    def make_generator( %Choice{} = choice ) do
-      choice
-    end
-  end
-
   defimpl Regen.Protocol do
     def emit( %Choice{} = choice ) do
       Choice.walk_choice( choice )

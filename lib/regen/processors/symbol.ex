@@ -13,12 +13,6 @@ alias InterpreterTerms.SymbolMatch, as: SymbolMatch
 defmodule Symbol do
   defstruct [ :symbol, :state, { :ebnf, :none }, {:self_element, :none}, { :sub_generator, :none } ]
 
-  defimpl Regen.Protocol.Generator do
-    def make_generator( %Symbol{} = symbol ) do
-      symbol
-    end
-  end
-
   defimpl Regen.Protocol do
     def emit( %Symbol{} = symbol ) do
       Symbol.walk( symbol )

@@ -1,12 +1,6 @@
 defmodule Regen.Processors.Word do
   defstruct [ :word, :state ]
 
-  defimpl Regen.Protocol.Generator do
-    def make_generator( %Regen.Processors.Word{} = word ) do
-      word
-    end
-  end
-
   defimpl Regen.Protocol do
     def emit( %Regen.Processors.Word{} = word ) do
       Regen.Processors.Word.emit( word )

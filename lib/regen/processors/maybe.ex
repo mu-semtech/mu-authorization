@@ -4,12 +4,6 @@ alias Regen.Status, as: State
 defmodule Maybe do
   defstruct [ :element, { :state, %State{} }, { :self_generator, :none } ]
 
-  defimpl Regen.Protocol.Generator do
-    def make_generator( %Maybe{} = maybe ) do
-      maybe
-    end
-  end
-
   defimpl Regen.Protocol do
     def emit( %Maybe{} = maybe ) do
       Maybe.walk( maybe )

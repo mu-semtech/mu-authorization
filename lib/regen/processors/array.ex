@@ -25,12 +25,6 @@ alias Regen.Result, as: Result
 defmodule Array do
   defstruct [ elements: [], state: %State{}, child_generator: :none, rest_generator: :none, last_child_result: :none ]
 
-  defimpl Regen.Protocol.Generator do
-    def make_generator( %Array{} = array ) do
-      array
-    end
-  end
-
   defimpl Regen.Protocol do
     def emit( %Array{} = array ) do
       Array.walk( array )
@@ -100,7 +94,6 @@ defmodule Array do
                                              last_child_result: new_state } = arr ) do
     gen =
       %Array{ elements: rest, state: new_state }
-      |> Regen.Protocol.Generator.make_generator
 
     %{ arr | rest_generator: gen }
   end
