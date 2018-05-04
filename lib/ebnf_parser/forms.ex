@@ -13,7 +13,6 @@ defmodule EbnfParser.Forms do
         "SelectQuery	  ::=  	SelectClause DatasetClause* WhereClause SolutionModifier",
         "SubSelect	  ::=  	SelectClause WhereClause SolutionModifier ValuesClause",
         "SelectClause	  ::=  	'SELECT' ( 'DISTINCT' | 'REDUCED' )? ( ( Var | ( '(' Expression 'AS' Var ')' ) )+ | '*' )",
-        "DebugSelectMatch ::= ( Var | ( '(' Expression 'AS' Var ')' ) )+ | '*'",
         "ConstructQuery	  ::=  	'CONSTRUCT' ( ConstructTemplate DatasetClause* WhereClause SolutionModifier | DatasetClause* 'WHERE' '{' TriplesTemplate? '}' SolutionModifier )",
         "DescribeQuery	  ::=  	'DESCRIBE' ( VarOrIri+ | '*' ) DatasetClause* WhereClause? SolutionModifier",
         "AskQuery	  ::=  	'ASK' DatasetClause* WhereClause SolutionModifier",

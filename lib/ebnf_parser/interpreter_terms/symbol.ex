@@ -1,12 +1,12 @@
 alias Generator.State, as: State
 
 defmodule InterpreterTerms.Symbol do
-  defstruct [:symbol, {:state, %Generator.State{}}]
+  defstruct [:symbol, {:state, %State{}}]
 
   defimpl EbnfParser.GeneratorProtocol do
     def make_generator( %InterpreterTerms.Symbol{
           symbol: name,
-          state: %Generator.State{ syntax: syntax, chars: chars, options: options } = state } ) do
+          state: %State{ syntax: syntax, options: options } = state } ) do
       # Match rule
       { terminal, rule } = Map.get( syntax, name )
 
@@ -14,10 +14,10 @@ defmodule InterpreterTerms.Symbol do
       emit_submatches = ! Generator.State.is_terminal( state )
 
       # Strip spaces from front
-      { state, whitespace } = if Generator.State.is_terminal( state ) do
+      { state, whitespace } = if State.is_terminal( state ) do
         { state, "" }
       else
-        Generator.State.split_off_whitespace( state )
+        State.split_off_whitespace( state )
       end
 
       # Override terminal option
