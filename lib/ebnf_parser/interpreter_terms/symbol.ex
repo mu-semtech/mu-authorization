@@ -10,15 +10,15 @@ defmodule InterpreterTerms.Symbol do
       # Match rule
       { terminal, rule } = Map.get( syntax, name )
 
-      # We should emit submatches when our _parents' state_ is not terminal
-      emit_submatches = ! Generator.State.is_terminal( state )
-
       # Strip spaces from front
       { state, whitespace } = if State.is_terminal( state ) do
         { state, "" }
       else
         State.split_off_whitespace( state )
       end
+
+      # We should emit submatches when our own state is not terminal
+      emit_submatches = ! terminal
 
       # Override terminal option
       new_options = Map.put( options, :terminal, terminal )
@@ -37,7 +37,7 @@ defmodule InterpreterTerms.Symbol do
         state: new_state,
         generator: child_generator,
         whitespace: whitespace,
-        emit_submatches: ! Generator.State.is_terminal( state )
+        emit_submatches: emit_submatches
       }
     end
   end
