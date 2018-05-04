@@ -29,7 +29,7 @@ defmodule ChoiceEmitter do
                      option_generators: new_generators }
   end
 
-  defp remove_empty_solutions( solutions ) do
+  def remove_empty_solutions( solutions ) do
     solutions
     |> Enum.reject( fn
         ( { :fail } ) -> true
@@ -42,7 +42,7 @@ defmodule ChoiceEmitter do
     |> Enum.sort_by( fn ({_, _, result} ) -> Generator.Result.length(result) end, &>=/2 )
   end
   
-  defp split_solutions_and_generators( solutions ) do
+  def split_solutions_and_generators( solutions ) do
     {
       Enum.map( solutions, fn ({_, _, solution}) -> solution end ),
       Enum.map( solutions, fn ({_, generator, _ } ) -> generator end )
