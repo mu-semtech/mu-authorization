@@ -107,10 +107,10 @@ defmodule Symbol do
 
 
   defp ensure_ebnf( %Symbol{ ebnf: :none,
-                             # state: %State{ syntax: syntax },
+                             state: %State{ syntax: syntax },
                              symbol: symbol
                            } = symbol_struct ) do
-    syntax = Parser.parse_sparql
+
     { _, ebnf } = Map.get( syntax, symbol )
     %{ symbol_struct | ebnf: ebnf }
   end
