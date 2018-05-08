@@ -29,8 +29,11 @@ defmodule Some do
       { :ok, some } ->
         some
         |> emit_restgenerator_result
+      { :ok, next_generator_state, state } ->
+        # last result
+        { :ok, next_generator_state, state }
       _ ->
-        if is_locked_state( some, state ) do 
+        if locked_state?( some, state ) do
           { :fail }
         else
           # the self generator failed to yield a result, our current
@@ -56,7 +59,7 @@ defmodule Some do
                                            locked_states: locked_states } = some ) do
     case Regen.Protocol.emit( selfgen ) do
       { :ok, new_selfgen, result } ->
-        if is_locked_state( some, result ) do
+        if locked_state?( some, result ) do
           # if we are now in a locked state, skip it
           walk %{ some |
                   selfgenerator: new_selfgen }
@@ -81,8 +84,8 @@ defmodule Some do
     { :ok, some }
   end
 
-  def is_locked_state( %Some{ locked_states: locked }, state ) do
-    Enum.find( locked, fn (x) -> state == x end )
+  def locked_state?( %Some{ locked_states: locked }, state ) do
+    Enum.member? locked, state
   end
 
   def emit_restgenerator_result( %Some{ restgenerator: restgen } = some ) do
