@@ -2,6 +2,7 @@ defmodule EbnfParser.Forms do
   @spec sparql :: %{ non_terminal: [String.t], terminal: [String.t] }
   def sparql do
     %{non_terminal: [
+        "Sparql    ::=   QueryUnit | UpdateUnit",
         "QueryUnit	  ::=  	Query",
         "Query	  ::=  	Prologue
                        ( SelectQuery | ConstructQuery | DescribeQuery | AskQuery )

@@ -30,7 +30,7 @@ defmodule Parser do
     |> Enum.into( my_map )
   end
 
-  def parse_query( string, rule\\:QueryUnit ) do
+  def parse_query( string, rule\\:Sparql ) do
     EbnfInterpreter.match_sparql_rule( rule, string )
   end
 
