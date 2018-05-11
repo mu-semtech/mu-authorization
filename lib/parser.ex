@@ -34,6 +34,14 @@ defmodule Parser do
     EbnfInterpreter.match_sparql_rule( rule, string )
   end
 
+  def parse_query_all( string, rule_name\\:Sparql ) do
+    rule = {:symbol, rule_name}
+    state = %Generator.State{ chars: String.graphemes( string ), syntax: Parser.parse_sparql }
+
+    EbnfParser.GeneratorConstructor.dispatch_generation( rule, state )
+    |> EbnfInterpreter.generate_all_options
+  end
+
   @doc """
   ## Examples
   iex> Parser.full_parse( "FOO" )

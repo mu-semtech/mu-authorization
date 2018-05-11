@@ -1,4 +1,8 @@
 defmodule Regen.Constructor do
+
+  @doc """
+  Converts a parsed EBNF element to a generator
+  """
   def make( { :single_quoted_string, word }, state ) do
     %Regen.Processors.Word{ word: word, state: state }
   end

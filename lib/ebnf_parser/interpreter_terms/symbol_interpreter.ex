@@ -58,7 +58,7 @@ defmodule SymbolEmitter do
           match_construct =
             %InterpreterTerms.SymbolMatch{
               symbol: sym,
-              string: whitespace <> str}
+              string: whitespace <> str} # TODO don't add whitespace for terminal symbols
           match_construct = if emit_submatches
             do %{ match_construct | submatches: construct }
             else match_construct end

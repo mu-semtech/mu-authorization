@@ -27,4 +27,16 @@ defmodule Generator.Result do
   def extract_element( %Generator.Result{ match_construct: [element] } ) do
     element
   end
+
+  @doc """
+  Yields truethy when the supplied result is a full match which consumed all
+  available characters.
+  """
+  def full_match?( %Generator.Result{ leftover: [] } ) do
+    true
+  end
+  def full_match?( %Generator.Result{} ) do
+    false
+  end
+
 end
