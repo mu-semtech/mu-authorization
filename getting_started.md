@@ -12,6 +12,173 @@ iex -S mix
 > sparql_ebnf = EbnfParser.Forms.sparql() 
 ```
 
+# Code documentation
+This section is intended as a hands on code getting started. The key methods of all modules will be illustrated with simple examples. Each time the full method signature will be used as the section title. All examples work in iex.
+
+## Parser.parse(query)
+Parsing a query will give the following tree as a result:
+```
+> query = "SELECT * WHERE { ?s ?p ?o . }"
+> Parser.parse(query)
+>
+> %Generator.Result{
+  leftover: [],
+  match_construct: [
+    %InterpreterTerms.SymbolMatch{
+      symbol: :QueryUnit,
+      string: "SELECT * WHERE {?s ?p ?o .}",
+      submatches: [
+        %InterpreterTerms.SymbolMatch{
+          symbol: :Query,
+          string: "SELECT * WHERE {?s ?p ?o .}",
+          submatches: [
+            %InterpreterTerms.SymbolMatch{
+              symbol: :Prologue,
+              string: "",
+              submatches: []
+            },
+            %InterpreterTerms.SymbolMatch{
+              symbol: :SelectQuery,
+              string: "SELECT * WHERE {?s ?p ?o .}",
+              submatches: [
+                %InterpreterTerms.SymbolMatch{
+                  symbol: :SelectClause,
+                  string: "SELECT *",
+                  submatches: [
+                    %InterpreterTerms.WordMatch{word: "SELECT"},
+                    %InterpreterTerms.WordMatch{word: "*"}
+                  ]
+                },
+                %InterpreterTerms.SymbolMatch{
+                  symbol: :WhereClause,
+                  string: " WHERE {?s ?p ?o .}",
+                  submatches: [
+                    %InterpreterTerms.WordMatch{word: "WHERE"},
+                    %InterpreterTerms.SymbolMatch{
+                      symbol: :GroupGraphPattern,
+                      string: " {?s ?p ?o .}",
+                      submatches: [
+                        %InterpreterTerms.WordMatch{word: "{"},
+                        %InterpreterTerms.SymbolMatch{
+                          symbol: :GroupGraphPatternSub,
+                          string: "?s ?p ?o .",
+                          submatches: [
+                            %InterpreterTerms.SymbolMatch{
+                              symbol: :TriplesBlock,
+                              string: "?s ?p ?o .",
+                              submatches: [
+                                %InterpreterTerms.SymbolMatch{
+                                  symbol: :TriplesSameSubjectPath,
+                                  string: "?s ?p ?o",
+                                  submatches: [
+                                    %InterpreterTerms.SymbolMatch{
+                                      symbol: :VarOrTerm,
+                                      string: "?s",
+                                      submatches: [
+                                        %InterpreterTerms.SymbolMatch{
+                                          symbol: :Var,
+                                          string: "?s",
+                                          submatches: [
+                                            %InterpreterTerms.SymbolMatch{
+                                              symbol: :VAR1,
+                                              string: "?s",
+                                              submatches: :none
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    %InterpreterTerms.SymbolMatch{
+                                      symbol: :PropertyListPathNotEmpty,
+                                      string: " ?p ?o",
+                                      submatches: [
+                                        %InterpreterTerms.SymbolMatch{
+                                          symbol: :VerbSimple,
+                                          string: "?p",
+                                          submatches: [
+                                            %InterpreterTerms.SymbolMatch{
+                                              symbol: :Var,
+                                              string: "?p",
+                                              submatches: [
+                                                %InterpreterTerms.SymbolMatch{
+                                                  symbol: :VAR1,
+                                                  string: "?p",
+                                                  submatches: :none
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        %InterpreterTerms.SymbolMatch{
+                                          symbol: :ObjectListPath,
+                                          string: " ?o",
+                                          submatches: [
+                                            %InterpreterTerms.SymbolMatch{
+                                              symbol: :ObjectPath,
+                                              string: "?o",
+                                              submatches: [
+                                                %InterpreterTerms.SymbolMatch{
+                                                  symbol: :GraphNodePath,
+                                                  string: "?o",
+                                                  submatches: [
+                                                    %InterpreterTerms.SymbolMatch{
+                                                      symbol: :VarOrTerm,
+                                                      string: "?o",
+                                                      submatches: [
+                                                        %InterpreterTerms.SymbolMatch{
+                                                          symbol: :Var,
+                                                          string: "?o",
+                                                          submatches: [
+                                                            %InterpreterTerms.SymbolMatch{
+                                                              symbol: :VAR1,
+                                                              string: "?o",
+                                                              submatches: :none
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                %InterpreterTerms.WordMatch{word: "."}
+                              ]
+                            }
+                          ]
+                        },
+                        %InterpreterTerms.WordMatch{word: "}"}
+                      ]
+                    }
+                  ]
+                }, 
+                %InterpreterTerms.SymbolMatch{
+                  symbol: :SolutionModifier,
+                  string: "",
+                  submatches: []
+                }
+              ]
+            },
+            %InterpreterTerms.SymbolMatch{
+              symbol: :ValuesClause,
+              string: "",
+              submatches: []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  matched_string: "SELECT * WHERE {?s ?p ?o .}"
+}
+```
+
 ## EbnfParser.Tokenizer.tokenize(string)
 Below are some examples of what can be expected when the example string is passed into the method. These input-output pairs should help understand what the tokenizer will produce for a given input. 
 
@@ -51,7 +218,7 @@ The strings that the tokenize method consumes are the third part of an EBNF rule
     {:close_bracket},
     {:close_paren},
     {:star},
-    {:single_quote, ">"}
+    {:single_quote, ">"}p
   ]
 ```
 
@@ -94,6 +261,27 @@ The strings that the tokenize method consumes are the third part of an EBNF rule
     {:close_paren},
     {:question_mark}
   ]
+```
+
+### EbnfParser.Parser.tokenize_and_parse(rule)
+This method takes the right hand side of an EBNF rule and transforms it into a well understood rule format. That well understood format will then be passed on to the methods validating that a certain input adheres to its form or to the generators that will produce output based on this rule.
+
+#### INTEGER   ::=   [0-9]+
+The integer rule has as input:
+```
+> input = "[0-9]+"
+```
+
+The parser generators the following output:
+```
+> input |> EbnfParser.Parser.tokenize_and_parse
+> [ one_or_more: 
+    [ bracket_selector: 
+      [range: 
+        [character: "0", character: "9"]
+      ]
+    ]
+]
 ```
 
 # TODO's
