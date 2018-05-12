@@ -1,6 +1,100 @@
-filesystem:
 # What is currently in this repo?
 This repo contains 2 separate things. On one hand we have implemented a W3C EBNF (yes it is a separate form of EBNF) parser generator which will generate a parser for the EBNF vocabulary passed. The other thing is a SPARQL parser which uses the previous parser generator to ... generate a parser.
+
+## Getting started in iex
+to start iex with all files loaded type the following in the root directory:
+```
+iex -S mix
+```
+
+### load the SPARQL EBNF vocabulary
+```
+> sparql_ebnf = EbnfParser.Forms.sparql() 
+```
+
+## EbnfParser.Tokenizer.tokenize(string)
+Below are some examples of what can be expected when the example string is passed into the method. These input-output pairs should help understand what the tokenizer will produce for a given input. 
+
+### Where to situate the inputs
+The strings that the tokenize method consumes are the third part of an EBNF rule, the first is the name and the second is the mandatory splitting character series '::='.
+
+### IRIREF ::= '<' ([^<>\"{}|^`\]-[#x00-#x20])* '>'
+#### input
+```
+> input = "  \t'<' ([^<>\\\"{}|^`\\]-[#x00-#x20])* '>'"
+```
+#### ouput
+```
+> input |> EbnfParser.Tokenizer.tokenize
+>[
+  [
+    {:single_quote, "<"},
+    {:open_paren},
+    {:open_bracket},
+    {:negation},
+    {:character, "<"},
+    {:character, ">"},
+    {:character, "\\"},
+    {:character, "\""},
+    {:character, "{"},
+    {:character, "}"},
+    {:character, "|"},
+    {:character, "^"},
+    {:character, "`"},
+    {:character, "\\"},
+    {:close_bracket},
+    {:minus},
+    {:open_bracket},
+    {:hex_character, 0},
+    {:range},
+    {:hex_character, 32},
+    {:close_bracket},
+    {:close_paren},
+    {:star},
+    {:single_quote, ">"}
+  ]
+```
+
+### PNAME_NS ::= PN_PREFIX? ':
+#### input
+```
+> input = "  \tPN_PREFIX? ':'"
+```
+#### output
+```
+> [{:symbol, :PN_PREFIX}, {:question_mark}, {:single_quote, ":"}]
+```
+
+### BLANK_NODE_LABEL ::= '_:' ( PN_CHARS_U | [0-9] ) ((PN_CHARS|'.')* PN_CHARS)?
+#### input
+```
+> input = "  \t'_:' ( PN_CHARS_U | [0-9] ) ((PN_CHARS|'.')* PN_CHARS)?"
+```
+#### output
+```
+> [
+    {:single_quote, "_:"},
+    {:open_paren},
+    {:symbol, :PN_CHARS_U},
+    {:pipe},
+    {:open_bracket},
+    {:character, "0"},
+    {:range},
+    {:character, "9"},
+    {:close_bracket},
+    {:close_paren},
+    {:open_paren},
+    {:open_paren},
+    {:symbol, :PN_CHARS},
+    {:pipe},
+    {:single_quote, "."},
+    {:close_paren},
+    {:star},
+    {:symbol, :PN_CHARS},
+    {:close_paren},
+    {:question_mark}
+  ]
+```
 
 # TODO's
 
