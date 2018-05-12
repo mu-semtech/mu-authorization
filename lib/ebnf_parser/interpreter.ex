@@ -23,8 +23,8 @@ defmodule EbnfInterpreter do
   end
 
   def generate_all_options( generator, results\\[] ) do
-    case EbnfInterpreter.emit( generator ) do
-      { new_state , answer } ->
+    case EbnfParser.Generator.emit( generator ) do
+      {:ok, new_state , answer } ->
         generate_all_options( new_state, [ answer | results ] )
       _ -> results
     end
@@ -32,8 +32,10 @@ defmodule EbnfInterpreter do
 
   def smart_all_options( rule, chars, options\\%{} ) do
     rule = Parser.full_parse( rule )
-    chars = String.codepoints( chars )
-    all_options( rule, chars, options )
+    state = %Generator.State{ chars: String.graphemes( chars ), options: options }
+
+    EbnfParser.GeneratorConstructor.dispatch_generation( rule, state )
+    |> generate_all_options
   end
 
   def all_options( rule, chars, options\\%{} ) do

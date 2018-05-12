@@ -6,6 +6,29 @@ alias InterpreterTerms.Symbol.Interpreter, as: SymbolEmitter
 defmodule InterpreterTerms.SymbolMatch do
   defstruct [ :string, :symbol, { :submatches, :none } ]
 
+  defimpl Inspect do
+    import Inspect.Algebra
+
+    def inspect( %InterpreterTerms.SymbolMatch{} = dict, opts ) do
+      {:doc_group,
+       {:doc_cons,
+        {:doc_nest,
+         {:doc_cons, "%InterpreterTerms.SymbolMatch{",
+          {:doc_cons,
+           {:doc_break, "", :strict},
+           {:doc_cons,
+            {:doc_cons, {:doc_cons, "symbol:", {:doc_cons, " ", Inspect.inspect( Map.get( dict, :symbol ), opts )}}, ","},
+            {:doc_cons, {:doc_break, " ", :strict},
+             {:doc_cons,
+              {:doc_cons,
+               {:doc_cons, "string:", {:doc_cons, " ", Inspect.inspect( Map.get( dict, :string ), opts )}}, ","},
+              {:doc_cons, {:doc_break, " ", :strict},
+               {:doc_cons, "submatches:", {:doc_cons, " ", Inspect.inspect( Map.get( dict, :submatches ), opts )}}
+              }}}}}}, 2, :always},
+        {:doc_cons, {:doc_break, "", :strict}, "}"}}, :self}
+    end
+  end
+
   defimpl String.Chars do
     def to_string( %InterpreterTerms.SymbolMatch{ string: str, symbol: symbol, submatches: sub } ) do
       if sub == :none do

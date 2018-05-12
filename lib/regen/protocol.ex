@@ -5,6 +5,6 @@ defprotocol Regen.Protocol do
   @type response :: { :ok, Regen.Protocol.generator, Regen.Protocol.state } | { :fail }
 
   @doc "Emits a new result"
-o  @spec emit( Regen.Protocol.generator ) :: Regen.Protocol.response
+  @spec emit( Regen.Protocol.generator ) :: Regen.Protocol.response
   def emit( generator )
 end

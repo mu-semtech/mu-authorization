@@ -19,4 +19,12 @@ defmodule Generator.Result do
       leftover: leftover
     }
   end
+
+  @doc """
+  Extracts a single match_construct element from the result.
+  This tends to be the interesting information for a SPARQL query.
+  """
+  def extract_element( %Generator.Result{ match_construct: [element] } ) do
+    element
+  end
 end
