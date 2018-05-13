@@ -69,7 +69,10 @@ defmodule Updates.QueryAnalyzer do
   - Prologue ::= ( BaseDecl | PrefixDecl )*
   - BaseDecl ::= 'BASE' IRIREF
   - PrefixDecl ::= 'PREFIX' PNAME_NS IRIREF
-  - Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | --DeleteData-- | --DeleteWhere-- | --Modify--
+  - Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | --DeleteWhere-- | --Modify--
+
+  Terms which were added for DELETE DATA
+  - DeleteData ::= 'DELETE DATA' QuadData
   """
 
   def extract_quads( query ) do
@@ -97,7 +100,7 @@ defmodule Updates.QueryAnalyzer do
       [ prologue_sym, update_one_sym ] ->
         new_options = import_prologue( prologue_sym, options )
         quads( update_one_sym, new_options )
-      [ prologue_sym, update_one_sym, update_sym ] ->
+      [ prologue_sym, update_one_sym, %Word{}, update_sym ] ->
         new_options = import_prologue( prologue_sym, options )
         Quad.append(
           quads( update_one_sym, new_options ),
@@ -106,14 +109,13 @@ defmodule Updates.QueryAnalyzer do
   end
 
   def quads( %Sym{ symbol: :Update1, submatches: [match] }, options ) do
-    # Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | --DeleteData-- | --DeleteWhere-- | --Modify--
+    # Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | --DeleteWhere-- | --Modify--
 
     case match do
       %Sym{ symbol: :InsertData } -> quads( match, options )
+      %Sym{ symbol: :DeleteData } -> quads( match, options )
     end
   end
-
-
 
   def quads( %Sym{ symbol: :InsertData, submatches: matches }, options ) do
     # InsertData ::= 'INSERT DATA' QuadData
@@ -124,8 +126,21 @@ defmodule Updates.QueryAnalyzer do
       %Word{} -> false
     end
 
-    quads( quad_data, options )
+    [ insert: quads( quad_data, options ) ]
   end
+
+  def quads( %Sym{ symbol: :DeleteData, submatches: matches }, options ) do
+    # DeleteData ::= 'DELETE DATA' QuadData
+
+    # scan matchesto find the single QuadData element:
+    quad_data = Enum.find matches, fn
+      %Sym{ symbol: :QuadData } -> true
+      %Word{} -> false
+    end
+
+    [ delete: quads( quad_data, options ) ]
+  end
+
 
   def quads( %Sym{ symbol: :QuadData, submatches: matches }, options ) do
     # QuadData ::= '{' Quads '}'
