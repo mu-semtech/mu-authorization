@@ -40,7 +40,7 @@ defmodule Sparqlex.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger, :httpoison, :poison]
     ]
   end
 
@@ -51,7 +51,9 @@ defmodule Sparqlex.MixProject do
       {:junit_formatter, "~> 2.1", only: :test},
       {:credo, "~> 0.8", only: [:dev, :test]},
       {:excoveralls, "~> 0.8", only: :test},
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
+      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
+      {:httpoison, "~> 1.1"},
+      {:poison, "~> 3.1"}
     ]
   end
 end
