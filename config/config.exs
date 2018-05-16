@@ -11,7 +11,7 @@ use Mix.Config
 # You can configure your application as:
 #
 #     config :sparqlex, key: :value
-config :sparqlex, author: :flowofcontrol
+config :"mu-authorization", author: :"mu-semtech"
 #
 # and access this configuration in your application as:
 #

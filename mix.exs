@@ -1,11 +1,11 @@
-defmodule Sparqlex.MixProject do
+defmodule MuAuthorization.MixProject do
   use Mix.Project
 
-  @github_url "https://github.com/langens-jonathan/sparql"
+  @github_url "https://github.com/mu-semtech/mu-authorization"
 
   def project do
     [
-      app: :sparqlex,
+      app: :"mu-authorization",
       version: "0.1.0",
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
@@ -22,13 +22,13 @@ defmodule Sparqlex.MixProject do
         "coveralls.post": :test,
         "coveralls.html": :test
       ],
-      name: "sparqlex",
-      description: "An elixir library for parsing and handling SPARQL queries.",
+      name: "mu-authorization",
+      description: "A proxy server that offers a authorization/delta wrapper for a SPARQL endpoint.",
       source_url: @github_url,
       homepage_url: @github_url,
       files: ~w(mix.exs lib LICENSE.md README.md CHANGELOG.md),
       package: [
-        maintainers: ["Langens Jonathan"],
+        maintainers: ["Versteden Aad", "Langens Jonathan"],
         licenses: ["MIT"],
         links: %{
           "GitHub" => @github_url,
@@ -40,7 +40,9 @@ defmodule Sparqlex.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger, :httpoison, :poison]
+      extra_applications: [:logger, :httpoison, :poison, :plug, :cowboy],
+      mod: {SPARQLServer, []},
+      env: ["sparql-port": 9980]
     ]
   end
 
@@ -53,7 +55,9 @@ defmodule Sparqlex.MixProject do
       {:excoveralls, "~> 0.8", only: :test},
       {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
       {:httpoison, "~> 1.1"},
-      {:poison, "~> 3.1"}
+      {:poison, "~> 3.1"},
+      {:plug, "~> 1.5"},
+      {:cowboy, "~> 2.4"}
     ]
   end
 end
