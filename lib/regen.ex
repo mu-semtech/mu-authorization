@@ -7,4 +7,13 @@ defmodule Regen do
   def make_generator( element, symbol\\:Sparql ) do
     Regen.Constructor.make( { :symbol, symbol }, %Regen.Status{ elements: [element], syntax: Parser.parse_sparql } )
   end
+
+  def result( element, symbol\\:Sparql ) do
+    element
+    |> Regen.make_generator( symbol )
+    |> Regen.Result.all
+    |> Enum.map( &Regen.Result.as_sparql/1 )
+    |> Enum.sort_by( &String.length/1, &>=/2 )
+    |> List.first
+  end
 end

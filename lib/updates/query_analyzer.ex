@@ -1,6 +1,7 @@
 alias InterpreterTerms.SymbolMatch, as: Sym
 alias InterpreterTerms.WordMatch, as: Word
 alias Updates.QueryAnalyzer.Iri, as: Iri
+alias Updates.QueryAnalyzer.Variable, as: Var
 alias Updates.QueryAnalyzer.String, as: Str
 alias Updates.QueryAnalyzer.Boolean, as: Bool
 alias Updates.QueryAnalyzer.NumericLiteral, as: Number
@@ -19,10 +20,17 @@ defmodule Updates.QueryAnalyzer do
   understand, rather than providing a fall through which loops
   over each submatch for models we haven't understood.
 
-  The analyzer consumes the following EBNF terms.  Some forms may
-  have children which are not parsed.  Check the full tree to be
-  sure.  EBNF forms which explicitly aren't handled have received
-  double-dashes in front and after the used term in the EBNF.
+  The analyzer consumes the following EBNF terms.  Some forms may have
+  children which are not parsed.  Check the full tree to be sure.
+  EBNF forms which explicitly aren't handled have received
+  double-dashes (--) in front and after the used term in the EBNF.
+  When forms are not handled, an error will be thrown.  The behaviour
+  is not yet supported but might be in the future.  Other forms are
+  handled, but not parsed.  These forms are placed between
+  double-plusses (++) in front and after the used term in the EBNF.
+  This means the form is not parsed, but is stored as a whole in the
+  analyzed query.  The WHERE clause is a good example of something we
+  don't expect to parse for update queries.
 
   Terms which yield quads:
 
@@ -37,10 +45,11 @@ defmodule Updates.QueryAnalyzer do
   - Object ::= GraphNode
 
   Terms which yield primitive values (variables included)
-  - VarOrIri ::= --Var-- | iri
+  - VarOrIri ::= Var | iri
+  - Var ::= VAR1 | VAR2
   - iri ::= IRIREF | PrefixedName
   - PrefixedName ::= PNAME_LN | PNAME_NS
-  - VarOrTerm ::= --Var-- | GraphTerm
+  - VarOrTerm ::= Var | GraphTerm
   - GraphTerm ::= iri | RDFLiteral | NumericLiteral | BooleanLiteral | --BlankNode-- | --NIL--
   - RDFLiteral ::= String ( LANGTAG | ( '^^' iri ) )?
   - GraphNode ::= VarOrTerm | --TriplesNode--
@@ -69,10 +78,16 @@ defmodule Updates.QueryAnalyzer do
   - Prologue ::= ( BaseDecl | PrefixDecl )*
   - BaseDecl ::= 'BASE' IRIREF
   - PrefixDecl ::= 'PREFIX' PNAME_NS IRIREF
-  - Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | --DeleteWhere-- | --Modify--
+  - Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | --DeleteWhere-- | Modify
 
   Terms which were added for DELETE DATA
   - DeleteData ::= 'DELETE DATA' QuadData
+
+  Terms which were added for INSERT WHERE
+  - [ ] Modify ::= ( 'WITH' iri )? ( --DeleteClause-- InsertClause? | InsertClause ) UsingClause* 'WHERE' ++GroupGraphPattern++
+  - InsertClause ::= 'INSERT' QuadPattern
+  - [ ] UsingClause* ::= 'USING' ( iri | 'NAMED' iri )
+  - QuadPattern ::= '{' Quads '}'
   """
 
   def extract_quads( query ) do
@@ -109,11 +124,12 @@ defmodule Updates.QueryAnalyzer do
   end
 
   def quads( %Sym{ symbol: :Update1, submatches: [match] }, options ) do
-    # Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | --DeleteWhere-- | --Modify--
+    # Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | --DeleteWhere-- | Modify
 
     case match do
       %Sym{ symbol: :InsertData } -> quads( match, options )
       %Sym{ symbol: :DeleteData } -> quads( match, options )
+      %Sym{ symbol: :Modify } -> quads( match, options )
     end
   end
 
@@ -141,6 +157,74 @@ defmodule Updates.QueryAnalyzer do
     [ delete: quads( quad_data, options ) ]
   end
 
+  def quads( %Sym{ symbol: :Modify, submatches: matches }, options ) do
+    # [ ] Modify ::= ( 'WITH' iri )? ( --DeleteClause-- InsertClause? | InsertClause ) UsingClause* 'WHERE' ++GroupGraphPattern++
+
+    group_graph_pattern_sym = %Sym{} = Enum.find matches, fn
+      %Sym{ symbol: :GroupGraphPattern } -> true
+      _ -> false
+    end
+
+    # We disallow the explicit use of USING in the construct queries.
+    # Users should never specify them, they should be calculated.
+    using_clause_syms = [] = Enum.filter matches, fn
+      %Sym{ symbol: :UsingClause } -> true
+      _ -> false
+    end
+
+    # with our current supported functions, we know we'll hit
+    # InsertClause instead of DeleteClause
+    insert_clause_sym = Enum.find matches, fn
+      %Sym{ symbol: :InsertClause } -> true
+      _ -> false
+    end
+
+    # The WITH clause provides a default for both the INSERT and the
+    # SELECT portion of our Modify.
+    { rest, options } =
+      case matches do
+        [%Word{ word: "WITH" }, iri_sym | rest] ->
+          { rest, update_options_for_with( iri_sym, options ) }
+        _ -> { matches, options }
+      end
+
+    # Our options are set, it's time to build the model for our insert
+    # templates
+    insert_clause_quads = quads( insert_clause_sym, options )
+
+    # Collect all information to construct the SELECT query, by
+    # converting the using clauses, adding them to our options,
+    # discovering the necessary SELECT variables, and constructing a
+    # new SELECT query.
+
+    find_variables_in_quads( insert_clause_quads )
+    |> construct_select_query( group_graph_pattern_sym, options )
+    |> Regen.result # the SELECT query to execute
+    |> IO.inspect
+    |> SparqlClient.query
+    |> SparqlClient.extract_results # Array of solutions
+    |> IO.inspect
+    |> Enum.flat_map( fn (res) -> fill_quad_template( insert_clause_quads, res ) end )
+    |> Enum.uniq # remove duplicate solutions
+  end
+
+  def quads( %Sym{ symbol: :InsertClause, submatches: matches }, options ) do
+    # InsertClause ::= 'INSERT' QuadPattern
+
+    [%Word{}, %Sym{ symbol: :QuadPattern } = subsym] = matches
+    quads( subsym, options )
+  end
+
+  def quads( %Sym{ symbol: :QuadPattern, submatches: matches }, options ) do
+    #  QuadPattern ::= '{' Quads '}'
+
+    # Find the Quads symbol and dispatch to it
+    Enum.find( matches, fn
+      %Sym{ symbol: :Quads } -> true
+      %Word{} -> false
+    end )
+    |> quads( options )
+  end
 
   def quads( %Sym{ symbol: :QuadData, submatches: matches }, options ) do
     # QuadData ::= '{' Quads '}'
@@ -194,7 +278,8 @@ defmodule Updates.QueryAnalyzer do
       graph_uri =
         graph_sym
         |> primitive_value( options )
-        |> is_uri_like!
+        # |> is_uri_like!  # <<-- we have started supporting
+        # variables, the EBNF is not sufficiently expressive
 
       quads( triples_template_sym, %{ options | default_graph: graph_uri } )
     end
@@ -248,7 +333,8 @@ defmodule Updates.QueryAnalyzer do
     subject_uri =
       var_or_term_sym
       |> primitive_value( options )
-      |> is_uri_like!
+      # |> is_uri_like! # <-- we now support Variables and the EBNF is
+      # not sufficiently expressive to block this.
 
     new_options = Map.put( options, :subject, subject_uri )
 
@@ -309,9 +395,14 @@ defmodule Updates.QueryAnalyzer do
     [ quad ]
   end
 
-  def primitive_value( %Sym{ symbol: :VarOrIri, submatches: [%Sym{ symbol: :iri } = iri_sym] }, options ) do
-    # VarOrIri ::= --Var-- | iri
-    primitive_value( iri_sym, options )
+  def primitive_value( %Sym{ symbol: :VarOrIri, submatches: [submatch] }, options ) do
+    # VarOrIri ::= Var | iri
+
+    case submatch do
+      %Sym{ symbol: :iri } -> submatch
+      %Sym{ symbol: :var } -> submatch
+    end
+    |> primitive_value( options )
   end
 
   def primitive_value( %Sym{ symbol: :iri, submatches: [submatch]}, options ) do
@@ -327,7 +418,6 @@ defmodule Updates.QueryAnalyzer do
   def primitive_value( %Sym{ symbol: :IRIREF, string: string }, options ) do
     Iri.from_iri_string( string, options )
   end
-
 
   def primitive_value( %Sym{ symbol: :PrefixedName, submatches: [prefix_sym] }, options ) do
     # PrefixedName ::= PNAME_LN | PNAME_NS
@@ -347,11 +437,27 @@ defmodule Updates.QueryAnalyzer do
     |> Iri.from_prefix_string( options )
   end
 
+  def primitive_value( %Sym{ symbol: :Var, submatches: [submatch] }, options ) do
+    # Var ::= VAR1 | VAR2
+
+    primitive_value( submatch, options )
+  end
+
+  def primitive_value( %Sym{ symbol: var_sym, string: string, submatches: :none }, options ) when var_sym in [:VAR1, :VAR2] do
+    # VAR1
+    # VAR2
+
+    string
+    |> Var.from_string
+  end
+
   def primitive_value( %Sym{ symbol: :VarOrTerm, submatches: [submatch] }, options ) do
-    # VarOrTerm ::= --Var-- | GraphTerm
+    # VarOrTerm ::= Var | GraphTerm
     case submatch do
-      %Sym{ symbol: :GraphTerm } -> primitive_value( submatch, options )
+      %Sym{ symbol: :GraphTerm } -> submatch
+      %Sym{ symbol: :Var } -> submatch
     end
+    |> primitive_value( options )
   end
 
   def primitive_value( %Sym{ symbol: :GraphTerm, submatches: [submatch] }, options ) do
@@ -510,16 +616,119 @@ defmodule Updates.QueryAnalyzer do
     Map.put( options, :prefixes, prefixes )
   end
 
+  @doc """
+  Yields a list of all variables which are containted in the query,
+  with duplicates removed.
+  """
+  def find_variables_in_quads( quads ) do
+    quads
+    |> Enum.flat_map( &Quad.as_list/1 )
+    |> Enum.filter( &Var.is_var/1 )
+    |> Enum.uniq
+  end
+
+  def update_options_for_with( %Sym{ symbol: :iri } = sym, options ) do
+    # TODO double_check the use of :default_graph.  The may be used
+    # incorrectly as the basis for empty predicates.
+    iri = primitive_value( sym, options )
+
+    options
+    |> Map.put( :default_graph, iri )
+  end
+
+  def construct_select_query( variables, group_graph_pattern_sym, options ) do
+    # In order to build the select query, we need to walk the right tree.
+    # At this stage, we have our options (which we can use to set the default graph)
+
+    # TODO: remove graph statements in group_graph_pattern_sym
+    # TODO: add FROM NAMED allowed graphs to select query
+    # TODO: move this method to a better module
+
+    select_variables =
+      variables
+      |> Enum.map( &Var.to_solution_sym/1 )
+
+    Updates.QueryConstructors.make_select_query( select_variables, group_graph_pattern_sym )
+    # |> remove_graph_statements # TODO when passing through this interface, the graph statements should be removed
+    # |> add_from_graphs_for_user # TODO detect FROM graph based on current user
+    |> Manipulators.Recipes.set_from_graph # This should be replaced by the previous rule in the future
+    |> Manipulators.Recipes.add_prefixes( prefix_list_from_options( options ) )
+  end
+
+  def construct_insert_query_from_quads(quads, options) do
+    quads
+    |> Enum.map( &Updates.QueryConstructors.make_quad_match_from_quad/1 )
+    |> IO.inspect
+    |> Updates.QueryConstructors.make_insert_query
+    |> IO.inspect
+    # |> TODO add prefixes
+  end
+
+
+  def prefix_list_from_options( options ) do
+    options
+    |> Map.get(:prefixes)
+    |> Enum.into( [] )
+    |> Enum.map( fn ({name, %Updates.QueryAnalyzer.Iri{ iri: iri }}) -> { name, iri } end )
+  end
+
+  def fill_quad_template( quads, single_query_result ) do
+    quads
+    |> Enum.map( fn (quad) -> instantiate_quad( quad, single_query_result ) end )
+    |> Enum.reject( &Quad.has_var?/1 )
+  end
 
   @doc """
-  Appends two sets of quads to each other.
+  Fills in the variables of a single quad, for the supplied variable binding.
   """
+  def instantiate_quad( %Quad{} = quad, %{} = binding ) do
+    quad
+    |> Quad.as_list
+    |> Enum.map( fn (elt) ->
+      if Var.is_var( elt ) && Map.has_key?( binding, Var.pure_name( elt ) ) do
+        Map.get( binding, Var.pure_name( elt ) )
+        |> primitive_value_from_binding
+      else
+        elt
+      end
+    end )
+    |> Quad.from_list
+  end
+
+  def primitive_value_from_binding( binding_value ) do
+    # TODO convert binding_value to local value
+    case binding_value do
+      %{ "type" => "uri", "value" => value } ->
+        Iri.from_iri_string( "<" <> value <> ">", %{} ) # We supply an empty options object, it will not be used
+      %{ "type" => "literal", "xml:lang" => lang, "value": value } ->
+        Str.from_langstring( value, lang )
+      %{ "type" => "literal", "datatype" => datatype, "value": value } ->
+        type_iri = Iri.from_iri_string( "<" <> datatype <> ">" )
+        Str.from_typestring( value, type_iri )
+        # TODO it seems only URIs are allowed here, but we should be
+        # certain stores don't break this assumption
+      %{ "type" => "literal", "value": value } -> Str.from_string( value )
+      # %{ "type" => "bnode", "value": value } -> # <-- we don't do
+      # blank nodes, we will crash when blank nodes arrive
+    end
+  end
+
   def is_uri_like!(%Iri{} = iri) do
     iri
   end
 
   def remove_last_string_char( string ) do
     String.slice( string, 0, String.length( string ) - 1 )
+  end
+
+  def insert_quads( quads, options ) do
+    quads
+    # |> consolidate_insert_quads
+    # |> dispatch_insert_quads_to_desired_graphs
+    |> construct_insert_query_from_quads( options )
+    |> Regen.result
+    |> IO.inspect
+    |> SparqlClient.query
   end
 
 end

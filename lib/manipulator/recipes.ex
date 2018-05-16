@@ -28,4 +28,20 @@ defmodule Manipulators.Recipes do
     |> Manipulators.SparqlQuery.add_graph( "http://mu.semte.ch/application" )
   end
 
+  def set_from_graph( element ) do
+    element
+    |> Manipulators.SparqlQuery.add_from_graph( "http://mu.semte.ch/application" )
+  end
+
+  def add_prefixes( element, prefixes ) do
+    Enum.reduce prefixes, element, fn (elt, acc) ->
+      add_prefix( acc, elt )
+    end
+  end
+
+  def add_prefix( element, { _prefix, _printable_iri } = prefix ) do
+    element
+    |> Manipulators.SparqlQuery.add_prefix( prefix )
+  end
+
 end

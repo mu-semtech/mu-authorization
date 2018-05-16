@@ -42,6 +42,14 @@ defmodule Parser do
     |> EbnfInterpreter.generate_all_options
   end
 
+  def parse_query_full( query ) do
+    Parser.parse_query_all( query )
+    |> Enum.filter( &Generator.Result.full_match?/1 )
+    |> List.first
+    |> Map.get( :match_construct )
+    |> List.first
+  end
+
   @doc """
   ## Examples
   iex> Parser.full_parse( "FOO" )

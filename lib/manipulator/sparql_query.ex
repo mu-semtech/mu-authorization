@@ -67,4 +67,45 @@ defmodule Manipulators.SparqlQuery do
     end )
   end
 
+  @doc """
+  Adds a prefix to the query.
+
+  It is assumed the prefix is just the prefix without a colon (:)
+  eg: foaf
+
+  It is assumed the printable_iri contains all the escaping for it to
+  be added to the graph.  For instance, it would be named
+  <http://mu.semte.ch/vocabularies/ext>.
+  """
+  def add_prefix( element, { prefix, printable_iri } ) do
+    # create the new prefix symbol
+    prefix_symbolmatch =
+      %InterpreterTerms.SymbolMatch{
+        symbol: :PrefixDecl,
+        submatches: [
+          %InterpreterTerms.WordMatch{word: "PREFIX"},
+          %InterpreterTerms.SymbolMatch{
+            symbol: :PNAME_NS,
+            string: prefix <> ":",
+            submatches: :none
+          },
+          %InterpreterTerms.SymbolMatch{
+            symbol: :IRIREF,
+            string: printable_iri,
+            submatches: :none
+          }
+        ] }
+
+    # add the match to our prologue
+    Manipulators.Basics.map_matches( element, fn (element) ->
+      case element do
+        %InterpreterTerms.SymbolMatch{ symbol: :Prologue, submatches: matches } = match ->
+          { :replace_by,
+            %{ match |
+               string: nil,
+               submatches: [ prefix_symbolmatch | matches ] } }
+        _ -> { :continue }
+      end
+    end )
+  end
 end
