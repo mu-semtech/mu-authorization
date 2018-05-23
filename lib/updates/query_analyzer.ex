@@ -167,7 +167,7 @@ defmodule Updates.QueryAnalyzer do
 
     # We disallow the explicit use of USING in the construct queries.
     # Users should never specify them, they should be calculated.
-    using_clause_syms = [] = Enum.filter matches, fn
+    _using_clause_syms = [] = Enum.filter matches, fn
       %Sym{ symbol: :UsingClause } -> true
       _ -> false
     end
@@ -181,7 +181,7 @@ defmodule Updates.QueryAnalyzer do
 
     # The WITH clause provides a default for both the INSERT and the
     # SELECT portion of our Modify.
-    { rest, options } =
+    { _, options } =
       case matches do
         [%Word{ word: "WITH" }, iri_sym | rest] ->
           { rest, update_options_for_with( iri_sym, options ) }
@@ -197,15 +197,18 @@ defmodule Updates.QueryAnalyzer do
     # discovering the necessary SELECT variables, and constructing a
     # new SELECT query.
 
-    find_variables_in_quads( insert_clause_quads )
-    |> construct_select_query( group_graph_pattern_sym, options )
-    |> Regen.result # the SELECT query to execute
-    |> IO.inspect
-    |> SparqlClient.query
-    |> SparqlClient.extract_results # Array of solutions
-    |> IO.inspect
-    |> Enum.flat_map( fn (res) -> fill_quad_template( insert_clause_quads, res ) end )
-    |> Enum.uniq # remove duplicate solutions
+    quads_to_insert =
+      find_variables_in_quads( insert_clause_quads )
+      |> construct_select_query( group_graph_pattern_sym, options )
+      |> Regen.result # the SELECT query to execute
+      |> IO.inspect
+      |> SparqlClient.query
+      |> SparqlClient.extract_results # Array of solutions
+      |> IO.inspect
+      |> Enum.flat_map( fn (res) -> fill_quad_template( insert_clause_quads, res ) end )
+      |> Enum.uniq # remove duplicate solutions
+
+    [insert: quads_to_insert]
   end
 
   def quads( %Sym{ symbol: :InsertClause, submatches: matches }, options ) do
@@ -443,7 +446,7 @@ defmodule Updates.QueryAnalyzer do
     primitive_value( submatch, options )
   end
 
-  def primitive_value( %Sym{ symbol: var_sym, string: string, submatches: :none }, options ) when var_sym in [:VAR1, :VAR2] do
+  def primitive_value( %Sym{ symbol: var_sym, string: string, submatches: :none }, _options ) when var_sym in [:VAR1, :VAR2] do
     # VAR1
     # VAR2
 
@@ -655,7 +658,7 @@ defmodule Updates.QueryAnalyzer do
     |> Manipulators.Recipes.add_prefixes( prefix_list_from_options( options ) )
   end
 
-  def construct_insert_query_from_quads(quads, options) do
+  def construct_insert_query_from_quads(quads, _options) do
     quads
     |> Enum.map( &Updates.QueryConstructors.make_quad_match_from_quad/1 )
     |> IO.inspect
@@ -703,7 +706,7 @@ defmodule Updates.QueryAnalyzer do
       %{ "type" => "literal", "xml:lang" => lang, "value": value } ->
         Str.from_langstring( value, lang )
       %{ "type" => "literal", "datatype" => datatype, "value": value } ->
-        type_iri = Iri.from_iri_string( "<" <> datatype <> ">" )
+        type_iri = Iri.from_iri_string( "<" <> datatype <> ">", %{} ) # We supply an empty options object, it will not be used
         Str.from_typestring( value, type_iri )
         # TODO it seems only URIs are allowed here, but we should be
         # certain stores don't break this assumption

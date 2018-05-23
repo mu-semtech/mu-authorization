@@ -12,7 +12,7 @@ end
 defmodule Iri do
   defstruct [:iri, :real_name]
 
-  def from_iri_string( iri, _options ) do
+  def from_iri_string( iri, _options \\ [] ) do
     new_iri = String.trim( iri, " " ) # TODO remove trimming when terminal symbols don't emit spaces anymore
     %Iri{ iri: new_iri, real_name: new_iri }
   end
@@ -38,11 +38,11 @@ defmodule Iri do
   end
 
   def make_a do
-    %Iri{ iri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", real_name: "a" }
+    %Iri{ iri: "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", real_name: "a" }
   end
 
   def is_a?( %Iri{ iri: iri } ) do
-    iri == "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    iri == "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"
   end
 
   defp strip_iri_marks( string ) do
