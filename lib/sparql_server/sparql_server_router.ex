@@ -39,15 +39,44 @@ defmodule SparqlServer.Router do
 
   # TODO for now this method does not apply our access constraints
   defp handle_query(query) do
-    query
-    |> String.trim
-    |> Parser.parse_query_all
-    |> Enum.filter( &Generator.Result.full_match?/1 )
-    |> List.first
-    |> Map.get( :match_construct )
-    |> List.first
+    parsed_form =
+      query
+      |> String.trim
+      |> Parser.parse_query_all
+      |> Enum.filter( &Generator.Result.full_match?/1 )
+      |> List.first
+      |> Map.get( :match_construct )
+      |> List.first
+
+    new_parsed_form = if is_select_query( parsed_form ) do
+      manipulate_select_query( parsed_form )
+    else
+      manipulate_update_query( parsed_form )
+    end
+
+    new_parsed_form
     |> Regen.result
     |> SparqlClient.query
     |> Poison.encode!
   end
+
+  defp is_select_query( query ) do
+    case query do
+      %InterpreterTerms.SymbolMatch{
+        symbol: :Sparql,
+        submatches: [
+          %InterpreterTerms.SymbolMatch{} ]} -> true
+      _ -> false
+    end
+  end
+
+  defp manipulate_select_query( query ) do
+    query
+    |> Manipulators.Recipes.set_application_graph
+  end
+
+  defp manipulate_update_query( query ) do
+    query
+  end
+
 end
