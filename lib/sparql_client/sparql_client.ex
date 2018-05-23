@@ -1,4 +1,4 @@
-defmodule SPARQLClient do
+defmodule SparqlClient do
   @moduledoc """
   A client library that offers the possibility to query a SPARQL endpoint
   """
@@ -28,6 +28,3 @@ defmodule SPARQLClient do
     |> Map.get("bindings")
   end
 end
-
-
-

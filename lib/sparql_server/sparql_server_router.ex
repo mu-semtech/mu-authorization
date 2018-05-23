@@ -1,4 +1,4 @@
-defmodule SPARQLServer.Router do
+defmodule SparqlServer.Router do
   @moduledoc """
   The router for the SPARQL endpoint.
   """
@@ -40,7 +40,7 @@ defmodule SPARQLServer.Router do
   # TODO for now this method does not hook into our query parser
   defp handle_query(query) do
     query
-    |> SPARQLClient.query
+    |> SparqlClient.query
     |> Poison.encode!
   end
 end
