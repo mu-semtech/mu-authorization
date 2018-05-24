@@ -65,7 +65,8 @@ defmodule SparqlServer.Router do
       %InterpreterTerms.SymbolMatch{
         symbol: :Sparql,
         submatches: [
-          %InterpreterTerms.SymbolMatch{} ]} -> true
+          %InterpreterTerms.SymbolMatch{
+            symbol: :QueryUnit} ]} -> true
       _ -> false
     end
   end
@@ -76,7 +77,18 @@ defmodule SparqlServer.Router do
   end
 
   defp manipulate_update_query( query ) do
+    # TODO DRY into/from Updates.QueryAnalyzer.insert_quads
+
+    options = %{ default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ) }   
     query
+    |> Updates.QueryAnalyzer.quads( %{ default_graph:
+                                     Updates.QueryAnalyzer.Iri.from_iri_string(
+                                       "<http://mu.semte.ch/application>", %{} ) } )
+    |> List.first
+    |> (fn ({_,quads}) -> quads end).() # TODO add support for multiple insert/delete statements
+    |> Acl.process_quads_for_update( Acl.Config.UserGroups.user_groups, %{} )
+    |> (fn ({_,quads}) -> quads end).()
+    |> Updates.QueryAnalyzer.construct_insert_query_from_quads( options )
   end
 
 end
