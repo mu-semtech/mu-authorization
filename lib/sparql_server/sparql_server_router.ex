@@ -23,7 +23,9 @@ defmodule SparqlServer.Router do
 
     response = handle_query query
 
-    send_resp(conn, 200, response)
+    conn
+    |> put_resp_content_type( "application/json" )
+    |> send_resp(200, response)
   end
 
   get "/sparql" do
@@ -32,7 +34,10 @@ defmodule SparqlServer.Router do
     query = params["query"]
 
     response = handle_query query
-    send_resp(conn, 200, response)
+
+    conn
+    |> put_resp_content_type( "application/json" )
+    |> send_resp(200, response)
   end
 
   match _, do: send_resp(conn, 404, "404 error not found")
