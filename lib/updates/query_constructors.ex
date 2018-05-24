@@ -84,6 +84,36 @@ defmodule Updates.QueryConstructors do
                             %InterpreterTerms.WordMatch{word: "}"} ] } ] } ] } ] } ] } ] }
   end
 
+  def make_delete_query( quads ) do
+    %InterpreterTerms.SymbolMatch{
+      symbol: :Sparql,
+      submatches: [
+        %InterpreterTerms.SymbolMatch{
+          symbol: :UpdateUnit,
+          submatches: [
+            %InterpreterTerms.SymbolMatch{
+              symbol: :Update,
+              submatches: [
+                %InterpreterTerms.SymbolMatch{
+                  symbol: :Prologue,
+                  submatches: [] },
+                %InterpreterTerms.SymbolMatch{
+                  symbol: :Update1,
+                  submatches: [
+                    %InterpreterTerms.SymbolMatch{
+                      symbol: :DeleteData,
+                      submatches: [
+                        %InterpreterTerms.WordMatch{word: "DELETE DATA"},
+                        %InterpreterTerms.SymbolMatch{
+                          symbol: :QuadData,
+                          submatches: [
+                            %InterpreterTerms.WordMatch{word: "{"},
+                            %InterpreterTerms.SymbolMatch{
+                              symbol: :Quads,
+                              submatches: quads },
+                            %InterpreterTerms.WordMatch{word: "}"} ] } ] } ] } ] } ] } ] }
+  end
+
   def make_quad_match_from_quad( %Quad{ subject: subject, predicate: predicate, object: object, graph: graph } ) do
     %InterpreterTerms.SymbolMatch{
       symbol: :QuadsNotTriples,

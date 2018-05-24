@@ -48,15 +48,19 @@ defmodule SparqlServer.Router do
       |> Map.get( :match_construct )
       |> List.first
 
-    new_parsed_form = if is_select_query( parsed_form ) do
+    new_parsed_forms = if is_select_query( parsed_form ) do
       manipulate_select_query( parsed_form )
     else
       manipulate_update_query( parsed_form )
     end
 
-    new_parsed_form
-    |> Regen.result
-    |> SparqlClient.query
+    new_parsed_forms
+    |> IO.inspect
+    |> Enum.reduce( nil, fn( elt, _ ) ->
+      elt
+      |> Regen.result
+      |> SparqlClient.query
+    end )
     |> Poison.encode!
   end
 
@@ -74,6 +78,7 @@ defmodule SparqlServer.Router do
   defp manipulate_select_query( query ) do
     query
     |> Manipulators.Recipes.set_application_graph
+    |> (fn (e) -> [e] end).()
   end
 
   defp manipulate_update_query( query ) do
@@ -84,11 +89,21 @@ defmodule SparqlServer.Router do
     |> Updates.QueryAnalyzer.quads( %{ default_graph:
                                      Updates.QueryAnalyzer.Iri.from_iri_string(
                                        "<http://mu.semte.ch/application>", %{} ) } )
-    |> List.first
-    |> (fn ({_,quads}) -> quads end).() # TODO add support for multiple insert/delete statements
-    |> Acl.process_quads_for_update( Acl.Config.UserGroups.user_groups, %{} )
-    |> (fn ({_,quads}) -> quads end).()
-    |> Updates.QueryAnalyzer.construct_insert_query_from_quads( options )
+    |> Enum.map(
+      fn ({statement, quads}) ->
+        case statement do
+          :insert ->
+            quads
+            |> Acl.process_quads_for_update( Acl.Config.UserGroups.user_groups, %{} )
+            |> (fn ({_,quads}) -> quads end).()
+            |> Updates.QueryAnalyzer.construct_insert_query_from_quads( options )
+          :delete ->
+            quads # TODO perhaps process quads for deletion differently
+            |> Acl.process_quads_for_update( Acl.Config.UserGroups.user_groups, %{} )
+            |> (fn ({_,quads}) -> quads end).()
+            |> Updates.QueryAnalyzer.construct_delete_query_from_quads( options )
+        end
+      end)
   end
 
 end

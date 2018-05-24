@@ -661,9 +661,14 @@ defmodule Updates.QueryAnalyzer do
   def construct_insert_query_from_quads(quads, _options) do
     quads
     |> Enum.map( &Updates.QueryConstructors.make_quad_match_from_quad/1 )
-    |> IO.inspect
     |> Updates.QueryConstructors.make_insert_query
-    |> IO.inspect
+    # |> TODO add prefixes
+  end
+
+  def construct_delete_query_from_quads(quads, _options) do
+    quads
+    |> Enum.map( &Updates.QueryConstructors.make_quad_match_from_quad/1 )
+    |> Updates.QueryConstructors.make_delete_query
     # |> TODO add prefixes
   end
 
