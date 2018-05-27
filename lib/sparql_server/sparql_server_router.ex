@@ -47,11 +47,7 @@ defmodule SparqlServer.Router do
     parsed_form =
       query
       |> String.trim
-      |> Parser.parse_query_all
-      |> Enum.filter( &Generator.Result.full_match?/1 )
-      |> List.first
-      |> Map.get( :match_construct )
-      |> List.first
+      |> Parser.parse_query_full
 
     new_parsed_forms = if is_select_query( parsed_form ) do
       manipulate_select_query( parsed_form )
