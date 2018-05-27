@@ -108,4 +108,28 @@ defmodule Manipulators.SparqlQuery do
       end
     end )
   end
+
+
+  @doc """
+  Removes the GRAPH statements from a sparql query.
+  """
+  def remove_graph_statements( element ) do
+    # We are interested in converting the GraphGraphPattern into
+    # something that does not scope to the graph.
+    #
+    # At the same level of the GraphGraphPattern, there is the
+    # GroupOrUnionGraphPattern.  Both of these use a GroupGraphPattern
+    # to identify their matching contents.  Hence, we can translate
+    # the GraphGraphPattern into a GroupOrUnionGraphPattern.
+    Manipulators.Basics.map_matches( element, fn (child) ->
+      case child do
+        %InterpreterTerms.SymbolMatch{ symbol: :GraphGraphPattern, submatches: [_,_,group_graph_pattern] }
+          -> { :replace_and_traverse,
+             %InterpreterTerms.SymbolMatch{ symbol: :GroupOrUnionGraphPattern,
+                                            submatches: [ group_graph_pattern ] } }
+        _ -> { :continue }
+      end
+    end )
+  end
+
 end

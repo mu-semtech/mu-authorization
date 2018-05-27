@@ -8,6 +8,8 @@ defmodule Manipulators.Basics do
     case functor.( result ) do
       { :replace_by, content } ->
         content
+      { :replace_and_traverse, content } ->
+        map_submatches( content, functor )
       { :insert_after, content } ->
         { :insert_after, content }
       { :continue } ->
