@@ -85,9 +85,10 @@ defmodule SparqlServer.Router do
     |> (fn (e) -> [e] end).()
   end
 
-  defp manipulate_update_query( query, _conn ) do
+  defp manipulate_update_query( query, conn ) do
     # TODO DRY into/from Updates.QueryAnalyzer.insert_quads
 
+    # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
     options = %{ default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ) }   
     query
     |> Updates.QueryAnalyzer.quads( %{ default_graph:
@@ -95,19 +96,17 @@ defmodule SparqlServer.Router do
                                        "<http://mu.semte.ch/application>", %{} ) } )
     |> Enum.map(
       fn ({statement, quads}) ->
+        processed_quads =
+          quads
+          |> Acl.process_quads_for_update( Acl.Config.UserGroups.user_groups, conn )
+          |> elem(1)
+
         case statement do
           :insert ->
-            quads
-            |> Acl.process_quads_for_update( Acl.Config.UserGroups.user_groups, %{} )
-            |> (fn ({_,quads}) -> quads end).()
-            |> Updates.QueryAnalyzer.construct_insert_query_from_quads( options )
+            Updates.QueryAnalyzer.construct_insert_query_from_quads( processed_quads, options )
           :delete ->
-            quads # TODO perhaps process quads for deletion differently
-            |> Acl.process_quads_for_update( Acl.Config.UserGroups.user_groups, %{} )
-            |> (fn ({_,quads}) -> quads end).()
-            |> Updates.QueryAnalyzer.construct_delete_query_from_quads( options )
-        end
-      end)
+            Updates.QueryAnalyzer.construct_delete_query_from_quads( processed_quads, options )
+        end end )
   end
 
 end
