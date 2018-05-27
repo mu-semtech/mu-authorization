@@ -132,4 +132,25 @@ defmodule Manipulators.SparqlQuery do
     end )
   end
 
+  @doc """
+  Removes FROM and FROM NAMED from QueryUnit.
+  """
+  def remove_from_statements( element ) do
+    # We need to search for components which have a DatasetClause, and
+    # remove it from where it might be.
+
+    # TODO: this can be optimized by only searching the tree in
+    # locations where this may be the case, rather than searching
+    # everywhere.
+    is_dataset_clause? = &match?(%InterpreterTerms.SymbolMatch{ symbol: :DatasetClause },&1)
+
+    Manipulators.Basics.map_matches( element, fn (%InterpreterTerms.SymbolMatch{ submatches: matches } = sym) ->
+      if Enum.find( matches, is_dataset_clause? ) do
+        { :replace_by,
+          %{ sym | submatches: Enum.reject( matches, is_dataset_clause? ) } }
+      else
+        { :continue }
+      end
+    end )
+  end
 end
