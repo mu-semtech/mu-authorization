@@ -21,7 +21,7 @@ defmodule SparqlServer.Router do
 
     query = body_params["query"]
 
-    response = handle_query query
+    response = handle_query query, conn
 
     conn
     |> put_resp_content_type( "application/json" )
@@ -33,7 +33,7 @@ defmodule SparqlServer.Router do
 
     query = params["query"]
 
-    response = handle_query query
+    response = handle_query query, conn
 
     conn
     |> put_resp_content_type( "application/json" )
@@ -43,16 +43,16 @@ defmodule SparqlServer.Router do
   match _, do: send_resp(conn, 404, "404 error not found")
 
   # TODO for now this method does not apply our access constraints
-  defp handle_query(query) do
+  defp handle_query(query, conn) do
     parsed_form =
       query
       |> String.trim
       |> Parser.parse_query_full
 
     new_parsed_forms = if is_select_query( parsed_form ) do
-      manipulate_select_query( parsed_form )
+      manipulate_select_query( parsed_form, conn )
     else
-      manipulate_update_query( parsed_form )
+      manipulate_update_query( parsed_form, conn )
     end
 
     new_parsed_forms
@@ -76,7 +76,8 @@ defmodule SparqlServer.Router do
     end
   end
 
-  defp manipulate_select_query( query ) do
+  defp manipulate_select_query( query, _conn ) do
+    # TODO: apply Acl.Config.UserGroups to select queries
     query
     |> Manipulators.SparqlQuery.remove_graph_statements
     |> Manipulators.SparqlQuery.remove_from_statements # TODO: check how BaseDecl should be interpreted, possibly also remove that.
@@ -84,7 +85,7 @@ defmodule SparqlServer.Router do
     |> (fn (e) -> [e] end).()
   end
 
-  defp manipulate_update_query( query ) do
+  defp manipulate_update_query( query, _conn ) do
     # TODO DRY into/from Updates.QueryAnalyzer.insert_quads
 
     options = %{ default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ) }   
