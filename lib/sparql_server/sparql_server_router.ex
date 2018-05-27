@@ -79,6 +79,7 @@ defmodule SparqlServer.Router do
   defp manipulate_select_query( query ) do
     query
     |> Manipulators.SparqlQuery.remove_graph_statements
+    |> Manipulators.SparqlQuery.remove_from_statements # TODO: check how BaseDecl should be interpreted, possibly also remove that.
     |> Manipulators.Recipes.set_application_graph
     |> (fn (e) -> [e] end).()
   end
