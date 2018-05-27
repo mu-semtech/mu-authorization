@@ -78,6 +78,7 @@ defmodule SparqlServer.Router do
 
   defp manipulate_select_query( query ) do
     query
+    |> Manipulators.SparqlQuery.remove_graph_statements
     |> Manipulators.Recipes.set_application_graph
     |> (fn (e) -> [e] end).()
   end
