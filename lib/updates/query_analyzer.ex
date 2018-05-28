@@ -709,10 +709,16 @@ defmodule Updates.QueryAnalyzer do
       %{ "type" => "uri", "value" => value } ->
         Iri.from_iri_string( "<" <> value <> ">", %{} ) # We supply an empty options object, it will not be used
       %{ "type" => "literal", "xml:lang" => lang, "value": value } ->
-        Str.from_langstring( value, lang )
-      %{ "type" => "literal", "datatype" => datatype, "value": value } ->
+        value
+        |> String.replace( "\"", "\\\"" )
+        |> (fn (x) -> "\"" <> x <> "\"" end).()
+        |> Str.from_langstring( lang )
+      %{ "type" => type_name, "datatype" => datatype, "value" => value } when type_name in ["literal", "typed-literal"] -> # It seems Virtuoso emits typed-literal rather than literal
         type_iri = Iri.from_iri_string( "<" <> datatype <> ">", %{} ) # We supply an empty options object, it will not be used
-        Str.from_typestring( value, type_iri )
+        value
+        |> String.replace( "\"", "\\\"" )
+        |> (fn (x) -> "\"" <> x <> "\"" end).()
+        |> Str.from_typestring( type_iri )
         # TODO it seems only URIs are allowed here, but we should be
         # certain stores don't break this assumption
       %{ "type" => "literal", "value": value } -> Str.from_string( value )
