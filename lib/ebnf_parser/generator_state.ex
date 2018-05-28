@@ -22,22 +22,18 @@ defmodule State do
 
   def cut_whitespace( chars ) do
     # Strip spaces from front
-    reduce_char_step = fn (char, x) ->
-      if char in [" ","\t","\n"] do
-        { :cnt, x + 1 }
-      else
-        { :skip, x }
-      end
-    end
-
-    { _, drop_count } = Enum.reduce(
-      chars, { :cnt, 0 }, fn
-        (char, { :cnt, x }) -> reduce_char_step.( char, x )
-        ( _, { _, x } ) -> { :skip, x }
-      end )
+    drop_count =
+      Enum.reduce_while( chars, 0,
+        fn (char, acc) ->
+          if char in [" ", "\t", "\n"] do
+            { :cont, acc + 1 }
+          else
+            { :halt, acc }
+          end
+        end )
 
     { Enum.drop(chars, drop_count),
-      Enum.take(chars, drop_count) |> Enum.reduce( "", fn (a,b)  -> a <> b end ) }
+      Enum.take(chars, drop_count) |> List.to_string }
   end
 
 end
