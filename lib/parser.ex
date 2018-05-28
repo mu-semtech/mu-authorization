@@ -42,12 +42,25 @@ defmodule Parser do
     |> EbnfInterpreter.generate_all_options
   end
 
-  def parse_query_full( query ) do
-    Parser.parse_query_all( query )
-    |> Enum.filter( &Generator.Result.full_match?/1 )
-    |> List.first
+  def parse_query_full( query, rule_name\\:Sparql ) do
+    rule = {:symbol, rule_name}
+    state = %Generator.State{ chars: String.graphemes( query ), syntax: Parser.parse_sparql }
+
+    EbnfParser.GeneratorConstructor.dispatch_generation( rule, state )
+    |> find_full_solution_for_generator
     |> Map.get( :match_construct )
     |> List.first
+  end
+
+  defp find_full_solution_for_generator( generator ) do
+    case EbnfParser.Generator.emit( generator ) do
+      {:ok, new_state , answer } ->
+        if Generator.Result.full_match? answer do
+          answer
+        else
+          find_full_solution_for_generator( new_state )
+        end
+    end
   end
 
   @doc """
