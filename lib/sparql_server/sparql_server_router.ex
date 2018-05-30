@@ -76,13 +76,18 @@ defmodule SparqlServer.Router do
     end
   end
 
-  defp manipulate_select_query( query, _conn ) do
+  defp manipulate_select_query( query, conn ) do
     # TODO: apply Acl.Config.UserGroups to select queries
-    query
-    |> Manipulators.SparqlQuery.remove_graph_statements
-    |> Manipulators.SparqlQuery.remove_from_statements # TODO: check how BaseDecl should be interpreted, possibly also remove that.
-    |> Manipulators.Recipes.set_application_graph
-    |> (fn (e) -> [e] end).()
+    { query, access_groups } =
+      query
+      |> Manipulators.SparqlQuery.remove_graph_statements
+      |> Manipulators.SparqlQuery.remove_from_statements # TODO: check how BaseDecl should be interpreted, possibly also remove that.
+      |> Acl.process_query( Acl.Config.UserGroups.user_groups, conn )
+
+    IO.inspect access_groups, label: "Acces groups"
+    access_groups = Enum.uniq( access_groups )
+
+    [ query ]
   end
 
   defp manipulate_update_query( query, conn ) do

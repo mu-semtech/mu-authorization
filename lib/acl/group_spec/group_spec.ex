@@ -30,6 +30,10 @@ defmodule Acl.GroupSpec do
     def process( %GroupSpec{} = group_spec, info, quads ) do
       GroupSpec.process( group_spec, info, quads )
     end
+
+    def process_query( %GroupSpec{} = group_spec, info, query ) do
+      Acl.GroupSpec.process_query( group_spec, info, query )
+    end
   end
 
   def process( %GroupSpec{ graphs: graph_specs }, info, quads ) do
@@ -41,4 +45,11 @@ defmodule Acl.GroupSpec do
     |> Enum.uniq # TODO We should do a uniq_by and supply the IRI instead
   end
 
+  def process_query( %GroupSpec{ graphs: graph_specs }, info, query ) do
+    graph_specs
+    |> Enum.reduce( {query,[]}, fn (graph_spec, {query,auths}) ->
+      { new_query, new_auths } = Acl.GraphSpec.process_query( graph_spec, info, query )
+      { new_query, auths ++ new_auths }
+    end )
+  end
 end

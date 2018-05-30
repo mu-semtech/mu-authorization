@@ -15,6 +15,10 @@ defmodule Acl.GroupSpec.GraphCleanup do
     def process( %GraphCleanup{} = graph_cleanup, _, quads ) do
       GraphCleanup.clean_originating_graph( graph_cleanup, quads )
     end
+
+    def process_query( %GraphCleanup{} = group_spec, info, query ) do
+      { query, [] }
+    end
   end
 
   def clean_originating_graph( %GraphCleanup{ originating_graph: graph }, quads ) do
