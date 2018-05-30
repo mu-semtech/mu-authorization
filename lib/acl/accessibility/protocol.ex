@@ -6,8 +6,8 @@ defprotocol Acl.Accessibility.Protocol do
   @type graph_spec :: Acl.GraphSpec
 
   # The result of this function should probably be something more
-  # complex than [String.t].  The values of the arguments will need to
+  # complex than [[String.t]].  The values of the arguments will need to
   # make sense.  A map or json-like representation are necessary.
-  @spec accessible?( Pr.t, Acl.GraphSpec, GPr.request ) :: { :ok, [String.t] } | { :fail }
+  @spec accessible?( Pr.t, Acl.GraphSpec, GPr.request ) :: { :ok, [[String.t]] } | { :fail }
   def accessible?( constraint, graph_spec, request )
 end

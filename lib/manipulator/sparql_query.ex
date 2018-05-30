@@ -144,12 +144,47 @@ defmodule Manipulators.SparqlQuery do
     # everywhere.
     is_dataset_clause? = &match?(%InterpreterTerms.SymbolMatch{ symbol: :DatasetClause },&1)
 
-    Manipulators.Basics.map_matches( element, fn (%InterpreterTerms.SymbolMatch{ submatches: matches } = sym) ->
-      if Enum.find( matches, is_dataset_clause? ) do
-        { :replace_by,
-          %{ sym | submatches: Enum.reject( matches, is_dataset_clause? ) } }
-      else
-        { :continue }
+    Manipulators.Basics.map_matches( element, fn (sym) ->
+      case sym do
+        %InterpreterTerms.SymbolMatch{ submatches: :none }  = sym ->
+          { :continue }
+        %InterpreterTerms.SymbolMatch{ submatches: matches } = sym ->
+          if Enum.find( matches, is_dataset_clause? ) do
+            { :replace_by,
+              %{ sym | submatches: Enum.reject( matches, is_dataset_clause? ) } }
+          else
+            { :continue }
+          end
+        _ -> { :continue }
+      end
+    end )
+  end
+
+  @doc """
+  Replaces the from_iri with the to_iri in the whole query.
+
+  The from_iri string should be an Iri in the format in which it
+  appears in the query (eg: <http://mu.semte.ch/sessions/24>).
+  """
+  def replace_iri( element, from_iri, to_iri ) do
+    Manipulators.Basics.map_matches( element, fn (child) ->
+      case child do
+        %InterpreterTerms.SymbolMatch{ symbol: :iri, string: str } ->
+          if str == from_iri do
+            { :replace_and_traverse,
+              %InterpreterTerms.SymbolMatch{
+                symbol: :iri,
+                submatches: [
+                  %InterpreterTerms.SymbolMatch{
+                    symbol: :IRIREF,
+                    string: to_iri,
+                    submatches: :none }
+                ]
+              } }
+          else
+            { :continue }
+          end
+        _ -> { :continue }
       end
     end )
   end

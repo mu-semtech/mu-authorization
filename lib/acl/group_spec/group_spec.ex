@@ -18,20 +18,25 @@ defmodule Acl.GroupSpec do
     def accessible?( %GroupSpec{ access: access, name: name } = group_spec, request ) do
       case Acl.Accessibility.Protocol.accessible?( access, group_spec, request ) do
         { :fail } -> { :fail }
-        { :ok, args } -> {:ok, [ { name, args } ] }
+        { :ok, args } ->
+          # Emit an array of solutions when they are available
+          solutions =
+            args
+            |> Enum.map( fn (vars) -> { name, vars } end )
+          { :ok, solutions }
       end
     end
 
-    def process( %GroupSpec{} = group_spec, quads ) do
-      GroupSpec.process( group_spec, quads )
+    def process( %GroupSpec{} = group_spec, info, quads ) do
+      GroupSpec.process( group_spec, info, quads )
     end
   end
 
-  def process( %GroupSpec{ graphs: graph_specs }, quads ) do
+  def process( %GroupSpec{ graphs: graph_specs }, info, quads ) do
     # TODO: we should accept extra quads in order to limit the amount
     # of queries to be executed on the server in the long run.
     graph_specs
-    |> Enum.flat_map( &(Acl.GraphSpec.process_quads( &1, quads, [] ) ) ) # We should cache and supply extra quads
+    |> Enum.flat_map( &Acl.GraphSpec.process_quads( &1, info, quads, [] ) ) # We should cache and supply extra quads
     |> IO.inspect( label: "Flat mapped processed quads" )
     |> Enum.uniq # TODO We should do a uniq_by and supply the IRI instead
   end

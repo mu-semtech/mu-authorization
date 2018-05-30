@@ -1,4 +1,5 @@
 alias Acl.Accessibility.Always, as: AlwaysAccessible
+alias Acl.Accessibility.ByQuery, as: AccessByQuery
 alias Acl.GraphSpec.Constraint.Resource.AllPredicates, as: AllPredicates
 alias Acl.GraphSpec.Constraint.Resource.NoPredicates, as: NoPredicates
 alias Acl.GraphSpec.Constraint.Resource, as: ResourceConstraint
@@ -27,20 +28,22 @@ defmodule Acl.Config.UserGroups do
                     graph: "http://mu.semte.ch/graphs/contacts",
                     constraint: %ResourceConstraint{
                       source_graph: "http://mu.semte.ch/application",
-                      resource_type: "http://mu.semte.ch/ext/Contacts",
+                      resource_type: "http://mu.semte.ch/ext/Contact",
                       predicates: %AllPredicates{},
                       inverse_predicates: %NoPredicates{} } } ] },
-      # %GroupSpec{
-      #   name: "users",
-      #   access: %AccessByQuery{
-      #     vars: ["?user_uuid"],
-      #     query: "PREFIX foaf: <http://xmlns.com/foaf/0.1/> PREFIX musession: <https://mu.semte.ch/vocabularies/session/> mu: <http://mu.semte.ch/vocabularies/core/> SELECT ?user_uuid WHERE { <SESSION_ID> musession:account/^foaf:account/mu:uuid ?user_uuid }" },
-      #   graphs: [ %GraphSpec{
-      #               graph: "http://mu.semte.ch/graphs/users/",
-      #               constraint: %ResourceConstraint{
-      #                 resource_type: "http://mu.semte.ch/ext/Basket",
-      #                 predicates: %AllPredicates{},
-      #                 inverse_predicates: %NoPredicates{} } } ] },
+      %GroupSpec{
+        name: "users",
+        access: %AccessByQuery{
+          vars: ["user_uuid"],
+          query: "PREFIX foaf: <http://xmlns.com/foaf/0.1/> PREFIX musession: <https://mu.semte.ch/vocabularies/session/> PREFIX mu: <http://mu.semte.ch/vocabularies/core/> SELECT ?user_uuid WHERE { <SESSION_ID> mu:uuid ?user_uuid. }"
+                # "PREFIX foaf: <http://xmlns.com/foaf/0.1/> PREFIX musession: <https://mu.semte.ch/vocabularies/session/> PREFIX mu: <http://mu.semte.ch/vocabularies/core/> SELECT ?user_uuid WHERE { <SESSION_ID> musession:account/^foaf:account/mu:uuid ?user_uuid }"
+        },
+        graphs: [ %GraphSpec{
+                    graph: "http://mu.semte.ch/graphs/users/",
+                    constraint: %ResourceConstraint{
+                      resource_type: "http://mu.semte.ch/ext/Basket",
+                      predicates: %AllPredicates{},
+                      inverse_predicates: %NoPredicates{} } } ] },
       %GraphCleanup{
         originating_graph: "http://mu.semte.ch/application"
       }

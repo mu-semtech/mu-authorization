@@ -9,10 +9,10 @@ defmodule Acl.GroupSpec.GraphCleanup do
     def accessible?( %GraphCleanup{}, _ ) do
       # We are always accessible, and we don't belong to an access
       # group.
-      { :ok, [] }
+      { :ok, [[]] }
     end
 
-    def process( %GraphCleanup{} = graph_cleanup, quads ) do
+    def process( %GraphCleanup{} = graph_cleanup, _, quads ) do
       GraphCleanup.clean_originating_graph( graph_cleanup, quads )
     end
   end

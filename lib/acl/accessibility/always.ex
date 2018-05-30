@@ -17,7 +17,7 @@ defmodule AlwaysAccessible do
     no need to yield any specific parameters indicating a scope.
     """
     def accessible?( %AlwaysAccessible{}, _graph_spec, _request ) do
-      {:ok, []}
+      {:ok, [[]]}
     end
   end
 

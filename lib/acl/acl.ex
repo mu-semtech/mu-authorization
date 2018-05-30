@@ -17,7 +17,7 @@ defmodule Acl do
   """
   def process_quads_for_update( quads, user_groups, request ) do
     # The active_group_names should not consist of an array of strings.
-    { active_groups, active_group_specs } =
+    active_groups_info =
       user_groups
       |> Enum.map( &({&1,Acl.GroupSpec.Protocol.accessible?(&1, request)}) )
       |> Enum.filter( fn
@@ -25,25 +25,28 @@ defmodule Acl do
         ({_, {:fail}}) -> false
       end )
       |> Enum.map( fn ({user_group,{_,group_names}}) -> { user_group, group_names } end )
-      |> Enum.unzip
 
     all_group_specs =
-        active_group_specs
+        active_groups_info
+        |> Enum.unzip
+        |> elem(1)
         |> List.flatten
-        |> IO.inspect
         |> Enum.uniq
-        |> IO.inspect
 
     IO.puts "^ all group specs"
 
     resulting_quads =
-      active_groups
-      |> Enum.reduce( quads, fn (item, acc) -> Acl.GroupSpec.Protocol.process( item, acc ) end )
+      active_groups_info
+      |> Enum.reduce( quads, fn ({active_group, active_group_specs} , acc) ->
+        # active_group_spec should be an array of specs
+        Enum.reduce( active_group_specs, acc,
+          &Acl.GroupSpec.Protocol.process( active_group, &1, &2 ) )
+      end )
       |> IO.inspect
 
     IO.puts "^ new quads"
 
-    {all_group_specs, resulting_quads}
+    { all_group_specs, resulting_quads }
   end
 
 
