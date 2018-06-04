@@ -37,7 +37,8 @@ defmodule InterpreterTerms.Word do
 
       # Check if we start with the right word
       %State{ chars: chars } = state
-      if word == to_string( Enum.take( chars, String.length( word ) ) ) do
+      # we upcase both parts, because there's the 'a' case which is to be transformed as lowercase...
+      if String.upcase(word) == String.upcase( to_string( Enum.take( chars, String.length( word ) ) ) ) do
         result = %Result{
           leftover: Enum.drop( chars, String.length( word ) ),
           matched_string: whitespace <> word,
