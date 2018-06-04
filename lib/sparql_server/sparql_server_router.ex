@@ -19,9 +19,9 @@ defmodule SparqlServer.Router do
 
     body_params = body_params_encoded |> URI.decode_query
 
-    query = body_params["query"]
+    query = body_params["query"] |> IO.inspect( label: "Received query" )
 
-    response = handle_query query, conn
+    { conn, response } = handle_query query, conn
 
     conn
     |> put_resp_content_type( "application/json" )
@@ -33,7 +33,7 @@ defmodule SparqlServer.Router do
 
     query = params["query"]
 
-    response = handle_query query, conn
+    { conn, response } = handle_query query, conn
 
     conn
     |> put_resp_content_type( "application/json" )
@@ -44,25 +44,48 @@ defmodule SparqlServer.Router do
 
   # TODO for now this method does not apply our access constraints
   defp handle_query(query, conn) do
+    access_groups = get_access_groups( conn )
+
+    conn = Plug.Conn.put_resp_header(
+      conn,
+      "mu-authorization-groups",
+      encode_json_access_groups( access_groups ) )
+
     parsed_form =
       query
       |> String.trim
+      |> String.replace( "\r", "" ) # TODO: check if this is valid and/or ensure parser skips \r between words.
       |> Parser.parse_query_full
 
     new_parsed_forms = if is_select_query( parsed_form ) do
-      manipulate_select_query( parsed_form, conn )
+      manipulate_select_query( parsed_form, conn, access_groups )
     else
-      manipulate_update_query( parsed_form, conn )
+      manipulate_update_query( parsed_form, conn, access_groups )
     end
 
-    new_parsed_forms
-    |> IO.inspect
-    |> Enum.reduce( nil, fn( elt, _ ) ->
-      elt
-      |> Regen.result
-      |> SparqlClient.query
-    end )
-    |> Poison.encode!
+    encoded_response =
+      new_parsed_forms
+      |> Enum.reduce( nil, fn( elt, _ ) ->
+        elt
+        |> Regen.result
+        |> SparqlClient.query
+      end )
+      |> Poison.encode!
+
+    { conn, encoded_response }
+  end
+
+  defp get_access_groups( conn ) do
+    access_groups = Plug.Conn.get_req_header( conn, "mu-authorization-groups" )
+
+    if Enum.empty?( access_groups ) do
+      Acl.Config.UserGroups.user_groups
+      |> Acl.user_authorization_groups( conn )
+    else
+      access_groups
+      |> List.first
+      |> decode_json_access_groups
+    end
   end
 
   defp is_select_query( query ) do
@@ -76,21 +99,18 @@ defmodule SparqlServer.Router do
     end
   end
 
-  defp manipulate_select_query( query, conn ) do
+  defp manipulate_select_query( query, _conn, authorization_groups ) do
     # TODO: apply Acl.Config.UserGroups to select queries
-    { query, access_groups } =
+    { query, _access_groups } =
       query
       |> Manipulators.SparqlQuery.remove_graph_statements
       |> Manipulators.SparqlQuery.remove_from_statements # TODO: check how BaseDecl should be interpreted, possibly also remove that.
-      |> Acl.process_query( Acl.Config.UserGroups.user_groups, conn )
-
-    IO.inspect access_groups, label: "Acces groups"
-    access_groups = Enum.uniq( access_groups )
+      |> Acl.process_query( Acl.Config.UserGroups.user_groups, authorization_groups )
 
     [ query ]
   end
 
-  defp manipulate_update_query( query, conn ) do
+  defp manipulate_update_query( query, conn, authorization_groups ) do
     # TODO DRY into/from Updates.QueryAnalyzer.insert_quads
 
     # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
@@ -103,7 +123,7 @@ defmodule SparqlServer.Router do
       fn ({statement, quads}) ->
         processed_quads =
           quads
-          |> Acl.process_quads_for_update( Acl.Config.UserGroups.user_groups, conn )
+          |> Acl.process_quads_for_update( Acl.Config.UserGroups.user_groups, authorization_groups )
           |> elem(1)
 
         case statement do
@@ -112,6 +132,20 @@ defmodule SparqlServer.Router do
           :delete ->
             Updates.QueryAnalyzer.construct_delete_query_from_quads( processed_quads, options )
         end end )
+  end
+
+  defp decode_json_access_groups( json_string ) do
+    json_string
+    |> Poison.decode!
+    |> Enum.map( fn (%{"name" => name, "variables" => variables}) -> {name, variables} end )
+  end
+
+  defp encode_json_access_groups( access_groups ) do
+    access_groups
+    |> Enum.map( fn ({name, variables}) ->
+      %{ "name" => name, "variables" => variables }
+    end)
+    |> Poison.encode!
   end
 
 end

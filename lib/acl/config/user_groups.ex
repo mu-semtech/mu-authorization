@@ -45,7 +45,8 @@ defmodule Acl.Config.UserGroups do
                       predicates: %AllPredicates{},
                       inverse_predicates: %NoPredicates{} } } ] },
       %GraphCleanup{
-        originating_graph: "http://mu.semte.ch/application"
+        originating_graph: "http://mu.semte.ch/application",
+        name: "clean"
       }
     ]
   end
