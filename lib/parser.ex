@@ -63,6 +63,32 @@ defmodule Parser do
     end
   end
 
+  defp test_full_solution_for_generator( generator ) do
+    case EbnfParser.Generator.emit( generator ) do
+      {:ok, new_state , answer } ->
+        if Generator.Result.full_match? answer do
+          true
+        else
+          test_full_solution_for_generator( new_state )
+        end
+      {:fail} ->
+        false
+    end
+  end
+
+  @doc """
+    Similar to parse_query_full, but handier in a setting where you
+    want to test whether a solution would exist or not.  This is not
+    cheaper to execute than finding a solution.
+  """
+  def test_full_solution( query, rule_name\\:Sparql ) do
+    rule = {:symbol, rule_name}
+    state = %Generator.State{ chars: String.graphemes( query ), syntax: Parser.parse_sparql }
+
+    EbnfParser.GeneratorConstructor.dispatch_generation( rule, state )
+    |> test_full_solution_for_generator
+  end
+
   @doc """
   ## Examples
   iex> Parser.full_parse( "FOO" )
