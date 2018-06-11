@@ -23,3 +23,5 @@ erl_crash.dump
 sparql-*.tar
 
 current_todos.txt
+
+*~

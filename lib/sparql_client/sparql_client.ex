@@ -4,7 +4,7 @@ defmodule SparqlClient do
   """
 
   def default_endpoint do
-    "http://localhost:8890/sparql"
+    System.get_env("MU_SPARQL_ENDPOINT") || "http://localhost:8890/sparql"
   end
 
   def query(query, endpoint\\default_endpoint) do
