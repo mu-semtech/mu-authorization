@@ -11,6 +11,7 @@ defmodule MuAuthorization.MixProject do
       start_permanent: Mix.env() == :prod,
       erlc_paths: ["parser-generator"],
       deps: deps(),
+      aliases: aliases(),
       docs: [
         main: "readme",
         extras: ["README.md", "CHANGELOG.md"]
@@ -37,12 +38,17 @@ defmodule MuAuthorization.MixProject do
     ]
   end
 
+  # Some command line aliases
+  def aliases do
+    [server: "run --no-halt"]
+  end
+
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger, :httpoison, :poison, :plug, :cowboy],
       mod: {SparqlServer, []},
-      env: ["sparql-port": 9980]
+      env: ["sparql-port": 80]
     ]
   end
 
