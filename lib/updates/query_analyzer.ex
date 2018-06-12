@@ -34,7 +34,7 @@ defmodule Updates.QueryAnalyzer do
 
   Terms which yield quads:
 
-  - InsertData ::= 'INSERT DATA' QuadData
+  - InsertData ::= 'INSERT' 'DATA' QuadData
   - QuadData ::= '{' Quads '}'
   - Quads ::= TriplesTemplate? (QuadsNotTriples '.'? TriplesTemplate ?)*
   - QuadsNotTriples ::= 'GRAPH' VarOrIri '{' TriplesTemplate? '}'
@@ -81,7 +81,7 @@ defmodule Updates.QueryAnalyzer do
   - Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | --DeleteWhere-- | Modify
 
   Terms which were added for DELETE DATA
-  - DeleteData ::= 'DELETE DATA' QuadData
+  - DeleteData ::= 'DELETE' 'DATA' QuadData
 
   Terms which were added for INSERT WHERE
   - [ ] Modify ::= ( 'WITH' iri )? ( DeleteClause InsertClause? | InsertClause ) UsingClause* 'WHERE' ++GroupGraphPattern++
@@ -137,7 +137,7 @@ defmodule Updates.QueryAnalyzer do
   end
 
   def quads( %Sym{ symbol: :InsertData, submatches: matches }, options ) do
-    # InsertData ::= 'INSERT DATA' QuadData
+    # InsertData ::= 'INSERT' 'DATA' QuadData
 
     # scan matches to find the single QuadData element:
     quad_data = Enum.find matches, fn
@@ -149,7 +149,7 @@ defmodule Updates.QueryAnalyzer do
   end
 
   def quads( %Sym{ symbol: :DeleteData, submatches: matches }, options ) do
-    # DeleteData ::= 'DELETE DATA' QuadData
+    # DeleteData ::= 'DELETE' 'DATA' QuadData
 
     # scan matchesto find the single QuadData element:
     quad_data = Enum.find matches, fn
@@ -214,12 +214,16 @@ defmodule Updates.QueryAnalyzer do
       [ { :delete,
           fill_in_triples_template( delete_clause_quads, group_graph_pattern_sym, options )
         } ]
+    else
+      []
     end
 
     insert_quads_statement = if insert_clause_quads do
       [ { :insert,
           fill_in_triples_template( insert_clause_quads, group_graph_pattern_sym, options )
         } ]
+    else
+      []
     end
 
     delete_quads_statement ++ insert_quads_statement
@@ -667,7 +671,6 @@ defmodule Updates.QueryAnalyzer do
     authorization_groups = Map.get( options, :authorization_groups ) # TODO add default to calculate authorization_groups for no user
 
     # TODO: remove graph statements in group_graph_pattern_sym
-    # TODO: add FROM NAMED allowed graphs to select query
     # TODO: move this method to a better module
 
     select_variables =
@@ -675,10 +678,11 @@ defmodule Updates.QueryAnalyzer do
       |> Enum.map( &Var.to_solution_sym/1 )
 
     Updates.QueryConstructors.make_select_query( select_variables, group_graph_pattern_sym )
-    # |> remove_graph_statements # TODO when passing through this interface, the graph statements should be removed
-    |> add_from_graphs_for_user( authorization_groups ) # TODO detect FROM graph based on current user
-    # |> Manipulators.Recipes.set_from_graph # This should be replaced by the previous rule in the future
     |> Manipulators.Recipes.add_prefixes( prefix_list_from_options( options ) )
+    # |> remove_graph_statements # TODO when passing through this interface, the graph statements should be removed
+    # TODO: Should we select from our READ graphs, from our WRITE graphs or from something else?
+    |> Acl.process_query( Acl.Config.UserGroups.user_groups, authorization_groups )
+    # |> Manipulators.Recipes.set_from_graph # This should be replaced by the previous rule in the future
   end
 
   def construct_insert_query_from_quads(quads, _options) do
@@ -764,6 +768,7 @@ defmodule Updates.QueryAnalyzer do
     # blindly sent to the application graph.
     find_variables_in_quads( quads_with_vars )
     |> construct_select_query( group_graph_pattern_sym, options )
+    |> elem(0)
     |> Regen.result # the SELECT query to execute
     |> SparqlClient.query
     |> SparqlClient.extract_results # Array of solutions

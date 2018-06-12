@@ -65,7 +65,7 @@ defmodule SparqlServer.Router do
 
     encoded_response =
       new_parsed_forms
-      |> Enum.reduce( nil, fn( elt, _ ) ->
+      |> Enum.reduce( true, fn( elt, _ ) ->
         elt
         |> Regen.result
         |> SparqlClient.query

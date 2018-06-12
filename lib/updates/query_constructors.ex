@@ -73,7 +73,8 @@ defmodule Updates.QueryConstructors do
                     %InterpreterTerms.SymbolMatch{
                       symbol: :InsertData,
                       submatches: [
-                        %InterpreterTerms.WordMatch{word: "INSERT DATA"},
+                        %InterpreterTerms.WordMatch{word: "INSERT"},
+                        %InterpreterTerms.WordMatch{word: "DATA"},
                         %InterpreterTerms.SymbolMatch{
                           symbol: :QuadData,
                           submatches: [
@@ -103,7 +104,8 @@ defmodule Updates.QueryConstructors do
                     %InterpreterTerms.SymbolMatch{
                       symbol: :DeleteData,
                       submatches: [
-                        %InterpreterTerms.WordMatch{word: "DELETE DATA"},
+                        %InterpreterTerms.WordMatch{word: "DELETE"},
+                        %InterpreterTerms.WordMatch{word: "DATA"},
                         %InterpreterTerms.SymbolMatch{
                           symbol: :QuadData,
                           submatches: [
