@@ -685,20 +685,35 @@ defmodule Updates.QueryAnalyzer do
     # |> Manipulators.Recipes.set_from_graph # This should be replaced by the previous rule in the future
   end
 
-  def construct_insert_query_from_quads(quads, _options) do
+  def construct_insert_query_from_quads(quads, options) do
+    # TODO: this should be clearing when the query is executed
+    clear_cache_for_typed_quads( quads, options )
+
     quads
     |> Enum.map( &Updates.QueryConstructors.make_quad_match_from_quad/1 )
     |> Updates.QueryConstructors.make_insert_query
     # |> TODO add prefixes
   end
 
-  def construct_delete_query_from_quads(quads, _options) do
+  def construct_delete_query_from_quads(quads, options) do
+    # TODO: this should be clearing when the query is executed
+    clear_cache_for_typed_quads( quads, options )
+
     quads
     |> Enum.map( &Updates.QueryConstructors.make_quad_match_from_quad/1 )
     |> Updates.QueryConstructors.make_delete_query
     # |> TODO add prefixes
   end
 
+  defp clear_cache_for_typed_quads( quads, options ) do
+    authorization_groups = Map.get( options, :authorization_groups )
+
+    quads
+    |> Enum.filter( fn (%Quad{predicate: pred}) -> Iri.is_a?( pred ) end )
+    |> Enum.map( fn (%Quad{subject: %Iri{ iri: subj }}) ->
+      Cache.Types.clear( subj, authorization_groups )
+    end )
+  end
 
   def prefix_list_from_options( options ) do
     options

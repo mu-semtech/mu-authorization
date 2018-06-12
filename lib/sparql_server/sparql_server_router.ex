@@ -119,6 +119,10 @@ defmodule SparqlServer.Router do
     |> Updates.QueryAnalyzer.quads( %{ default_graph:
                                      Updates.QueryAnalyzer.Iri.from_iri_string(
                                        "<http://mu.semte.ch/application>", %{} ) } )
+    |> Updates.QueryAnalyzer.quads( %{
+          default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ),
+          authorization_groups: authorization_groups } )
+    |> Enum.reject( &match?( {_,[]}, &1 ) )
     |> Enum.map(
       fn ({statement, quads}) ->
         processed_quads =
@@ -134,7 +138,7 @@ defmodule SparqlServer.Router do
         end end )
   end
 
-  defp decode_json_access_groups( json_string ) do
+  def decode_json_access_groups( json_string ) do
     json_string
     |> Poison.decode!
     |> Enum.map( fn (%{"name" => name, "variables" => variables}) -> {name, variables} end )

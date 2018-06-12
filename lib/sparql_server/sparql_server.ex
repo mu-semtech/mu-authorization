@@ -9,6 +9,7 @@ defmodule SparqlServer do
     port = Application.get_env(:"mu-authorization", :"sparql-port", 8890)
 
     children = [
+      {Cache.Types,%{}},
       {Plug.Adapters.Cowboy2, scheme: :http, plug: SparqlServer.Router, options: [port: port]}
     ]
 

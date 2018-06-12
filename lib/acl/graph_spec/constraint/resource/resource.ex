@@ -13,7 +13,9 @@ defmodule Resource do
 
   defimpl Acl.GraphSpec.Constraint.Protocol do
     def matching_quads( %Resource{} = resource, quads, extra_quads\\[] ) do
-      Resource.matching_quads( resource, quads, extra_quads )
+      # TODO: we should have the options with authorization_groups so we
+      # can collect the types of a resource on a per-user basis.
+      Resource.matching_quads( resource, quads, extra_quads, %{} )
     end
 
   end
@@ -21,10 +23,10 @@ defmodule Resource do
   @doc """
   Yields the matching quads constructed by the supplied Resource.
   """
-  def matching_quads( resource, quads, extra_quads ) do
+  def matching_quads( resource, quads, extra_quads, options ) do
     # Get all resources of the right type as strings
     matching_resources =
-      find_matching_resources( resource, quads, extra_quads )
+      find_matching_resources( resource, quads, extra_quads, options )
 
     # Ensure we only have quads from the right graph
     graph_quads = filter_by_graph( resource, quads ) |> IO.inspect
@@ -56,7 +58,7 @@ defmodule Resource do
     |> Enum.uniq_by( fn (%Iri{ iri: iri }) -> iri end )
   end
 
-  defp resources_with_types( quads, extra_quads ) do
+  defp resources_with_types( quads, extra_quads, options ) do
     # TODO: This code should cope with resources having multiple types
     all_quads = quads ++ extra_quads
 
@@ -86,7 +88,7 @@ defmodule Resource do
         end )
 
     # we need to enrich the unknown_resources
-    discovered_resources = discover_resources( unknown_resources )
+    discovered_resources = discover_resources( unknown_resources, options )
 
     IO.inspect discovered_resources, label: "Discovered resources"
 
@@ -96,38 +98,29 @@ defmodule Resource do
     known_resources ++ discovered_resources
   end
 
-  defp discover_resources( unknown_resources ) do
-    unknown_resources
-    |> IO.inspect( label: "unknown resources to discover" )
-    |> Enum.flat_map( fn (%Iri{ iri: resource_iri_value } = resource_iri) ->
-      # TODO: this should be based on a query that was parsed first
-      # TODO: pass the right graphs to this query.  for now, it is
-      # incorrectly assumed that triplestore will solve this problem
-      # for us.
-      # TODO: cope with resources for which there is no type in code
-      # that calls discover_resources
+  defp discover_resources( unknown_resources, options ) do
+    # TODO: cope with resources for which there is no type in code
+    # that calls discover_resources
 
-      "SELECT DISTINCT ?type WHERE { <MY_RESOURCE> a ?type }"
-      |> Parser.parse_query_full(  )
-      |> Manipulators.SparqlQuery.replace_iri( "<MY_RESOURCE>", resource_iri_value )
-      |> Regen.result
-      |> IO.inspect( label: "query to find type for " <> resource_iri_value )
-      |> SparqlClient.query
-      |> SparqlClient.extract_results
-      |> IO.inspect( label: "results for " <> resource_iri_value )
-      |> Enum.map( fn (result) ->
-        result
-        |> Map.get( "type" )
-        |> Map.get( "value" )
-        |> (fn (value) ->
-          # TODO: wrapping of iri should be handled correctly
-          { resource_iri, Iri.from_iri_string( "<" <> value <> ">" ) }
-        end ).()
-      end )
+    authorization_groups = Map.get( options, :authorization_groups, [] )
+
+    resource_map =
+      unknown_resources
+      |> IO.inspect( label: "unknown resources to discover" )
+      |> Cache.Types.get_types( authorization_groups )
+      |> IO.inspect( label: "cached types" )
+
+    # We now have a map with various keys, and its types
+    resource_map
+    |> Map.keys
+    |> Enum.flat_map( fn (resource_iri) ->
+      resource_map
+      |> Map.get( resource_iri ) # yields a list of iri_values
+      |> Enum.map( fn (iri_value) -> { resource_iri, Iri.from_iri_string( iri_value ) } end )
     end )
   end
 
-  defp find_matching_resources( %Resource{ resource_type: type }, quads, extra_quads ) do
+  defp find_matching_resources( %Resource{ resource_type: type }, quads, extra_quads, options ) do
     # TODO: alter the implementation of this method by one using
     # resources_with_types
 
@@ -137,7 +130,7 @@ defmodule Resource do
     # TODO: wrapping of iri should be handled correctly
     wrapped_type  = "<" <> type <> ">"
 
-    resources_with_types( quads, extra_quads )
+    resources_with_types( quads, extra_quads, options )
     |> IO.inspect( label: "Resources with types" )
     |> Enum.filter( fn ({_, %Iri{ iri: type_iri }}) -> type_iri == wrapped_type end )
     |> Enum.map( fn({ %Iri{ iri: iri }, _ } ) -> iri end )
