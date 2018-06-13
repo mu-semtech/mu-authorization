@@ -6,7 +6,7 @@ alias Acl.GraphSpec.Constraint.Resource.AllPredicates, as: AllPredicates
 alias Acl.GraphSpec.Constraint.Resource.NoPredicates, as: NoPredicates
 
 defmodule Resource do
-  defstruct [ :resource_type, # Type of the resource to match
+  defstruct [ :resource_types, # Types of the resource to match
               {:source_graph, "http://mu.semte.ch/application"},
               {:predicates, %AllPredicates{} },
               {:inverse_predicates, %NoPredicates{}} ]
@@ -120,19 +120,19 @@ defmodule Resource do
     end )
   end
 
-  defp find_matching_resources( %Resource{ resource_type: type }, quads, extra_quads, options ) do
+  defp find_matching_resources( %Resource{ resource_types: types }, quads, extra_quads, options ) do
     # TODO: alter the implementation of this method by one using
     # resources_with_types
 
-    IO.puts "Checking if quads contain resources of type #{type}"
+    IO.puts "Checking if quads contain resources of types #{types}"
     IO.inspect quads
 
     # TODO: wrapping of iri should be handled correctly
-    wrapped_type  = "<" <> type <> ">"
+    wrapped_types = Enum.map( types, fn (x) -> "<" <> x <> ">" end )
 
     resources_with_types( quads, extra_quads, options )
     |> IO.inspect( label: "Resources with types" )
-    |> Enum.filter( fn ({_, %Iri{ iri: type_iri }}) -> type_iri == wrapped_type end )
+    |> Enum.filter( fn ({_, %Iri{ iri: type_iri }}) -> Enum.member?( wrapped_types, type_iri ) end )
     |> Enum.map( fn({ %Iri{ iri: iri }, _ } ) -> iri end )
     |> IO.inspect( label: "matching resources" )
   end

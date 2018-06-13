@@ -79,7 +79,7 @@ defmodule SparqlServer.Router do
     access_groups = Plug.Conn.get_req_header( conn, "mu-authorization-groups" )
 
     if Enum.empty?( access_groups ) do
-      Acl.Config.UserGroups.user_groups
+      Acl.UserGroups.Config.user_groups
       |> Acl.user_authorization_groups( conn )
     else
       access_groups
@@ -100,12 +100,12 @@ defmodule SparqlServer.Router do
   end
 
   defp manipulate_select_query( query, _conn, authorization_groups ) do
-    # TODO: apply Acl.Config.UserGroups to select queries
+    # TODO: apply Acl.UserGroups.Config to select queries
     { query, _access_groups } =
       query
       |> Manipulators.SparqlQuery.remove_graph_statements
       |> Manipulators.SparqlQuery.remove_from_statements # TODO: check how BaseDecl should be interpreted, possibly also remove that.
-      |> Acl.process_query( Acl.Config.UserGroups.for_use(:read), authorization_groups )
+      |> Acl.process_query( Acl.UserGroups.for_use(:read), authorization_groups )
 
     [ query ]
   end
@@ -122,7 +122,7 @@ defmodule SparqlServer.Router do
     |> Enum.reject( &match?( {_,[]}, &1 ) )
     |> Enum.map(
       fn ({statement, quads}) ->
-        user_groups_for_update = Acl.Config.UserGroups.for_use( :write )
+        user_groups_for_update = Acl.UserGroups.for_use( :write )
 
         processed_quads =
           quads

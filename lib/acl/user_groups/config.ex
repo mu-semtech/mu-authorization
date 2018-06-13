@@ -7,7 +7,7 @@ alias Acl.GraphSpec, as: GraphSpec
 alias Acl.GroupSpec, as: GroupSpec
 alias Acl.GroupSpec.GraphCleanup, as: GraphCleanup
 
-defmodule Acl.Config.UserGroups do
+defmodule Acl.UserGroups.Config do
   def user_groups do
     # These elements are walked from top to bottom.  Each of them may
     # alter the quads to which the current query applies.  Quads are
@@ -23,14 +23,14 @@ defmodule Acl.Config.UserGroups do
                     graph: "http://mu.semte.ch/graphs/shared",
                     constraint: %ResourceConstraint{
                       source_graph: "http://mu.semte.ch/application",
-                      resource_type: "http://mu.semte.ch/ext/Product",
+                      resource_types: ["http://mu.semte.ch/ext/Product"],
                       predicates: %AllPredicates{},
                       inverse_predicates: %NoPredicates{} } },
                   %GraphSpec{
                     graph: "http://mu.semte.ch/graphs/contacts",
                     constraint: %ResourceConstraint{
                       source_graph: "http://mu.semte.ch/application",
-                      resource_type: "http://mu.semte.ch/ext/Contact",
+                      resource_types: ["http://mu.semte.ch/ext/Contact"],
                       predicates: %AllPredicates{except: ["<http://mu.semte.ch/ext/preference>"]},
                       inverse_predicates: %NoPredicates{} } } ] },
       %GroupSpec{
@@ -44,14 +44,14 @@ defmodule Acl.Config.UserGroups do
         graphs: [ %GraphSpec{
                     graph: "http://mu.semte.ch/graphs/users/",
                     constraint: %ResourceConstraint{
-                      resource_type: "http://mu.semte.ch/ext/Basket",
+                      resource_types: ["http://mu.semte.ch/ext/Basket"],
                       predicates: %AllPredicates{},
                       inverse_predicates: %NoPredicates{} } },
                   %GraphSpec{
                     graph: "http://mu.semte.ch/graphs/users/",
                     constraint: %ResourceConstraint{
                       source_graph: "http://mu.semte.ch/application",
-                      resource_type: "http://mu.semte.ch/ext/Contact",
+                      resource_types: ["http://mu.semte.ch/ext/Contact"],
                       inverse_predicates: %NoPredicates{},
                       predicates: %NoPredicates{except: ["<http://mu.semte.ch/ext/preference>"]} } } ] },
       %GroupSpec{
@@ -61,13 +61,7 @@ defmodule Acl.Config.UserGroups do
         graphs: [ %GraphSpec{
                     graph: "http://mu.semte.ch/graphs/dump/",
                     constraint: %ResourceConstraint{
-                      resource_type: "http://mu.semte.ch/ext/Basket",
-                      predicates: %AllPredicates{},
-                      inverse_predicates: %AllPredicates{} } },
-                  %GraphSpec{
-                    graph: "http://mu.semte.ch/graphs/dump/",
-                    constraint: %ResourceConstraint{
-                      resource_type: "http://mu.semte.ch/ext/Contact",
+                      resource_types: ["http://mu.semte.ch/ext/Basket","http://mu.semte.ch/ext/Contact"],
                       predicates: %AllPredicates{},
                       inverse_predicates: %AllPredicates{} } } ] },
       %GraphCleanup{
@@ -77,25 +71,4 @@ defmodule Acl.Config.UserGroups do
       }
     ]
   end
-
-  @doc """
-  Filters the useage_groups for a particular useage.
-  """
-  def user_groups_for( user_groups, useage ) do
-    user_groups
-    |> Enum.filter( fn (user_group) ->
-      user_group
-      |> Map.get( :useage )
-      |> Enum.member?( useage )
-    end )
-  end
-
-  @doc """
-  Yields all the user groups for the supplied useage.
-  """
-  def for_use( useage ) do
-    user_groups
-    |> user_groups_for( useage )
-  end
-
 end

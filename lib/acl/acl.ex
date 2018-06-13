@@ -13,7 +13,7 @@ defmodule Acl do
   - ...
 
   A current example of applicable access rights can be found in
-  Acl.Config.UserGroups
+  Acl.UserGroups.Config
   """
   def process_quads_for_update( quads, user_groups, authorization_groups ) do
     # The active_group_names should not consist of an array of strings.
