@@ -116,9 +116,6 @@ defmodule SparqlServer.Router do
     # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
     options = %{ default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ) }   
     query
-    |> Updates.QueryAnalyzer.quads( %{ default_graph:
-                                     Updates.QueryAnalyzer.Iri.from_iri_string(
-                                       "<http://mu.semte.ch/application>", %{} ) } )
     |> Updates.QueryAnalyzer.quads( %{
           default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ),
           authorization_groups: authorization_groups } )

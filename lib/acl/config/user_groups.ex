@@ -9,11 +9,12 @@ alias Acl.GroupSpec.GraphCleanup, as: GraphCleanup
 
 defmodule Acl.Config.UserGroups do
   def user_groups do
-    "These elements are walked from top to bottom.  Each of them may
-    alter the quads to which the current query applies.  Quads are
-    represented in three sections: current_source_quads,
-    removed_source_quads, new_quads.  The quads may be calculated in
-    many ways.  The useage of a GroupSpec and GraphCleanup are common."
+    # These elements are walked from top to bottom.  Each of them may
+    # alter the quads to which the current query applies.  Quads are
+    # represented in three sections: current_source_quads,
+    # removed_source_quads, new_quads.  The quads may be calculated in
+    # many ways.  The useage of a GroupSpec and GraphCleanup are
+    # common.
     [ %GroupSpec{
         name: "shared",
         access: %AlwaysAccessible{},
@@ -29,7 +30,7 @@ defmodule Acl.Config.UserGroups do
                     constraint: %ResourceConstraint{
                       source_graph: "http://mu.semte.ch/application",
                       resource_type: "http://mu.semte.ch/ext/Contact",
-                      predicates: %AllPredicates{},
+                      predicates: %AllPredicates{except: ["<http://mu.semte.ch/ext/preference>"]},
                       inverse_predicates: %NoPredicates{} } } ] },
       %GroupSpec{
         name: "users",
@@ -43,7 +44,14 @@ defmodule Acl.Config.UserGroups do
                     constraint: %ResourceConstraint{
                       resource_type: "http://mu.semte.ch/ext/Basket",
                       predicates: %AllPredicates{},
-                      inverse_predicates: %NoPredicates{} } } ] },
+                      inverse_predicates: %NoPredicates{} } },
+                  %GraphSpec{
+                    graph: "http://mu.semte.ch/graphs/users/",
+                    constraint: %ResourceConstraint{
+                      source_graph: "http://mu.semte.ch/application",
+                      resource_type: "http://mu.semte.ch/ext/Contact",
+                      inverse_predicates: %NoPredicates{},
+                      predicates: %NoPredicates{except: ["<http://mu.semte.ch/ext/preference>"]} } } ] },
       %GraphCleanup{
         originating_graph: "http://mu.semte.ch/application",
         name: "clean"
