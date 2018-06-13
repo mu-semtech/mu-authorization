@@ -105,7 +105,7 @@ defmodule SparqlServer.Router do
       query
       |> Manipulators.SparqlQuery.remove_graph_statements
       |> Manipulators.SparqlQuery.remove_from_statements # TODO: check how BaseDecl should be interpreted, possibly also remove that.
-      |> Acl.process_query( Acl.Config.UserGroups.user_groups, authorization_groups )
+      |> Acl.process_query( Acl.Config.UserGroups.for_use(:read), authorization_groups )
 
     [ query ]
   end
@@ -122,9 +122,11 @@ defmodule SparqlServer.Router do
     |> Enum.reject( &match?( {_,[]}, &1 ) )
     |> Enum.map(
       fn ({statement, quads}) ->
+        user_groups_for_update = Acl.Config.UserGroups.for_use( :write )
+
         processed_quads =
           quads
-          |> Acl.process_quads_for_update( Acl.Config.UserGroups.user_groups, authorization_groups )
+          |> Acl.process_quads_for_update( user_groups_for_update, authorization_groups )
           |> elem(1)
 
         case statement do

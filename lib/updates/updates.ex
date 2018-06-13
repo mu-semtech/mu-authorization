@@ -19,7 +19,7 @@ defmodule Updates do
     options = %{ default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ) }   
     result =
       insert_quads
-      |> Acl.process_quads_for_update( Acl.Config.UserGroups.user_groups, %{} )
+      |> Acl.process_quads_for_update( Acl.Config.UserGroups.for_use(:write), %{} )
       |> IO.inspect
       |> (fn ({_,quads}) -> quads end).()
       |> Updates.QueryAnalyzer.construct_insert_query_from_quads( options )

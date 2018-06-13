@@ -3,7 +3,7 @@ alias Updates.QueryAnalyzer.Types.Quad, as: Quad
 alias Updates.QueryAnalyzer.Iri, as: Iri
 
 defmodule Acl.GroupSpec.GraphCleanup do
-  defstruct [ name: "clean", originating_graph: "http://mu.semte.ch/application"]
+  defstruct [ name: "clean", originating_graph: "http://mu.semte.ch/application", useage: [:write]]
 
   defimpl Acl.GroupSpec.Protocol do
     def accessible?( %GraphCleanup{name: name}, _ ) do

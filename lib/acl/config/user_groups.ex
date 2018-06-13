@@ -17,6 +17,7 @@ defmodule Acl.Config.UserGroups do
     # common.
     [ %GroupSpec{
         name: "shared",
+        useage: [:read, :read_for_write],
         access: %AlwaysAccessible{},
         graphs: [ %GraphSpec{
                     graph: "http://mu.semte.ch/graphs/shared",
@@ -34,6 +35,7 @@ defmodule Acl.Config.UserGroups do
                       inverse_predicates: %NoPredicates{} } } ] },
       %GroupSpec{
         name: "users",
+        useage: [:read, :write, :read_for_write],
         access: %AccessByQuery{
           vars: ["user_uuid"],
           query: "PREFIX foaf: <http://xmlns.com/foaf/0.1/> PREFIX musession: <https://mu.semte.ch/vocabularies/session/> PREFIX mu: <http://mu.semte.ch/vocabularies/core/> SELECT ?user_uuid WHERE { <SESSION_ID> mu:uuid ?user_uuid. }"
@@ -52,10 +54,48 @@ defmodule Acl.Config.UserGroups do
                       resource_type: "http://mu.semte.ch/ext/Contact",
                       inverse_predicates: %NoPredicates{},
                       predicates: %NoPredicates{except: ["<http://mu.semte.ch/ext/preference>"]} } } ] },
+      %GroupSpec{
+        name: "dump",
+        useage: [:write],
+        access: %AlwaysAccessible{},
+        graphs: [ %GraphSpec{
+                    graph: "http://mu.semte.ch/graphs/dump/",
+                    constraint: %ResourceConstraint{
+                      resource_type: "http://mu.semte.ch/ext/Basket",
+                      predicates: %AllPredicates{},
+                      inverse_predicates: %AllPredicates{} } },
+                  %GraphSpec{
+                    graph: "http://mu.semte.ch/graphs/dump/",
+                    constraint: %ResourceConstraint{
+                      resource_type: "http://mu.semte.ch/ext/Contact",
+                      predicates: %AllPredicates{},
+                      inverse_predicates: %AllPredicates{} } } ] },
       %GraphCleanup{
         originating_graph: "http://mu.semte.ch/application",
+        useage: [:write],
         name: "clean"
       }
     ]
   end
+
+  @doc """
+  Filters the useage_groups for a particular useage.
+  """
+  def user_groups_for( user_groups, useage ) do
+    user_groups
+    |> Enum.filter( fn (user_group) ->
+      user_group
+      |> Map.get( :useage )
+      |> Enum.member?( useage )
+    end )
+  end
+
+  @doc """
+  Yields all the user groups for the supplied useage.
+  """
+  def for_use( useage ) do
+    user_groups
+    |> user_groups_for( useage )
+  end
+
 end

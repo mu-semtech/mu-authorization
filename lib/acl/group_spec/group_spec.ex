@@ -1,7 +1,7 @@
 alias Acl.GroupSpec, as: GroupSpec
 
 defmodule Acl.GroupSpec do
-  defstruct [ :name, :access, :graphs ]
+  defstruct [ :name, :access, :graphs, :useage ]
 
   @moduledoc """
   The GroupSpec indicates groups to which a user has access.  Where
@@ -11,7 +11,9 @@ defmodule Acl.GroupSpec do
 
   These Groupspecs may be shared between reading and updating.  The
   access definition works in the same way, though the specific
-  authorization may differ in practical instantiations.
+  authorization may differ in practical instantiations.  Selection of
+  what the selection is allowed to be used for is configured using the
+  :useage keyword.
   """
 
   defimpl Acl.GroupSpec.Protocol do
