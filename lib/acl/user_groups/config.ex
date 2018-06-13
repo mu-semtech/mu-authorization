@@ -31,7 +31,7 @@ defmodule Acl.UserGroups.Config do
                     constraint: %ResourceConstraint{
                       source_graph: "http://mu.semte.ch/application",
                       resource_types: ["http://mu.semte.ch/ext/Contact"],
-                      predicates: %AllPredicates{except: ["<http://mu.semte.ch/ext/preference>"]},
+                      predicates: %AllPredicates{except: ["http://mu.semte.ch/ext/preference"]},
                       inverse_predicates: %NoPredicates{} } } ] },
       %GroupSpec{
         name: "users",
@@ -53,7 +53,7 @@ defmodule Acl.UserGroups.Config do
                       source_graph: "http://mu.semte.ch/application",
                       resource_types: ["http://mu.semte.ch/ext/Contact"],
                       inverse_predicates: %NoPredicates{},
-                      predicates: %NoPredicates{except: ["<http://mu.semte.ch/ext/preference>"]} } } ] },
+                      predicates: %NoPredicates{except: ["http://mu.semte.ch/ext/preference"]} } } ] },
       %GroupSpec{
         name: "dump",
         useage: [:write],
