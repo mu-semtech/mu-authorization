@@ -1,0 +1,103 @@
+result = SPARQLServer.SPARQLHandlerConfiguration.get_config |> SPARQLServer.Router.start_gen_servers
+
+GenServer.cast(result.first, {:"add-query", "SELECT * WHERE { ?s ?p ?o } LIMIT 1"})
+
+GenServer.cast(result.first, {:"add-query", "SELECT * WHERE { ?s ?p ?o } LIMIT 10"})
+
+GenServer.cast(result.first, {:"add-query", "SELECT * WHERE { ?s ?p ?o } LIMIT 100"})
+
+GenServer.call(result.first, :config)
+
+
+####
+####
+####
+####
+
+
+add_query = fn
+   (arr, q) ->
+     IO.puts "in p1 adding:"
+     IO.puts q
+     IO.puts DateTime.to_string(DateTime.utc_now())
+     [q|arr]
+end
+
+pick_query = fn
+  ([f|r]) ->
+    IO.puts "in p1 picking: "
+    IO.puts f
+    IO.puts DateTime.to_string(DateTime.utc_now())
+    {:continue, r, f}
+end
+
+process_query = fn
+   (q,n) ->
+     IO.puts "in p1 processing"
+     IO.puts q
+     IO.puts DateTime.to_string(DateTime.utc_now())
+     :timer.sleep(5000)
+     {:next, n, q}
+end
+
+options = %{add_query: add_query, pick_query: pick_query, process_query: process_query, next: P2, current_queries: [], current_action: :continue, current_queue: [], original_process: :none}
+
+{:ok, handler1} = GenServer.start(SPARQLServer.SPARQLHandler, options, name: P1)
+
+add_query2 = fn
+   (arr, q) ->
+     IO.puts "in p2 adding:"
+     IO.puts q
+     IO.puts DateTime.to_string(DateTime.utc_now())
+     [q|arr]
+end
+
+pick_query2 = fn
+  ([f|r]) ->
+    IO.puts "in p2 picking: "
+    IO.puts f
+    IO.puts DateTime.to_string(DateTime.utc_now())
+    {:wait, r, f}
+end
+
+process_query2 = fn
+   (q,n) ->
+     IO.puts "in p2 processing..."
+     IO.puts q
+     IO.puts DateTime.to_string(DateTime.utc_now())
+     :timer.sleep(5000)
+     {:stop, n, q}
+end
+
+options2 = %{add_query: add_query2, pick_query: pick_query2, process_query: process_query2, next: :none, current_queries: [], current_action: :continue, current_queue: [], original_process: :none}
+
+{:ok, handler2} = GenServer.start(SPARQLServer.SPARQLHandler, options2, name: P2)
+
+GenServer.cast(P1, {:"add-query", "SELECT * WHERE { ?s ?p ?o } LIMIT 1"})
+
+GenServer.cast(P1, {:"add-query", "SELECT * WHERE { ?s ?p ?o } LIMIT 10"})
+
+GenServer.cast(P1, {:"add-query", "SELECT * WHERE { ?s ?p ?o } LIMIT 100"})
+
+GenServer.call(P1, :config)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+GenServer.call(handler, :query_array)
+
+
