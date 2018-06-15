@@ -45,8 +45,8 @@ defmodule SPARQLServer.Router do
       process_query: handler_config.process_query,
       next: :none,
       current_queries: [],
-      current_action: [],
-      current_queue: :continue,
+      current_queue: [],
+      current_action: :continue,
       original_process: :none
     }
   end
@@ -59,8 +59,8 @@ defmodule SPARQLServer.Router do
       process_query: handler_config.process_query,
       next: next.name,
       current_queries: [],
-      current_action: [],
-      current_queue: :continue,
+      current_queue: [],
+      current_action: :continue,
       original_process: :none
     }
   end

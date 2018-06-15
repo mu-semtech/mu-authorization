@@ -10,7 +10,8 @@ defmodule SPARQLServer.SPARQLHandlerConfiguration do
           IO.puts "in p1 adding..."
           IO.puts q
           IO.puts DateTime.to_string(DateTime.utc_now())
-          [q|arr]
+          rarr = Enum.reverse(arr)
+          Enum.reverse([q|rarr])
         end,
         pick_query: fn([f|r]) ->
           IO.puts "in p1 picking"
@@ -44,9 +45,10 @@ defmodule SPARQLServer.SPARQLHandlerConfiguration do
           IO.puts "in p2 processing"
           IO.puts q
           IO.puts DateTime.to_string(DateTime.utc_now())
-          # q
-          # |> SPARQLClient.query
-          # |> Poison.encode!
+          q
+          |> SPARQLClient.query
+          |> Poison.encode!
+          |> IO.puts
           {:next, n, q}
         end,
       }
