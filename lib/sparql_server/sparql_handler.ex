@@ -20,8 +20,8 @@
   {:continue, [query2], query1}
   ```
 
-  ## handle-query
-  takes a query and handles it. It then returns a tuple {:action, query} where query is the query that was just handled and :action can be either :stop or :next. :stop will stop this query from further propagating through the system, :next will pass it on to the next handler in our setup.
+  ## process-query
+  takes a query and handles it. It then returns a tuple {:action, result, query} where query is the query that was just handled and :action can be either :stop or :next. :stop will stop this query from further propagating through the system, :next will pass it on to the next handler in our setup. The result is the result of the processing. If the :stop atom is set as the action then the result will be returned to the original process (the sender).
 
   # Configuration
   The handle query configuration holds the following properties for a single GenServer:
@@ -33,6 +33,8 @@
   * current_action the current 'query' state (can be :continue or :wait)
   * current_queue the queue of queries that are waiting to be processed
   * original_process the process to which the results of this flow needs to be returned to
+
+  TODO the config part original_process was a bit of a brain fart, this has been replaced by making the objects that get manipulated and added tuples of {query, sender} pairs as each query could potentially be sent by a different process! The original_process part has to be removed.
   """
   use GenServer
 
@@ -112,13 +114,14 @@
                  original_process: :none}}
   end
 
-  def handle_cast({:"process-query", query}, config) do
-    {action, next, query} = config.process_query.(query, config.next)
+  def handle_cast({:"process-query", {sender, query}}, config) do
+    {action, result, query} = config.process_query.(query)
     cond do
       action == :next ->
-        GenServer.cast(config.next, {:"add-query", query})
+        GenServer.cast(config.next, {:"add-query", {sender, query}})
       action == :stop ->
         IO.puts "stop called"
+        send sender, result
     end
     GenServer.cast(self, :"pick-query")
     {:noreply, %{add_query: config.add_query,

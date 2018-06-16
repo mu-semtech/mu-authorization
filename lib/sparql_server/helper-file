@@ -1,3 +1,14 @@
+GenServer.cast(Ingest, {:"add-query", {self(), "SELECT * WHERE { ?s ?p ?o } LIMIT 100"}})
+
+receive do
+  msg -> msg
+end
+
+###
+###
+###
+###
+
 result = SPARQLServer.SPARQLHandlerConfiguration.get_config |> SPARQLServer.Router.start_gen_servers
 
 GenServer.cast(result.first, {:"add-query", "SELECT * WHERE { ?s ?p ?o } LIMIT 1"})
