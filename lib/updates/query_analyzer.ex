@@ -78,7 +78,7 @@ defmodule Updates.QueryAnalyzer do
   - Prologue ::= ( BaseDecl | PrefixDecl )*
   - BaseDecl ::= 'BASE' IRIREF
   - PrefixDecl ::= 'PREFIX' PNAME_NS IRIREF
-  - Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | --DeleteWhere-- | Modify
+  - Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | DeleteWhere | Modify
 
   Terms which were added for DELETE DATA
   - DeleteData ::= 'DELETE' 'DATA' QuadData
@@ -91,6 +91,7 @@ defmodule Updates.QueryAnalyzer do
 
   Terms which were added for DELETE WHERE
   - DeleteClause ::= 'DELETE' QuadPattern",
+  - DeleteWhere ::= 'DELETE' 'WHERE' QuadPattern"
   """
 
   def extract_quads( query ) do
@@ -127,11 +128,12 @@ defmodule Updates.QueryAnalyzer do
   end
 
   def quads( %Sym{ symbol: :Update1, submatches: [match] }, options ) do
-    # Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | --DeleteWhere-- | Modify
+    # Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | DeleteWhere | Modify
 
     case match do
       %Sym{ symbol: :InsertData } -> quads( match, options )
       %Sym{ symbol: :DeleteData } -> quads( match, options )
+      %Sym{ symbol: :DeleteWhere } -> quads( match, options )
       %Sym{ symbol: :Modify } -> quads( match, options )
     end
   end
@@ -234,6 +236,36 @@ defmodule Updates.QueryAnalyzer do
 
     [%Word{}, %Sym{ symbol: :QuadPattern } = subsym] = matches
     quads( subsym, options )
+  end
+
+  def quads( %Sym{ symbol: :DeleteWhere, submatches: matches }, options ) do
+    # DeleteWhere ::= 'DELETE' 'WHERE' QuadPattern"
+    quad_pattern = Enum.find( matches, &match?(%Sym{ symbol: :QuadPattern }, &1) )
+
+    # The quad_pattern is more constrained than the GroupGraphPattern.
+    # However, many keys are different.  The simplest way for us to
+    # convert from the less expressive variant to the more expressive
+    # variant is seemingly to simply convert the QuadPattern clause to
+    # GroupGraphPattern by regenerating the output and interpreting it
+    # as a GroupGraphPattern
+
+    # TODO: Verify the above reasoning is fully sound as per EBNF.  An
+    # initial reading showed it to be correct, yet there may be edge
+    # cases still.  This can be verified by comparing the EBNF for
+    # QuadPattern with the EBNF for GroupGraphPattern
+
+    group_graph_pattern =
+      quad_pattern
+      |> Regen.result( :QuadPattern )
+      |> String.trim
+      |> Parser.parse_query_full( :GroupGraphPattern )
+
+    template = quads( quad_pattern, options )
+
+
+    [ { :delete,
+        fill_in_triples_template( template, group_graph_pattern, options )
+      } ]
   end
 
   def quads( %Sym{ symbol: :InsertClause, submatches: matches }, options ) do
