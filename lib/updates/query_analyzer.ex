@@ -749,7 +749,7 @@ defmodule Updates.QueryAnalyzer do
 
   def prefix_list_from_options( options ) do
     options
-    |> Map.get(:prefixes)
+    |> Map.get(:prefixes, []) # TODO: remove this prefix when it is not required anymore
     |> Enum.into( [] )
     |> Enum.map( fn ({name, %Updates.QueryAnalyzer.Iri{ iri: iri }}) -> { name, iri } end )
   end
