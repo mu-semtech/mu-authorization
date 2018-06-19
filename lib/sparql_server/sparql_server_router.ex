@@ -19,7 +19,7 @@ defmodule SparqlServer.Router do
 
     body_params = body_params_encoded |> URI.decode_query
 
-    query = body_params["query"] |> IO.inspect( label: "Received query" )
+    query = ( body_params["query"] || body_params["update"] ) |> IO.inspect( label: "Received query" )
 
     { conn, response } = handle_query query, conn
 
