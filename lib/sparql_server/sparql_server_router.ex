@@ -24,7 +24,7 @@ defmodule SparqlServer.Router do
     { conn, response } = handle_query query, conn
 
     conn
-    |> put_resp_content_type( "application/json" )
+    |> put_resp_content_type( "application/sparql-results+json" )
     |> send_resp(200, response)
   end
 
@@ -36,7 +36,7 @@ defmodule SparqlServer.Router do
     { conn, response } = handle_query query, conn
 
     conn
-    |> put_resp_content_type( "application/json" )
+    |> put_resp_content_type( "application/sparql-results+json" )
     |> send_resp(200, response)
   end
 
