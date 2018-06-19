@@ -48,7 +48,7 @@ defmodule SparqlServer.Router do
 
     conn = Plug.Conn.put_resp_header(
       conn,
-      "mu-authorization-groups",
+      "mu-auth-allowed-groups",
       encode_json_access_groups( access_groups ) )
 
     parsed_form =
@@ -76,7 +76,7 @@ defmodule SparqlServer.Router do
   end
 
   defp get_access_groups( conn ) do
-    access_groups = Plug.Conn.get_req_header( conn, "mu-authorization-groups" )
+    access_groups = Plug.Conn.get_req_header( conn, "mu-auth-allowed-groups" )
 
     if Enum.empty?( access_groups ) do
       Acl.UserGroups.Config.user_groups
