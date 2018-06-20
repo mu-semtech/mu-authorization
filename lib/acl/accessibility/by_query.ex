@@ -52,14 +52,16 @@ defmodule AccessByQuery do
       query
       |> Parser.parse_query_full
       |> Manipulators.SparqlQuery.replace_iri( "<SESSION_ID>" , "<" <> get_session_uri(request) <> ">" )
-      |> Manipulators.SparqlQuery.add_from_graph( "http://mu.semte.ch/authorizations" )
+      # TODO: figure out where to select from through a separate UserGroups config
+      # |> Manipulators.SparqlQuery.add_from_graph( "http://mu.semte.ch/authorizations" )
       |> Regen.result
       |> IO.inspect( label: "validation query" )
     else
       IO.puts "No session"
       query
       |> Parser.parse_query_full
-      |> Manipulators.SparqlQuery.add_from_graph( "http://mu.semte.ch/authorizations" )
+      # TODO: figure out where to select from through a separate UserGroups config
+      # |> Manipulators.SparqlQuery.add_from_graph( "http://mu.semte.ch/authorizations" )
       |> Regen.result
       |> IO.inspect( label: "validation query" )
     end
