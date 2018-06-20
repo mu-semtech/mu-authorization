@@ -15,6 +15,9 @@ defmodule Acl do
   A current example of applicable access rights can be found in
   Acl.UserGroups.Config
   """
+  def process_quads_for_update( quads, _, :sudo ) do
+    { [], quads }
+  end
   def process_quads_for_update( quads, user_groups, authorization_groups ) do
     # The active_group_names should not consist of an array of strings.
     active_groups_info = active_user_groups_info( user_groups, authorization_groups )
@@ -46,6 +49,9 @@ defmodule Acl do
   Yields the new query, and all the accessibility groups from which
   this query was constructed.
   """
+  def process_query( query, _, :sudo ) do
+    { query, [] }
+  end
   def process_query( query, user_groups, authorization_groups ) do
     active_user_groups_info( user_groups, authorization_groups )
     |> Enum.reduce( { query, [] }, fn ({user_group, ug_access_infos}, { query, access_infos } ) ->

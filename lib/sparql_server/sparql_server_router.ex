@@ -42,8 +42,11 @@ defmodule SparqlServer.Router do
 
   match _, do: send_resp(conn, 404, "404 error not found")
 
-  # TODO for now this method does not apply our access constraints
-  defp handle_query(query, conn) do
+  @doc """
+  Calculates the access groups for the given connection and pushes
+  them on the connection itself.
+  """
+  defp calculate_access_groups( conn ) do
     access_groups = get_access_groups( conn )
 
     conn = Plug.Conn.put_resp_header(
@@ -51,17 +54,23 @@ defmodule SparqlServer.Router do
       "mu-auth-allowed-groups",
       encode_json_access_groups( access_groups ) )
 
+    { conn, access_groups }
+  end
+
+  # TODO for now this method does not apply our access constraints
+  defp handle_query(query, conn) do
     parsed_form =
       query
       |> String.trim
       |> String.replace( "\r", "" ) # TODO: check if this is valid and/or ensure parser skips \r between words.
       |> Parser.parse_query_full
 
-    new_parsed_forms = if is_select_query( parsed_form ) do
-      manipulate_select_query( parsed_form, conn, access_groups )
-    else
-      manipulate_update_query( parsed_form, conn, access_groups )
-    end
+    { conn, new_parsed_forms } =
+      if is_select_query( parsed_form ) do
+        manipulate_select_query( parsed_form, conn )
+      else
+        manipulate_update_query( parsed_form, conn )
+      end
 
     encoded_response =
       new_parsed_forms
@@ -77,14 +86,19 @@ defmodule SparqlServer.Router do
 
   defp get_access_groups( conn ) do
     access_groups = Plug.Conn.get_req_header( conn, "mu-auth-allowed-groups" )
+    is_sudo = not Enum.empty?( Plug.Conn.get_req_header( conn, "mu-auth-sudo" ) )
 
-    if Enum.empty?( access_groups ) do
-      Acl.UserGroups.Config.user_groups
-      |> Acl.user_authorization_groups( conn )
-    else
-      access_groups
-      |> List.first
-      |> decode_json_access_groups
+    cond do
+      Enum.empty?( access_groups ) ->
+        Acl.UserGroups.Config.user_groups
+        |> Acl.user_authorization_groups( conn )
+        |> IO.inspect( label: "Fresh authorization groups" )
+      is_sudo -> :sudo
+      true ->
+        access_groups
+        |> List.first
+        |> decode_json_access_groups
+        |> IO.inspect( label: "Decoded authorization groups" )
     end
   end
 
@@ -99,7 +113,9 @@ defmodule SparqlServer.Router do
     end
   end
 
-  defp manipulate_select_query( query, _conn, authorization_groups ) do
+  defp manipulate_select_query( query, conn ) do
+    { conn, authorization_groups } = calculate_access_groups( conn )
+
     # TODO: apply Acl.UserGroups.Config to select queries
     { query, _access_groups } =
       query
@@ -107,34 +123,56 @@ defmodule SparqlServer.Router do
       |> Manipulators.SparqlQuery.remove_from_statements # TODO: check how BaseDecl should be interpreted, possibly also remove that.
       |> Acl.process_query( Acl.UserGroups.for_use(:read), authorization_groups )
 
-    [ query ]
+    { conn, [ query ] }
   end
 
-  defp manipulate_update_query( query, conn, authorization_groups ) do
+  defp manipulate_update_query( query, conn ) do
+    IO.puts "This is an update query"
+
+    { conn, authorization_groups } = calculate_access_groups( conn )
+
     # TODO DRY into/from Updates.QueryAnalyzer.insert_quads
 
     # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
     options = %{ default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ) }   
-    query
-    |> Updates.QueryAnalyzer.quads( %{
+    executable_queries =
+      query
+      |> Updates.QueryAnalyzer.quads( %{
           default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ),
           authorization_groups: authorization_groups } )
-    |> Enum.reject( &match?( {_,[]}, &1 ) )
-    |> Enum.map(
-      fn ({statement, quads}) ->
-        user_groups_for_update = Acl.UserGroups.for_use( :write )
+      |> Enum.reject( &match?( {_,[]}, &1 ) )
+      |> IO.inspect( label: "Non-empty operations" )
+      |> Enum.map(
+        fn ({statement, quads}) ->
+          IO.inspect quads, label: "detected quads"
+          IO.inspect statement, label: "quads operation"
 
-        processed_quads =
-          quads
-          |> Acl.process_quads_for_update( user_groups_for_update, authorization_groups )
-          |> elem(1)
+          processed_quads = enforce_write_rights( quads, authorization_groups  )
 
-        case statement do
-          :insert ->
-            Updates.QueryAnalyzer.construct_insert_query_from_quads( processed_quads, options )
-          :delete ->
-            Updates.QueryAnalyzer.construct_delete_query_from_quads( processed_quads, options )
-        end end )
+          { statement, processed_quads }
+        end)
+      |> Enum.map(
+        fn ({statement, processed_quads}) ->
+          case statement do
+            :insert ->
+              Updates.QueryAnalyzer.construct_insert_query_from_quads( processed_quads, options )
+            :delete ->
+              Updates.QueryAnalyzer.construct_delete_query_from_quads( processed_quads, options )
+          end end )
+
+      { conn, executable_queries }
+  end
+
+  defp enforce_write_rights( quads, authorization_groups ) do
+    user_groups_for_update = Acl.UserGroups.for_use( :write )
+
+    processed_quads =
+      quads
+      |> Acl.process_quads_for_update( user_groups_for_update, authorization_groups )
+      |> elem(1)
+      |> IO.inspect( label: "processed quads" )
+
+    processed_quads
   end
 
   def decode_json_access_groups( json_string ) do
