@@ -138,7 +138,11 @@ defmodule SparqlServer.Router do
     # TODO DRY into/from Updates.QueryAnalyzer.insert_quads
 
     # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
-    options = %{ default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ) }   
+    options = %{
+      default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ),
+      prefixes: %{ "xsd" => Updates.QueryAnalyzer.Iri.from_iri_string("<http://www.w3.org/2001/XMLSchema#>"),
+                   "foaf" => Updates.QueryAnalyzer.Iri.from_iri_string("<http://xmlns.com/foaf/0.1/>") }
+    }
     executable_queries =
       query
       |> Updates.QueryAnalyzer.quads( %{
