@@ -17,8 +17,11 @@ defmodule SparqlServer.Router do
   post "/sparql" do
     {:ok, body_params_encoded, _} = read_body(conn)
 
-    body_params = body_params_encoded |> URI.decode_query
+    conn = process_request_headers( conn )
 
+    body_params =
+      body_params_encoded
+      |> URI.decode_query
     query = ( body_params["query"] || body_params["update"] ) |> IO.inspect( label: "Received query" )
 
     { conn, response } = handle_query query, conn
@@ -31,6 +34,7 @@ defmodule SparqlServer.Router do
   get "/sparql" do
     params = conn.query_string |> URI.decode_query
 
+    conn = process_request_headers( conn )
     query = params["query"]
 
     { conn, response } = handle_query query, conn
@@ -179,6 +183,16 @@ defmodule SparqlServer.Router do
     json_string
     |> Poison.decode!
     |> Enum.map( fn (%{"name" => name, "variables" => variables}) -> {name, variables} end )
+  end
+
+  defp process_request_headers( conn ) do
+    new_request_headers =
+      conn
+      |> Map.get(:req_headers)
+      |> Enum.map( fn {name, val} -> { String.downcase( name ), val } end )
+
+    conn
+    |> Map.put( :req_headers, new_request_headers )
   end
 
   defp encode_json_access_groups( access_groups ) do
