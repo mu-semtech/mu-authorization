@@ -455,12 +455,21 @@ defmodule Updates.QueryAnalyzer do
     [ quad ]
   end
 
+  def primitive_value( %Sym{ symbol: :Verb, submatches: [%Word{}] }, _ ) do
+    # Verb ::= VarOrIri | 'a'
+    Iri.make_a
+  end
+  def primitive_value( %Sym{ symbol: :Verb, submatches: [submatch] }, options ) do
+    # Verb ::= VarOrIri | 'a'
+    primitive_value( submatch, options )
+  end
+
   def primitive_value( %Sym{ symbol: :VarOrIri, submatches: [submatch] }, options ) do
     # VarOrIri ::= Var | iri
 
     case submatch do
       %Sym{ symbol: :iri } -> submatch
-      %Sym{ symbol: :var } -> submatch
+      %Sym{ symbol: :Var } -> submatch
     end
     |> primitive_value( options )
   end
@@ -795,7 +804,7 @@ defmodule Updates.QueryAnalyzer do
         |> Str.from_typestring( type_iri )
         # TODO it seems only URIs are allowed here, but we should be
         # certain stores don't break this assumption
-      %{ "type" => "literal", "value": value } -> Str.from_string( value )
+      %{ "type" => "literal", "value" => value } -> Str.from_string( value )
       # %{ "type" => "bnode", "value": value } -> # <-- we don't do
       # blank nodes, we will crash when blank nodes arrive
     end
