@@ -89,11 +89,11 @@ defmodule SparqlServer.Router do
     is_sudo = not Enum.empty?( Plug.Conn.get_req_header( conn, "mu-auth-sudo" ) )
 
     cond do
+      is_sudo -> :sudo
       Enum.empty?( access_groups ) ->
         Acl.UserGroups.Config.user_groups
         |> Acl.user_authorization_groups( conn )
         |> IO.inspect( label: "Fresh authorization groups" )
-      is_sudo -> :sudo
       true ->
         access_groups
         |> List.first
