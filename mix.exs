@@ -48,7 +48,7 @@ defmodule MuAuthorization.MixProject do
     [
       extra_applications: [:logger, :httpoison, :poison, :plug, :cowboy],
       mod: {SparqlServer, []},
-      env: ["sparql-port": 80]
+      env: ["sparql-port": 8890]
     ]
   end
 
