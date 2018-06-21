@@ -12,17 +12,24 @@ defmodule SparqlServer.Router do
     args
   end
 
+  defp get_query_from_post( conn, body ) do
+    if Plug.Conn.get_req_header(conn, "content-type") == ["application/sparql-update"] do
+      body
+    else
+      body_params = URI.decode_query( body )
+      body_params["query"] || body_params["update"]
+    end
+  end
+
   # TODO these methods are still very similar, I need to spent time
   #      to get the proper abstractions out
   post "/sparql" do
-    {:ok, body_params_encoded, _} = read_body(conn)
+    {:ok, body, _} = read_body(conn)
 
+    IO.inspect conn, label: "Received POST connection"
     conn = process_request_headers( conn )
 
-    body_params =
-      body_params_encoded
-      |> URI.decode_query
-    query = ( body_params["query"] || body_params["update"] ) |> IO.inspect( label: "Received query" )
+    query = get_query_from_post( conn, body ) |> IO.inspect( label: "Received query" )
 
     { conn, response } = handle_query query, conn
 
