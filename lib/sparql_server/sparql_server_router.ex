@@ -79,10 +79,14 @@ defmodule SparqlServer.Router do
   defp calculate_access_groups( conn ) do
     access_groups = get_access_groups( conn )
 
-    conn = Plug.Conn.put_resp_header(
-      conn,
-      "mu-auth-allowed-groups",
-      encode_json_access_groups( access_groups ) )
+    conn = if access_groups != :sudo do
+      Plug.Conn.put_resp_header(
+        conn,
+        "mu-auth-allowed-groups",
+        encode_json_access_groups( access_groups ) )
+    else
+      conn
+    end
 
     { conn, access_groups }
   end
@@ -150,11 +154,16 @@ defmodule SparqlServer.Router do
     { conn, authorization_groups } = calculate_access_groups( conn )
 
     # TODO: apply Acl.UserGroups.Config to select queries
-    { query, _access_groups } =
+    query = if authorization_groups == :sudo do
       query
-      |> Manipulators.SparqlQuery.remove_graph_statements
-      |> Manipulators.SparqlQuery.remove_from_statements # TODO: check how BaseDecl should be interpreted, possibly also remove that.
-      |> Acl.process_query( Acl.UserGroups.for_use(:read), authorization_groups )
+    else
+      { query, _access_groups } =
+        query
+        |> Manipulators.SparqlQuery.remove_graph_statements
+        |> Manipulators.SparqlQuery.remove_from_statements # TODO: check how BaseDecl should be interpreted, possibly also remove that.
+        |> Acl.process_query( Acl.UserGroups.for_use(:read), authorization_groups )
+      query
+    end
 
     { conn, [ query ] }
   end
