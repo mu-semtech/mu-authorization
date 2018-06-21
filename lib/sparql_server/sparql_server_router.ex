@@ -88,6 +88,8 @@ defmodule SparqlServer.Router do
       conn
     end
 
+    ALog.ii access_groups, "Access groups"
+
     { conn, access_groups }
   end
 
