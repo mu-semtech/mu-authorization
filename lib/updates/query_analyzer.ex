@@ -821,7 +821,11 @@ defmodule Updates.QueryAnalyzer do
         |> Str.from_typestring( type_iri )
         # TODO it seems only URIs are allowed here, but we should be
         # certain stores don't break this assumption
-      %{ "type" => "literal", "value" => value } -> Str.from_string( value )
+      %{ "type" => "literal", "value" => value } ->
+        value
+        |> String.replace( "\"", "\\\"" )
+        |> (fn (x) -> "\"" <> x <> "\"" end).()
+        |> Str.from_string
       # %{ "type" => "bnode", "value": value } -> # <-- we don't do
       # blank nodes, we will crash when blank nodes arrive
     end
