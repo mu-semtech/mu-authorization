@@ -17,7 +17,9 @@ defmodule Iri do
     %Iri{ iri: new_iri, real_name: new_iri }
   end
 
-  def from_prefix_string( prefixed_name, %{ prefixes: prefixes, default_graph: default_graph_iri } ) do
+  def from_prefix_string( prefixed_name, options ) do
+    prefixes = Map.get(options, :prefixes, %{})
+
     [ prefix, postfix ] =
       prefixed_name
       |> String.trim( " " ) # TODO remove trimming when terminal symbols don't emit spaces anymore
@@ -25,7 +27,7 @@ defmodule Iri do
 
     base_uri = cond do
       prefix == "" -> # no prefix was supplied
-        %Iri{ iri: default_graph } = default_graph_iri
+        %Iri{ iri: default_graph } = Map.get(options, :default_graph)
         default_graph
         |> String.trim( " " ) # TODO remove trimming when terminal symbols don't emit spaces anymore
         |> String.slice( 1, String.length( default_graph ) - 2 )
