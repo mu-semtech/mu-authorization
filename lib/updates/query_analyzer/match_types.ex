@@ -17,21 +17,28 @@ defmodule Iri do
     %Iri{ iri: new_iri, real_name: new_iri }
   end
 
-  def from_prefix_string( prefixed_name, %{ prefixes: prefixes, default_graph: %Iri{ iri: default_graph } } ) do
+  def from_prefix_string( prefixed_name, %{ prefixes: prefixes, default_graph: default_graph_iri } ) do
     [ prefix, postfix ] =
       prefixed_name
       |> String.trim( " " ) # TODO remove trimming when terminal symbols don't emit spaces anymore
       |> String.split( ":", parts: 2 )
 
-    base_uri =
-      if prefix == "" do
+    base_uri = cond do
+      prefix == "" -> # no prefix was supplied
+        %Iri{ iri: default_graph } = default_graph_iri
         default_graph
         |> String.trim( " " ) # TODO remove trimming when terminal symbols don't emit spaces anymore
         |> String.slice( 1, String.length( default_graph ) - 2 )
-      else
-        %Iri{ iri: iri } = Map.get( prefixes, prefix )
+      Map.has_key?( prefixes, prefix ) -> # the supplied prefix is in our options
+        %Iri{ iri: iri } =
+          Map.get( prefixes, prefix )
         strip_iri_marks( iri )
-      end
+      true -> # the supplied prefix is a default prefix
+        %Iri{ iri: iri } =
+          Map.get( default_prefixes, prefix )
+        strip_iri_marks( iri )
+    end
+
 
     full_iri = "<" <> base_uri <> postfix <> ">"
     %Iri{ iri: full_iri, real_name: prefixed_name }
@@ -43,6 +50,16 @@ defmodule Iri do
 
   def is_a?( %Iri{ iri: iri } ) do
     iri == "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"
+  end
+
+  @doc """
+  Map containing a set of default prefixes which may be assumed to
+  have been defined even though they haven't been specified
+  explicitly.
+  """
+  def default_prefixes do
+    %{}
+    |> Map.put( "xsd", Iri.from_iri_string( "<http://www.w3.org/2001/XMLSchema#>" ) )
   end
 
   defp strip_iri_marks( string ) do
