@@ -2,6 +2,9 @@ alias Updates.QueryAnalyzer.Iri, as: Iri
 alias Acl.GraphSpec, as: GraphSpec
 
 defmodule Acl.GraphSpec do
+  require Logger
+  require ALog
+
   defstruct [ :graph, :constraint ]
 
   @moduledoc """
@@ -15,11 +18,11 @@ defmodule Acl.GraphSpec do
   def process_quads( %GraphSpec{ constraint: constraint } = graph_spec, info, quads, extra_quads ) do
     constraint
     |> Acl.GraphSpec.Constraint.Protocol.matching_quads( quads, extra_quads )
-    |> IO.inspect( label: "Matching quads" )
+    |> ALog.di( "Matching quads" )
     |> Enum.map( &alter_quad_graph(&1, graph_spec, info) )
-    |> IO.inspect( label: "Renamed quads" )
+    |> ALog.di( "Renamed quads" )
     |> (fn (new_quads) -> quads ++ new_quads end).()
-    |> IO.inspect( label: "All quads" )
+    |> ALog.di( "All quads" )
   end
 
   defp alter_quad_graph( quad, %GraphSpec{} = graph_spec, info ) do

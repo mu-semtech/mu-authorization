@@ -1,4 +1,7 @@
 defmodule SparqlClient do
+  require Logger
+  require ALog
+
   @moduledoc """
   A client library that offers the possibility to query a SPARQL endpoint
   """
@@ -10,7 +13,7 @@ defmodule SparqlClient do
   def query(query, endpoint\\default_endpoint) do
     options = [recv_timeout: 50000]
 
-    IO.inspect( query, label: "Sending sparql query to backend" )
+    ALog.ii( query, "Sending sparql query to backend" )
 
     HTTPoison.post!(
       endpoint,
@@ -21,7 +24,7 @@ defmodule SparqlClient do
       ["Content-Type": "application/x-www-form-urlencoded"],
       options)
     .body
-    |> IO.inspect( label: "Raw query response" )
+    |> ALog.ii( "Raw query response" )
     |> Poison.decode!
   end
 

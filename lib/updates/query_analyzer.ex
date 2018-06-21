@@ -8,6 +8,9 @@ alias Updates.QueryAnalyzer.NumericLiteral, as: Number
 alias Updates.QueryAnalyzer.Types.Quad, as: Quad
 
 defmodule Updates.QueryAnalyzer do
+  require Logger
+  require ALog
+
   @moduledoc """
   Performs analysis on a sparql InsertData query and yields the
   triples to insert in quad-format.
@@ -228,7 +231,11 @@ defmodule Updates.QueryAnalyzer do
       []
     end
 
-    delete_quads_statement ++ insert_quads_statement
+    ALog.di( delete_quads_statement, "delete quads statement" )
+    ALog.di( insert_quads_statement, "insert quads statement" )
+
+    (delete_quads_statement ++ insert_quads_statement)
+    |> ALog.di( "All updated quads" )
   end
 
   def quads( %Sym{ symbol: :DeleteClause, submatches: matches }, options ) do
@@ -256,9 +263,12 @@ defmodule Updates.QueryAnalyzer do
 
     group_graph_pattern =
       quad_pattern
+      |> ALog.di( "Quad pattern to regenerate" )
       |> Regen.result( :QuadPattern )
+      |> ALog.di( "Regenerated quad pattern" )
       |> String.trim
       |> Parser.parse_query_full( :GroupGraphPattern )
+      |> ALog.di( "Parsed QuadPattern as GroupGraphPattern" )
 
     template = quads( quad_pattern, options )
 
@@ -420,7 +430,10 @@ defmodule Updates.QueryAnalyzer do
       ({%Sym{ symbol: :Verb } = verb,
         %Sym{ symbol: :ObjectList } = object_list},
         acc)  ->
-        predicate_uri = verb |> primitive_value( options ) |> is_uri_like!
+        predicate_uri =
+          verb
+          |> primitive_value( options )
+          |> is_uri_like!
         new_options = Map.put( options, :predicate, predicate_uri )
         new_quads = quads( object_list, new_options )
 
@@ -711,6 +724,9 @@ defmodule Updates.QueryAnalyzer do
 
     authorization_groups = Map.get( options, :authorization_groups ) # TODO add default to calculate authorization_groups for no user
 
+    ALog.di( authorization_groups, "Authorization groups" )
+    ALog.di( options, "Received options" )
+
     # TODO: remove graph statements in group_graph_pattern_sym
     # TODO: move this method to a better module
 
@@ -722,6 +738,7 @@ defmodule Updates.QueryAnalyzer do
     |> Manipulators.Recipes.add_prefixes( prefix_list_from_options( options ) )
     # |> remove_graph_statements # TODO when passing through this interface, the graph statements should be removed
     # TODO: Should we select from our READ graphs, from our WRITE graphs or from something else?
+    |> ALog.di( "Generated partial query" )
     |> Acl.process_query( Acl.UserGroups.for_use( :read_for_write ), authorization_groups )
     # |> Manipulators.Recipes.set_from_graph # This should be replaced by the previous rule in the future
   end
@@ -823,13 +840,18 @@ defmodule Updates.QueryAnalyzer do
     # user's access rights into account.  The query should not be
     # blindly sent to the application graph.
     find_variables_in_quads( quads_with_vars )
+    |> ALog.di( "Detected variables" )
     |> construct_select_query( group_graph_pattern_sym, options )
     |> elem(0)
+    |> ALog.di( "Constructed SELECT query" )
     |> Regen.result # the SELECT query to execute
+    |> ALog.di( "Construct query" )
     |> SparqlClient.query
     |> SparqlClient.extract_results # Array of solutions
+    |> ALog.di( "Results from SELECT query" )
     |> Enum.flat_map( fn (res) -> fill_quad_template( quads_with_vars, res ) end )
     |> Enum.uniq # remove duplicate solutions
+    |> ALog.di( "Resulting filled in quads" )
   end
 
   def insert_quads( quads, options ) do
@@ -838,7 +860,7 @@ defmodule Updates.QueryAnalyzer do
     # |> dispatch_insert_quads_to_desired_graphs
     |> construct_insert_query_from_quads( options )
     |> Regen.result
-    |> IO.inspect
+    |> ALog.di( "Quads to insert" )
     |> SparqlClient.query
   end
 

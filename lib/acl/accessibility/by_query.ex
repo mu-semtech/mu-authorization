@@ -1,10 +1,12 @@
 alias Acl.Accessibility.ByQuery, as: AccessByQuery
 
 defmodule AccessByQuery do
+  require Logger
+  require ALog
+
   defstruct [:vars, :query]
 
   @moduledoc """
-
   Represents a constraint that depends on the state of the
   triplestore.  A SPARQL query is executed to determine whether the
   user should have access or not.
@@ -26,22 +28,25 @@ defmodule AccessByQuery do
   AccessByQuery specification.  This construction allows yielding
   contents conditionally based on the current state of the
   application.
+
+  It is also allowed to construct ASK queries.  There are no :vars to
+  consume in this case, hence it should be an empty array.  From there
+  on, the ASK query can be written like other queries.
   """
   defimpl Acl.Accessibility.Protocol do
     @doc """
-    TODO: describe docs
+    This element is accessible when the supplied query yields a
+    positive result.
     """
     def accessible?( %AccessByQuery{} = access, graph_spec, request ) do
-      IO.puts "is this query thing accessible?"
       AccessByQuery.accessible?( access, graph_spec, request )
     end
   end
 
   def accessible?( %AccessByQuery{ vars: vars, query: query } = access, graph_spec, request ) do
-    IO.puts "is this query accessible?"
-
     query
     |> manipulate_sparql_query( request )
+    |> ALog.di( "Posing sparql query to check accessibility" )
     |> SparqlClient.query
     |> retrieve_access_vars( vars )
     |> extract_results
@@ -55,15 +60,15 @@ defmodule AccessByQuery do
       # TODO: figure out where to select from through a separate UserGroups config
       # |> Manipulators.SparqlQuery.add_from_graph( "http://mu.semte.ch/authorizations" )
       |> Regen.result
-      |> IO.inspect( label: "validation query" )
+      |> ALog.di( "validation query" )
     else
-      IO.puts "No session"
+      Logger.debug "No session"
       query
       |> Parser.parse_query_full
       # TODO: figure out where to select from through a separate UserGroups config
       # |> Manipulators.SparqlQuery.add_from_graph( "http://mu.semte.ch/authorizations" )
       |> Regen.result
-      |> IO.inspect( label: "validation query" )
+      |> ALog.di( "validation query" )
     end
   end
 
@@ -71,9 +76,16 @@ defmodule AccessByQuery do
     request
     |> Plug.Conn.get_req_header( "mu-session-id" )
     |> List.first
-    |> IO.inspect( label: "session id" )
+    |> ALog.di( "session id" )
   end
 
+  def retrieve_access_vars( %{ "boolean" => value }, [] ) do
+    if value do
+      [[]] # one solution with no variables
+    else
+      [] # no solutions
+    end
+  end
   def retrieve_access_vars( query_result, vars ) do
     query_result
     |> SparqlClient.extract_results

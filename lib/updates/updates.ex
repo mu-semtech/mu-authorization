@@ -1,4 +1,6 @@
 defmodule Updates do
+  require Logger
+  require ALog
 
   def quads_for_query( query ) do
     Parser.parse_query_all( query )
@@ -20,7 +22,7 @@ defmodule Updates do
     result =
       insert_quads
       |> Acl.process_quads_for_update( Acl.UserGroups.for_use(:write), %{} )
-      |> IO.inspect
+      |> ALog.di( "processed_quads" )
       |> (fn ({_,quads}) -> quads end).()
       |> Updates.QueryAnalyzer.construct_insert_query_from_quads( options )
       |> Regen.result

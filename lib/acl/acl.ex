@@ -1,4 +1,7 @@
 defmodule Acl do
+  require Logger
+  require ALog
+
   @moduledoc """
   Acl allows you to define and verify Access Control Lists.  It is
   used to specify who can see what, and where it should be updated.
@@ -20,6 +23,10 @@ defmodule Acl do
   end
   def process_quads_for_update( quads, user_groups, authorization_groups ) do
     # The active_group_names should not consist of an array of strings.
+
+    ALog.di user_groups, "User groups for quad update"
+    ALog.di authorization_groups, "Authorization groups for quad update"
+
     active_groups_info = active_user_groups_info( user_groups, authorization_groups )
 
     all_group_specs =
@@ -29,18 +36,15 @@ defmodule Acl do
         |> List.flatten
         |> Enum.uniq
 
-    IO.puts "^ all group specs"
-
     resulting_quads =
       active_groups_info
+      |> ALog.di( "Active Groups Info" )
       |> Enum.reduce( quads, fn ({active_group, active_group_specs} , acc) ->
         # active_group_spec should be an array of specs
         Enum.reduce( active_group_specs, acc,
           &Acl.GroupSpec.Protocol.process( active_group, &1, &2 ) )
       end )
-      |> IO.inspect
-
-    IO.puts "^ new quads"
+      |> ALog.di( "Resulting quads" )
 
     { all_group_specs, resulting_quads }
   end
@@ -54,6 +58,7 @@ defmodule Acl do
   end
   def process_query( query, user_groups, authorization_groups ) do
     active_user_groups_info( user_groups, authorization_groups )
+    |> ALog.di( "Active User Groups Info" )
     |> Enum.reduce( { query, [] }, fn ({user_group, ug_access_infos}, { query, access_infos } ) ->
       { new_query, new_access_info } =
         Enum.reduce( ug_access_infos, { query, access_infos },
@@ -91,11 +96,15 @@ defmodule Acl do
   def user_authorization_groups( user_groups, request ) do
     user_groups
     |> Enum.map( &({&1,Acl.GroupSpec.Protocol.accessible?(&1, request)}) )
+    |> ALog.di( "Accessibility Info" )
     |> Enum.filter( fn
       ({_, {:ok, _}}) -> true
       ({_, {:fail}}) -> false
     end )
+    |> ALog.di( "Accessible Group Specs" )
     |> Enum.flat_map( fn ({_,{_,group_infos}}) -> group_infos end )
+    |> ALog.di( "User Authorization Groups" )
   end
+
 
 end

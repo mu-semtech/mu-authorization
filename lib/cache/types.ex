@@ -1,6 +1,8 @@
 alias Updates.QueryAnalyzer.Iri, as: Iri
 
 defmodule Cache.Types do
+  require Logger
+  require ALog
   use GenServer
 
   @moduledoc """
@@ -83,7 +85,7 @@ defmodule Cache.Types do
     Clears the types for the supplied Uri.
   """
   def clear( uri, _authorization_groups ) do
-    IO.inspect( uri, label: "Clearing cache for uri" )
+    ALog.di( uri, "Clearing cache for uri" )
     GenServer.call( __MODULE__, { :clear, uri } )
   end
 
@@ -120,7 +122,7 @@ defmodule Cache.Types do
     case GenServer.call( __MODULE__, { :get, iri_value } ) do
       {:ok, types} ->
         types
-        |> IO.inspect( label: "Got cached type" )
+        |> ALog.di( "Got cached type" )
       {:fail} ->
         # fetch the types from the database
 
@@ -136,10 +138,10 @@ defmodule Cache.Types do
           |> Parser.parse_query_full()
           |> Manipulators.SparqlQuery.replace_iri( "<MY_RESOURCE>", iri_value )
           |> Regen.result
-          |> IO.inspect( label: "query to find type for " <> iri_value )
+          |> ALog.di( "query to find type for " <> iri_value )
           |> SparqlClient.query
           |> SparqlClient.extract_results
-          |> IO.inspect( label: "results for " <> iri_value )
+          |> ALog.di( "results for " <> iri_value )
           |> Enum.map( fn (result) ->
             result
             |> Map.get( "type" )

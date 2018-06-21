@@ -4,6 +4,7 @@ defmodule SparqlServer.Router do
   """
   use Plug.Router
   require Logger
+  require ALog
 
   plug :match
   plug :dispatch
@@ -26,14 +27,25 @@ defmodule SparqlServer.Router do
   post "/sparql" do
     {:ok, body, _} = read_body(conn)
 
-    IO.inspect conn, label: "Received POST connection"
+    ALog.di conn, "Received POST connection"
     conn = process_request_headers( conn )
 
-    query = get_query_from_post( conn, body ) |> IO.inspect( label: "Received query" )
+    query = get_query_from_post( conn, body ) |> ALog.di( "Received query" )
 
     { conn, response } = handle_query query, conn
 
+    ALog.di conn.req_headers, "Request headers"
+    ALog.di conn.resp_headers, "Response headers"
+    ALog.di response, "Response content"
+
+    _session_id =
+      conn
+      |> Plug.Conn.get_req_header( "mu-session-id" )
+      |> List.first
+      |> ALog.di( "session id" )
+
     conn
+    # |> put_resp_content_type( "application/json" )
     |> put_resp_content_type( "application/sparql-results+json" )
     |> send_resp(200, response)
   end
@@ -41,12 +53,19 @@ defmodule SparqlServer.Router do
   get "/sparql" do
     params = conn.query_string |> URI.decode_query
 
+    ALog.di conn, "Received GET connection"
     conn = process_request_headers( conn )
+
     query = params["query"]
 
     { conn, response } = handle_query query, conn
 
+    ALog.di conn.req_headers, "Request headers"
+    ALog.di conn.resp_headers, "Response headers"
+    ALog.di response, "Response content"
+
     conn
+    # |> put_resp_content_type( "application/json" )
     |> put_resp_content_type( "application/sparql-results+json" )
     |> send_resp(200, response)
   end
@@ -72,6 +91,7 @@ defmodule SparqlServer.Router do
   defp handle_query(query, conn) do
     parsed_form =
       query
+      |> ALog.di( "Raw received query" )
       |> String.trim
       |> String.replace( "\r", "" ) # TODO: check if this is valid and/or ensure parser skips \r between words.
       |> Parser.parse_query_full
@@ -85,9 +105,11 @@ defmodule SparqlServer.Router do
 
     encoded_response =
       new_parsed_forms
+      |> ALog.di( "New parsed forms" )
       |> Enum.reduce( true, fn( elt, _ ) ->
         elt
         |> Regen.result
+        |> ALog.di( "Posing query to backend" )
         |> SparqlClient.query
       end )
       |> Poison.encode!
@@ -104,12 +126,12 @@ defmodule SparqlServer.Router do
       Enum.empty?( access_groups ) ->
         Acl.UserGroups.Config.user_groups
         |> Acl.user_authorization_groups( conn )
-        |> IO.inspect( label: "Fresh authorization groups" )
+        |> ALog.di( "Fresh authorization groups" )
       true ->
         access_groups
         |> List.first
         |> decode_json_access_groups
-        |> IO.inspect( label: "Decoded authorization groups" )
+        |> ALog.di( "Decoded authorization groups" )
     end
   end
 
@@ -138,7 +160,7 @@ defmodule SparqlServer.Router do
   end
 
   defp manipulate_update_query( query, conn ) do
-    IO.puts "This is an update query"
+    Logger.debug( "This is an update query" )
 
     { conn, authorization_groups } = calculate_access_groups( conn )
 
@@ -150,17 +172,19 @@ defmodule SparqlServer.Router do
       prefixes: %{ "xsd" => Updates.QueryAnalyzer.Iri.from_iri_string("<http://www.w3.org/2001/XMLSchema#>"),
                    "foaf" => Updates.QueryAnalyzer.Iri.from_iri_string("<http://xmlns.com/foaf/0.1/>") }
     }
+
     executable_queries =
       query
+      |> ALog.di( "Parsed query" )
       |> Updates.QueryAnalyzer.quads( %{
           default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ),
           authorization_groups: authorization_groups } )
       |> Enum.reject( &match?( {_,[]}, &1 ) )
-      |> IO.inspect( label: "Non-empty operations" )
+      |> ALog.di( "Non-empty operations" )
       |> Enum.map(
         fn ({statement, quads}) ->
-          IO.inspect quads, label: "detected quads"
-          IO.inspect statement, label: "quads operation"
+          ALog.di quads, "detected quads"
+          ALog.di statement, "quads operation"
 
           processed_quads = enforce_write_rights( quads, authorization_groups  )
 
@@ -185,7 +209,7 @@ defmodule SparqlServer.Router do
       quads
       |> Acl.process_quads_for_update( user_groups_for_update, authorization_groups )
       |> elem(1)
-      |> IO.inspect( label: "processed quads" )
+      |> ALog.di( "processed quads" )
 
     processed_quads
   end

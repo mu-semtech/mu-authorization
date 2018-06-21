@@ -1,6 +1,9 @@
 alias Acl.GroupSpec, as: GroupSpec
 
 defmodule Acl.GroupSpec do
+  require Logger
+  require ALog
+
   defstruct [ :name, :access, :graphs, :useage ]
 
   @moduledoc """
@@ -43,7 +46,7 @@ defmodule Acl.GroupSpec do
     # of queries to be executed on the server in the long run.
     graph_specs
     |> Enum.flat_map( &Acl.GraphSpec.process_quads( &1, info, quads, [] ) ) # We should cache and supply extra quads
-    |> IO.inspect( label: "Flat mapped processed quads" )
+    |> ALog.di( "Flat mapped processed quads" )
     |> Enum.uniq # TODO We should do a uniq_by and supply the IRI instead
   end
 

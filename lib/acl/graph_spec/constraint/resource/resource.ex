@@ -6,6 +6,9 @@ alias Acl.GraphSpec.Constraint.Resource.AllPredicates, as: AllPredicates
 alias Acl.GraphSpec.Constraint.Resource.NoPredicates, as: NoPredicates
 
 defmodule Resource do
+  require Logger
+  require ALog
+
   defstruct [ :resource_types, # Types of the resource to match
               {:source_graph, "http://mu.semte.ch/application"},
               {:predicates, %AllPredicates{} },
@@ -29,17 +32,17 @@ defmodule Resource do
       find_matching_resources( resource, quads, extra_quads, options )
 
     # Ensure we only have quads from the right graph
-    graph_quads = filter_by_graph( resource, quads ) |> IO.inspect
+    graph_quads = filter_by_graph( resource, quads ) |> ALog.di( "Graph filtered quads" )
 
     # Limit the relations, as specified in predicates and inverse_predicates
     by_relation =
       find_matching_quads( resource, matching_resources, graph_quads )
       |> filter_predicates( resource )
-      |> IO.inspect
+      |> ALog.di( "filtered predicates" )
     by_inverse_relation =
       find_inverse_matching_quads( resource, matching_resources, graph_quads )
       |> filter_inverse_predicates( resource )
-      |> IO.inspect
+      |> ALog.di( "filtered inverse predicates" )
 
     # Our new quads are the combination of these two, positioned in the right target_graph
     by_relation ++ by_inverse_relation
@@ -65,12 +68,12 @@ defmodule Resource do
     type_defs =
       all_quads
       |> Enum.filter( fn (%Quad{ predicate: predicate }) -> Iri.is_a?( predicate ) end )
-      |> IO.inspect( label: "typed quads" )
+      |> ALog.di( "typed quads" )
       |> Enum.filter( &match?(%Quad{ object: %Iri{} },&1) ) # be defensive
       |> Enum.map( fn(%Quad{ subject: %Iri{ iri: iri } } = quad) -> { iri, quad } end )
-      |> IO.inspect( label: "type defs before map" )
+      |> ALog.di( "type defs before map" )
       |> Enum.into( %{} )
-      |> IO.inspect( label: "type map" )
+      |> ALog.di( "type map" )
 
     resources = all_resources( quads )
 
@@ -90,7 +93,7 @@ defmodule Resource do
     # we need to enrich the unknown_resources
     discovered_resources = discover_resources( unknown_resources, options )
 
-    IO.inspect discovered_resources, label: "Discovered resources"
+    ALog.di discovered_resources, "Discovered resources"
 
     # yield all the discovered resources
     # the format is
@@ -106,9 +109,9 @@ defmodule Resource do
 
     resource_map =
       unknown_resources
-      |> IO.inspect( label: "unknown resources to discover" )
+      |> ALog.di( "unknown resources to discover" )
       |> Cache.Types.get_types( authorization_groups )
-      |> IO.inspect( label: "cached types" )
+      |> ALog.di( "cached types" )
 
     # We now have a map with various keys, and its types
     resource_map
@@ -124,17 +127,17 @@ defmodule Resource do
     # TODO: alter the implementation of this method by one using
     # resources_with_types
 
-    IO.puts "Checking if quads contain resources of types #{types}"
-    IO.inspect quads
+    Logger.debug "Checking if quads contain resources of types #{types}"
+    ALog.di quads, "Quads to inspect"
 
     # TODO: wrapping of iri should be handled correctly
     wrapped_types = Enum.map( types, fn (x) -> "<" <> x <> ">" end )
 
     resources_with_types( quads, extra_quads, options )
-    |> IO.inspect( label: "Resources with types" )
+    |> ALog.di( "Resources with types" )
     |> Enum.filter( fn ({_, %Iri{ iri: type_iri }}) -> Enum.member?( wrapped_types, type_iri ) end )
     |> Enum.map( fn({ %Iri{ iri: iri }, _ } ) -> iri end )
-    |> IO.inspect( label: "matching resources" )
+    |> ALog.di( "matching resources" )
   end
 
   defp filter_by_graph( %Resource{ source_graph: graph }, quads ) do

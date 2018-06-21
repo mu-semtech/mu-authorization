@@ -14,6 +14,9 @@ alias InterpreterTerms.HexCharacter, as: HexCharacter
 alias EbnfParser.GeneratorProtocol, as: GP
 
 defmodule EbnfParser.GeneratorConstructor do
+  require Logger
+  require ALog
+
   def dispatch_generation( list, %State{} = state ) when is_list( list ) do
     dispatch_generation( { :paren_group, list }, state )
   end
@@ -71,9 +74,9 @@ defmodule EbnfParser.GeneratorConstructor do
   end
 
   def dispatch_generation( a, b ) do
-    IO.puts "falling back to failed dispatch generation"
-    IO.inspect a
-    IO.inspect b
+    Logger.warn( "falling back to failed dispatch generation" )
+    ALog.di a, "failed dispatch type"
+    ALog.di b, "failed dispatch state"
     %InterpreterTerms.Nothing{}
   end
 end
