@@ -15,10 +15,14 @@ defmodule SparqlServer.Router do
 
   defp get_query_from_post( conn, body ) do
     if Plug.Conn.get_req_header(conn, "content-type") == ["application/sparql-update"] do
-      body
+      { :update, body }
     else
       body_params = URI.decode_query( body )
-      body_params["query"] || body_params["update"]
+      if body_params["query"] do
+        { :query, body_params["query"] }
+      else
+        { :update, body_params["update"] }
+      end
     end
   end
 
@@ -30,9 +34,9 @@ defmodule SparqlServer.Router do
     ALog.di conn, "Received POST connection"
     conn = process_request_headers( conn )
 
-    query = get_query_from_post( conn, body ) |> ALog.di( "Received query" )
+    { method, query } = get_query_from_post( conn, body ) |> ALog.di( "Received query" )
 
-    { conn, response } = handle_query query, conn
+    { conn, response } = handle_query query, method, conn
 
     ALog.di conn.req_headers, "Request headers"
     ALog.di conn.resp_headers, "Response headers"
@@ -58,7 +62,7 @@ defmodule SparqlServer.Router do
 
     query = params["query"]
 
-    { conn, response } = handle_query query, conn
+    { conn, response } = handle_query query, :query, conn
 
     ALog.di conn.req_headers, "Request headers"
     ALog.di conn.resp_headers, "Response headers"
@@ -94,13 +98,16 @@ defmodule SparqlServer.Router do
   end
 
   # TODO for now this method does not apply our access constraints
-  defp handle_query(query, conn) do
+  defp handle_query(query, kind, conn) do
+    top_level_key = if kind == :query do :QueryUnit else :UpdateUnit end
+
     parsed_form =
       query
       |> ALog.di( "Raw received query" )
       |> String.trim
       |> String.replace( "\r", "" ) # TODO: check if this is valid and/or ensure parser skips \r between words.
-      |> Parser.parse_query_full
+      |> Parser.parse_query_full( top_level_key )
+      |> wrap_query_in_toplevel
 
     { conn, new_parsed_forms } =
       if is_select_query( parsed_form ) do
@@ -121,6 +128,14 @@ defmodule SparqlServer.Router do
       |> Poison.encode!
 
     { conn, encoded_response }
+  end
+
+  defp wrap_query_in_toplevel( %InterpreterTerms.SymbolMatch{ string: str } = matched ) do
+    %InterpreterTerms.SymbolMatch{
+      symbol: :Sparql,
+      string: str,
+      submatches: [matched]
+    }
   end
 
   defp get_access_groups( conn ) do
