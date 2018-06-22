@@ -1,11 +1,40 @@
 defmodule EbnfParser.Sparql do
-  @type syntax :: %{ optional( atom ) => any }
+  require Logger
+  require ALog
+  use GenServer
 
   @moduledoc """
   Parser which allows you to efficiently fetch the parsed spraql
   syntax.
   """
   @spec split_single_form(String.t, boolean) :: { atom, { boolean, any } }
+
+  @type syntax :: %{ optional( atom ) => any }
+
+  ### GenServer API
+  @doc """
+    GenServer.init/1 callback
+  """
+  def init(_) do
+    {:ok, EbnfParser.Sparql.parse_sparql}
+  end
+
+  @doc """
+    GenServer.handle_call/3 callback
+  """
+  def handle_call(:get, _from, syntax) do
+    {:reply, syntax, syntax}
+  end
+
+  ### Client API / Helper functions
+  def start_link(state\\%{}) do
+    GenServer.start_link(__MODULE__, state, name: __MODULE__)
+  end
+
+  def syntax do
+    GenServer.call( __MODULE__, :get )
+  end
+
   def split_single_form( string, terminal\\false ) do
     split_string = String.split( string , "::=", parts: 2 )
     [name, clause] = Enum.map( split_string , &String.trim/1 )
@@ -15,7 +44,6 @@ defmodule EbnfParser.Sparql do
   def full_parse( string ) do
     EbnfParser.Parser.tokenize_and_parse( string )
   end
-
 
   def split_forms( forms ) do
     Enum.map( forms, &split_single_form/1 )
@@ -35,8 +63,6 @@ defmodule EbnfParser.Sparql do
     |> Enum.into( my_map )
   end
 
-  def syntax do
-    parse_sparql()
-  end
+
 
 end
