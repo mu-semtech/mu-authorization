@@ -77,22 +77,8 @@
                  original_process: :none}}
   end
 
-  def handle_cast(:"pick-query", %{add_query: add_query,
-                                   pick_query: pick_query,
-                                   process_query: process_query,
-                                   next: next,
-                                   current_queries: current_queries,
-                                   current_action: :wait,
-                                   current_queue: current_queue,
-                                   original_process: :none}) do
-    {:noreply, %{add_query: add_query,
-                 pick_query: pick_query,
-                 process_query: process_query,
-                 next: next,
-                 current_queries: current_queries,
-                 current_action: :wait,
-                 current_queue: current_queue,
-                 original_process: :none}}
+  def handle_cast(:"pick-query", %{current_action: :wait} = config) do
+    {:noreply, config}
   end
 
   def handle_cast(:"pick-query", config) do
