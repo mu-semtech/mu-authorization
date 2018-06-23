@@ -22,13 +22,7 @@ defmodule Parser do
   end
 
   def parse_query_full( query, rule_name\\:Sparql, syntax\\Parser.parse_sparql ) do
-    rule = {:symbol, rule_name}
-    state = %Generator.State{ chars: String.graphemes( query ), syntax: syntax }
-
-    EbnfParser.GeneratorConstructor.dispatch_generation( rule, state )
-    |> find_full_solution_for_generator
-    |> Map.get( :match_construct )
-    |> List.first
+    Interpreter.CachedInterpreter.parse_query_full( query, rule_name, syntax )
   end
 
   defp find_full_solution_for_generator( generator ) do

@@ -11,6 +11,7 @@ defmodule SparqlServer do
     children = [
       {Cache.Types,%{}},
       {EbnfParser.Sparql,nil},
+      {Interpreter.CachedInterpreter,nil},
       {Plug.Adapters.Cowboy2, scheme: :http, plug: SparqlServer.Router, options: [port: port]}
     ]
 

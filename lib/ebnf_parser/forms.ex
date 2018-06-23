@@ -7,6 +7,8 @@ defmodule EbnfParser.Forms do
         "Query	  ::=  	Prologue
                        ( SelectQuery | ConstructQuery | DescribeQuery | AskQuery )
                       ValuesClause",
+        # QueryAfterPrologue is used internally for optimizations.  It is never emitted.
+        "QueryAfterPrologue ::= ( SelectQuery | ConstructQuery | DescribeQuery | AskQuery ) ValuesClause",
         "UpdateUnit	  ::=  	Update",
         "Prologue	  ::=  	( BaseDecl | PrefixDecl )*",
         "BaseDecl	  ::=  	'BASE' IRIREF",
@@ -35,6 +37,8 @@ defmodule EbnfParser.Forms do
         "OffsetClause	  ::=  	'OFFSET' INTEGER",
         "ValuesClause	  ::=  	( 'VALUES' DataBlock )?",
         "Update	  ::=  	Prologue ( Update1 ( ';' Update )? )?",
+        # UpdateAfterPrologue is used internally for optimizations.  It is never emitted.
+        "UpdateAfterPrologue	  ::=  	( Update1 ( ';' Update )? )?",
         "Update1	  ::=  	Load | Clear | Drop | Add | Move | Copy | Create | InsertData | DeleteData | DeleteWhere | Modify",
         "Load	  ::=  	'LOAD' 'SILENT'? iri ( 'INTO' GraphRef )?",
         "Clear	  ::=  	'CLEAR' 'SILENT'? GraphRefAll",
