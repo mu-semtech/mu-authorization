@@ -18,10 +18,14 @@ defmodule SparqlServer.Router do
       { :update, body }
     else
       body_params = URI.decode_query( body )
-      if body_params["query"] do
-        { :query, body_params["query"] }
-      else
-        { :update, body_params["update"] }
+      cond do
+        body_params["query"] -> { :query, body_params["query"] }
+        body_params["update"] -> { :update, body_params["update"] }
+        true ->
+          params =
+            conn.query_string
+            |> URI.decode_query
+          { :any, params["query"] }
       end
     end
   end
@@ -99,7 +103,11 @@ defmodule SparqlServer.Router do
 
   # TODO for now this method does not apply our access constraints
   defp handle_query(query, kind, conn) do
-    top_level_key = if kind == :query do :QueryUnit else :UpdateUnit end
+    top_level_key = case kind do
+                      :query -> :QueryUnit
+                      :update -> :UpdateUnit
+                      :any -> :Sparql
+                    end
 
     parsed_form =
       query
@@ -130,7 +138,11 @@ defmodule SparqlServer.Router do
     { conn, encoded_response }
   end
 
-  defp wrap_query_in_toplevel( %InterpreterTerms.SymbolMatch{ string: str } = matched ) do
+  def wrap_query_in_toplevel( %InterpreterTerms.SymbolMatch{ symbol: :Sparql } = matched ) do
+    matched
+  end
+  def wrap_query_in_toplevel( %InterpreterTerms.SymbolMatch{ string: str } = matched ) do
+    # Only public for benchmark
     %InterpreterTerms.SymbolMatch{
       symbol: :Sparql,
       string: str,
