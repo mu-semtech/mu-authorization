@@ -1,0 +1,5 @@
+s = QueryTemplate.to_regex_template
+q1 = "PREFIX foo: <http://example.com/foo> PREFIX bar: <http://example.com/bar> SELECT ?s ?o WHERE { ?s bar:123 ?o . ?s2 rdfs:type ?type ; ?p2 ?o2 , ?o3 .}"
+q2 = "PREFIX foo: <http://example.com/foo> PREFIX bar: <http://example.com/bar> SELECT ?s ?o WHERE { ?s foo:123 ?o . ?s2 rdfs:type ?type ; ?p2 ?o2 , ?o3 .}"
+q3 = "PREFIX foo: <http://example.com/foo> PREFIX bar: <http://example.com/bar> SELECT ?s ?o WHERE { ?s <http://example.com/baz> ?o . ?s2 rdfs:type ?type ; ?p2 ?o2 , ?o3 .}"
+QueryTemplate.extract_param_list(q1, s.structure)
