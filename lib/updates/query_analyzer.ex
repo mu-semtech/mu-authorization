@@ -847,6 +847,7 @@ defmodule Updates.QueryAnalyzer do
     |> ALog.di( "Detected variables" )
     |> construct_select_query( group_graph_pattern_sym, options )
     |> elem(0)
+    |> Manipulators.SparqlQuery.remove_graph_statements
     |> ALog.di( "Constructed SELECT query" )
     |> Regen.result # the SELECT query to execute
     |> ALog.di( "Construct query" )
