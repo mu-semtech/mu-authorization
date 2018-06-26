@@ -4,7 +4,7 @@ alias InterpreterTerms.Symbol.Interpreter, as: SymbolEmitter
 # import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
 
 defmodule InterpreterTerms.SymbolMatch do
-  defstruct [ :string, :symbol, { :submatches, :none } ]
+  defstruct [ :string, :symbol, { :submatches, :none }, { :whitespace, "" } ]
 
   defimpl Inspect do
     import Inspect.Algebra
@@ -58,6 +58,7 @@ defmodule SymbolEmitter do
           match_construct =
             %InterpreterTerms.SymbolMatch{
               symbol: sym,
+              whitespace: whitespace,
               string: whitespace <> str} # TODO don't add whitespace for terminal symbols
           match_construct = if emit_submatches
             do %{ match_construct | submatches: construct }

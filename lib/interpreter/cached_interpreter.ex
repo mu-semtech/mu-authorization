@@ -58,7 +58,16 @@ defmodule Interpreter.CachedInterpreter do
       after_prologue_solution = parse_query_full_no_cache( cut_query, no_prologue_unit, syntax )
 
       if after_prologue_solution do
-        %Sym{ submatches: discovered_matches } = after_prologue_solution
+        %Sym{ submatches: discovered_matches, whitespace: whitespace } = after_prologue_solution
+
+        [ %Sym{ whitespace: first_discovered_submatch_whitespace,
+                string: first_discovered_submatch_string } = first_discovered_submatch
+          | rest_discovered_submatches ] = discovered_matches
+
+        first_discovered_submatch_with_whitespace = %{
+          first_discovered_submatch |
+          whitespace: whitespace <> first_discovered_submatch_whitespace,
+          string: whitespace <> first_discovered_submatch_string }
 
         %Sym{
           symbol: symbol,
@@ -67,7 +76,9 @@ defmodule Interpreter.CachedInterpreter do
             %Sym{
               symbol: sub_unit,
               string: query,
-              submatches: [ cached_prologue | discovered_matches ]
+              submatches: [ cached_prologue,
+                            first_discovered_submatch_with_whitespace
+                            | rest_discovered_submatches ]
             } ] }
       else
         parse_query_full_no_cache( query, symbol, syntax )
