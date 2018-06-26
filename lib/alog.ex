@@ -20,8 +20,9 @@ defmodule ALog do
   """
   defmacro di( item, name ) do
     quote do
-      Logger.debug( fn -> unquote( name ) <> ": " <> inspect( unquote( item ) ) end )
-      unquote( item )
+      result = unquote( item )
+      Logger.debug( fn -> unquote( name ) <> ": " <> inspect( result ) end )
+      result
     end
   end
 
@@ -32,8 +33,9 @@ defmodule ALog do
   """
   defmacro ii( item, name ) do
     quote do
-      Logger.info( fn -> unquote( name ) <> ": " <> inspect( unquote( item ) ) end )
-      unquote( item )
+      result = unquote( item )
+      Logger.info( fn -> unquote( name ) <> ": " <> inspect( result ) end )
+      result
     end
   end
 
