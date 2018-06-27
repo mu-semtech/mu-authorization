@@ -57,6 +57,8 @@ defmodule Acl do
     { query, [] }
   end
   def process_query( query, user_groups, authorization_groups ) do
+    clean_query = Manipulators.SparqlQuery.remove_graph_statements( query )
+
     active_user_groups_info( user_groups, authorization_groups )
     |> ALog.di( "Active User Groups Info" )
     |> Enum.reduce( { query, [] }, fn ({user_group, ug_access_infos}, { query, access_infos } ) ->
