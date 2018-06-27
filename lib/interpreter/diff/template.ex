@@ -5,14 +5,101 @@ alias InterpreterTerms.WordMatch, as: Word
 alias Interpreter.Diff.Variable, as: Variable
 
 defmodule Template do
-  defstruct [:tree_template, :array_template, {:used_solutions,[]}]
+  defstruct [tree_template: nil, array_template: nil, used_solutions: []]
 
   # Accessors
   def tree( %Template{ tree_template: tree_template }), do: tree_template
   def array( %Template{ array_template: array_template }), do: array_template
 
   @doc """
+  Constructs a template from two query solutions.  This is the
+  simplest way to create a new template.  Both the array template, as
+  well as the variables, will become available.
+  """
+  def make_template( solution_a, solution_b ) do
+    case tree_calc( solution_a, solution_b ) do
+      {:fail} -> {:fail}
+      tree ->
+        %Template{ tree_template: tree, used_solutions: [ solution_a, solution_b ] }
+        |> array_calc
+    end
+  end
+
+  @doc """
+  Fills the Template based on the received query_string.
+  """
+  def fill( %Template{ array_template: array_template, tree_template: tree_template }, query_string ) do
+    case fill_array( array_template, query_string ) do
+      {:fail} -> {:fail}
+      array ->
+        case fill_tree( array, tree_template ) do
+          {resp,[]} -> resp
+          _ -> {:fail} # Either non-empty vars, or {:fail}
+        end
+    end
+  end
+
+  @doc """
+  Appends a solution to the used solutions of this template.
+  """
+  def add_solution( %Template{ used_solutions: solutions } = template, solution ) do
+    %{ template | used_solutions: [ solution | solutions ] }
+  end
+
+  @doc """
+  Exhaustively try to calculate a better template based on the
+  supplied query_solution.  This may help in incrementally finding
+  better templates.
+  """
+  def exhaustive_better_templates(
+    %Template{ used_solutions: solutions, tree_template: original_template }, query_solution
+  ) do
+    Enum.map( solutions, fn (solution) ->
+      new_template = make_template( solution, query_solution )
+      %Template{ tree_template: new_tree_template } = new_template
+
+      cond do
+        new_tree_template == original_template -> :skip
+        array( new_template ) == [] -> :skip
+        true -> new_template
+      end
+    end )
+    |> Enum.reject( fn (x) -> x == :skip end )
+  end
+
+  @doc """
+  Sorts an array of templates based on their score.
+  """
+  def sort( templates ) do
+    Enum.sort_by( templates, &score/1, &>=/2 )
+  end
+
+  def score( %Template{ used_solutions: solutions, array_template: var_arr } ) do
+    total_elements =
+      solutions
+      |> Enum.map( &element_count/1 )
+      |> Enum.sum
+
+    total_elements / (total_elements + ( Enum.count( solutions ) * Enum.count( var_arr ) ))
+  end
+
+  defp element_count( %InterpreterTerms.SymbolMatch{ submatches: submatches } ) when is_list( submatches ) do
+    child_count =
+      submatches
+      |> Enum.map( &element_count/1 )
+      |> Enum.sum
+
+    child_count + 1
+  end
+  defp element_count(_) do
+    1
+  end
+
+  @doc """
   Constructs a template tree from two similar matches.
+
+  For quickly constructing a %Template{} look at make_template
+  instead.
 
   The response consists of a tuple in which the first element contains
   the fixed strings and variable symbols, and the second element
@@ -65,6 +152,14 @@ defmodule Template do
   string can be matched to a template string to see if a short and
   fast match can be built.
   """
+  def array_calc( %Template{ array_template: nil, tree_template: tree_template } = template ) do
+    case array_calc( tree_template ) do
+      {:fail} -> {:fail}
+      array_template ->
+        %{ template | array_template: array_template }
+    end
+  end
+
   def array_calc( %Variable{} = var ) do
     [var]
   end
