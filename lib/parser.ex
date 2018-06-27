@@ -25,6 +25,21 @@ defmodule Parser do
     Interpreter.CachedInterpreter.parse_query_full( query, rule_name, syntax )
   end
 
+  @doc """
+  Parses the query and yields the first (possibly non-complete) match.
+  """
+  def parse_query_first( query, rule_name\\:Sparql, syntax\\Parser.parse_sparql) do
+    rule = {:symbol, rule_name}
+    state = %Generator.State{ chars: String.graphemes( query ), syntax: syntax }
+
+    generator = EbnfParser.GeneratorConstructor.dispatch_generation( rule, state )
+    case EbnfParser.Generator.emit( generator ) do
+      { :ok, _, %Generator.Result{ matched_string: matched_string, match_construct: [construct] } } ->
+        { matched_string, construct }
+      { :fail } -> { :fail }
+    end
+  end
+
   defp find_full_solution_for_generator( generator ) do
     case EbnfParser.Generator.emit( generator ) do
       {:ok, new_state , answer } ->
