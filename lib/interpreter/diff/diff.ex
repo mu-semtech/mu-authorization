@@ -152,18 +152,16 @@ defmodule Interpreter.Diff do
   end
 
   def fill_template_arr( [template_constant|template_arr], query_string ) when is_binary( template_constant ) do
-    # IO.puts "string match"
-    # IO.inspect query_string, label: "Query string"
-    # IO.inspect template_constant, label: "Template constant"
-    constant_byte_size = byte_size(template_constant)
-    <<query_head::binary-size(constant_byte_size),rest_query_string::binary>> = query_string
+    if byte_size(template_constant) <= byte_size( query_string ) do
+      constant_byte_size = byte_size(template_constant)
+      <<query_head::binary-size(constant_byte_size),rest_query_string::binary>> = query_string
 
-    if query_head == template_constant do
-      fill_template_arr( template_arr, rest_query_string )
+      if query_head == template_constant do
+        fill_template_arr( template_arr, rest_query_string )
+      else
+        {:fail}
+      end
     else
-      # IO.puts "Could not match head"
-      # IO.inspect query_head, label: "Query head to match"
-      # IO.inspect template_constant, label: "template constant to match"
       {:fail}
     end
   end
@@ -173,21 +171,21 @@ defmodule Interpreter.Diff do
     # that the first generated answer is not the right one.  We'll
     # still guess on that being the case for now.  Improvements are
     # possible.
-    # IO.puts "symbol match"
     case Parser.parse_query_first( query_string, sym ) do
       { string_match, symbol } ->
         match_byte_size = byte_size(string_match)
         <<_::binary-size(match_byte_size),leftover_query_string::binary>> = query_string
-        [symbol|fill_template_arr(template_arr, leftover_query_string)]
+        case fill_template_arr(template_arr, leftover_query_string) do
+          { :fail } -> { :fail }
+          next_fills -> [symbol|next_fills]
+        end
       { :fail } -> {:fail}
     end
   end
   def fill_template_arr( [], query_string ) do
-    # IO.puts "empty match"
     if String.trim(query_string) == "" do
       []
     else
-      # IO.inspect( query_string, label: "Failing match b/c leftover portion:" )
       {:fail}
     end
   end
@@ -202,10 +200,16 @@ defmodule Interpreter.Diff do
       %Sym{ submatches: submatches } ->
         { child_submatches, leftover_vars } =
           submatches
-          |> Enum.reduce( {[],vars}, fn (submatch, {prev_submatches,leftover_vars} ) ->
-              { match, new_leftover_vars } = fill_template_tree( leftover_vars, submatch )
-              { [ match | prev_submatches ], new_leftover_vars }
-             end )
+          |> Enum.reduce( {[],vars}, fn (submatch, acc ) ->
+            case acc do
+              {prev_submatches,leftover_vars} ->
+                case fill_template_tree( leftover_vars, submatch ) do
+                  { match, new_leftover_vars } -> { [ match | prev_submatches ], new_leftover_vars }
+                  { :fail } -> { :fail }
+                end
+              {:fail} -> {:fail}
+            end
+            end )
         { %{ template_tree | submatches: Enum.reverse(child_submatches) }, leftover_vars }
     end
   end
