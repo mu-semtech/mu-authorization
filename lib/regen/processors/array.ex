@@ -1,6 +1,5 @@
 alias Regen.Processors.Array, as: Array
 alias Regen.Status, as: State
-alias Regen.Result, as: Result
 
 # We probably need to do the work for the array again.  It's not great
 # to reuse the code that already exists as it may well not fit our

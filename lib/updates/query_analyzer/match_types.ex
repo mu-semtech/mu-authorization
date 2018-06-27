@@ -37,7 +37,7 @@ defmodule Iri do
         strip_iri_marks( iri )
       true -> # the supplied prefix is a default prefix
         %Iri{ iri: iri } =
-          Map.get( default_prefixes, prefix )
+          Map.get( default_prefixes(), prefix )
         strip_iri_marks( iri )
     end
 

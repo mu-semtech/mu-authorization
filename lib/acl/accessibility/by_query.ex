@@ -43,7 +43,7 @@ defmodule AccessByQuery do
     end
   end
 
-  def accessible?( %AccessByQuery{ vars: vars, query: query } = access, graph_spec, request ) do
+  def accessible?( %AccessByQuery{ vars: vars, query: query }, _graph_spec, request ) do
     query
     |> manipulate_sparql_query( request )
     |> ALog.di( "Posing sparql query to check accessibility" )

@@ -80,11 +80,9 @@ defmodule SparqlServer.Router do
 
   match _, do: send_resp(conn, 404, "404 error not found")
 
-  @doc """
-  Calculates the access groups for the given connection and pushes
-  them on the connection itself.
-  """
   defp calculate_access_groups( conn ) do
+    # Calculates the access groups for the given connection and pushes
+    # them on the connection itself.
     access_groups = get_access_groups( conn )
 
     conn = if access_groups != :sudo do

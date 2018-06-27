@@ -216,7 +216,11 @@ defmodule Interpreter.Diff do
   def shallow_same?( %Sym{ symbol: a , whitespace: whitespace }, %Sym{ symbol: a , whitespace: whitespace } ) do
     true
   end
-  def shallow_same?( %Sym{ symbol: a, whitespace: whitespace_one }, %Sym{ symbol: a, whitespace: whitespace_two } ) do
+  def shallow_same?( %Sym{ symbol: a, whitespace: _whitespace_one }, %Sym{ symbol: a, whitespace: _whitespace_two } ) do
+    # Symbols with different whitespace are different.
+
+    # TODO: merge with the last clause?  this will basically fall
+    # through to there.
     false
   end
   def shallow_same?( %Word{ word: word, whitespace: whitespace }, %Word{ word: word, whitespace: whitespace } ) do

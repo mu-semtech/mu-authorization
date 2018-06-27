@@ -3,7 +3,7 @@ alias Generator.Result, as: Result
 alias InterpreterTerms.Word, as: Word
 alias InterpreterTerms.Nothing, as: Nothing
 
-import Generator.State, only: [ drop_spaces: 1, is_terminal: 1 ]
+import Generator.State, only: [ is_terminal: 1 ]
 
 defmodule InterpreterTerms.WordMatch do
   defstruct [:word, {:whitespace, ""}]

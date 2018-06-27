@@ -40,17 +40,6 @@ defmodule Parser do
     end
   end
 
-  defp find_full_solution_for_generator( generator ) do
-    case EbnfParser.Generator.emit( generator ) do
-      {:ok, new_state , answer } ->
-        if Generator.Result.full_match? answer do
-          answer
-        else
-          find_full_solution_for_generator( new_state )
-        end
-    end
-  end
-
   defp test_full_solution_for_generator( generator ) do
     case EbnfParser.Generator.emit( generator ) do
       {:ok, new_state , answer } ->

@@ -1,6 +1,5 @@
 alias Regen.Processors.Choice, as: Choice
 alias Regen.Status, as: State
-alias Regen.Result, as: Result
 
 # The construction of the emitter is clean.  We will use a similar
 # approach.

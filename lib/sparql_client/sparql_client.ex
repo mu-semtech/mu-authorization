@@ -10,7 +10,7 @@ defmodule SparqlClient do
     System.get_env("MU_SPARQL_ENDPOINT") || "http://localhost:8890/sparql"
   end
 
-  def query(query, endpoint\\default_endpoint) do
+  def query(query, endpoint\\default_endpoint()) do
     options = [recv_timeout: 50000]
 
     ALog.ii( query, "Sending sparql query to backend" )

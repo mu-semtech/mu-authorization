@@ -100,11 +100,9 @@ defmodule ArrayEmitter do
     end
   end
 
-  @doc """
-  Combines two results for a list match.
-  The first supplied result is the one that was generated earlier.
-  """
   defp combine_results( base_result, new_result ) do
+    # Combines two results for a list match.  The first supplied
+    # result is the one that was generated earlier.
     Generator.Result.combine_results( base_result, new_result )
   end
 

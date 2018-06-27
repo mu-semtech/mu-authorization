@@ -35,7 +35,9 @@ defmodule SomeEmitter do
     base_result = %Result{ leftover: chars }
     %{ some | base_result: base_result }
   end
-  defp ensure_base_result( %SomeEmitter{ state: %State{ chars: chars } } = some ) do
+  # TODO: merge the following two states?  both yield some, regardless
+  # of the further state
+  defp ensure_base_result( %SomeEmitter{ state: %State{ chars: _chars } } = some ) do
     some
   end
   defp ensure_base_result( %SomeEmitter{} = some ) do

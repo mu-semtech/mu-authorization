@@ -31,6 +31,7 @@ defmodule Symbol do
           state_for_leaf_node( symbol ) }
       next_item_is_correct_symbol( symbol ) ->
         symbol
+        # TODO: introduce ensure_syntax_in_state again?
         # |> ensure_syntax_in_state
         |> ensure_ebnf
         |> ensure_sub_generator
@@ -79,13 +80,13 @@ defmodule Symbol do
     false
   end
 
-  defp ensure_syntax_in_state( %Symbol{ state: %State{ syntax: :none } = state } = symbol ) do
-    %{ symbol |
-       state: %{ state | syntax: Parser.parse_sparql } }
-  end
-  defp ensure_syntax_in_state( symbol ) do
-    symbol
-  end
+  # defp ensure_syntax_in_state( %Symbol{ state: %State{ syntax: :none } = state } = symbol ) do
+  #   %{ symbol |
+  #      state: %{ state | syntax: Parser.parse_sparql } }
+  # end
+  # defp ensure_syntax_in_state( symbol ) do
+  #   symbol
+  # end
 
   defp ensure_sub_generator( %Symbol{ sub_generator: :none,
                                       ebnf: ebnf,

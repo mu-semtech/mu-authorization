@@ -146,7 +146,7 @@ defmodule Manipulators.SparqlQuery do
 
     Manipulators.Basics.map_matches( element, fn (sym) ->
       case sym do
-        %InterpreterTerms.SymbolMatch{ submatches: :none }  = sym ->
+        %InterpreterTerms.SymbolMatch{ submatches: :none } ->
           { :continue }
         %InterpreterTerms.SymbolMatch{ submatches: matches } = sym ->
           if Enum.find( matches, is_dataset_clause? ) do

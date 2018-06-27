@@ -54,7 +54,6 @@ defmodule Some do
 
   def ensure_restgenerator_exists( %Some{ selfgenerator: selfgen,
                                            restgenerator: :none,
-                                           element: element,
                                            state: state,
                                            locked_states: locked_states } = some ) do
     case Regen.Protocol.emit( selfgen ) do

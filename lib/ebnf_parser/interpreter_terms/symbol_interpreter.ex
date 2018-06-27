@@ -1,14 +1,10 @@
 alias Generator.Result, as: Result
 alias InterpreterTerms.Symbol.Interpreter, as: SymbolEmitter
-# import EbnfParser.Generator, only: [emit: 1]
-# import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
 
 defmodule InterpreterTerms.SymbolMatch do
   defstruct [ :string, :symbol, { :submatches, :none }, { :whitespace, "" } ]
 
   defimpl Inspect do
-    import Inspect.Algebra
-
     def inspect( %InterpreterTerms.SymbolMatch{} = dict, opts ) do
       {:doc_group,
        {:doc_cons,

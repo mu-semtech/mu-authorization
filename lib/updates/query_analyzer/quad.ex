@@ -36,7 +36,7 @@ defmodule Quad do
     %Quad{ graph: graph, subject: subject, predicate: predicate, object: object }
   end
 
-  def has_var?( %Quad{ graph: graph, subject: subject, predicate: predicate, object: object } = quad ) do
+  def has_var?( %Quad{ graph: graph, subject: subject, predicate: predicate, object: object } ) do
     Var.is_var( object )
     || Var.is_var( subject )
     || Var.is_var( graph )
