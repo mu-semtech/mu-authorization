@@ -736,8 +736,6 @@ defmodule Updates.QueryAnalyzer do
 
     Updates.QueryConstructors.make_select_query( select_variables, group_graph_pattern_sym )
     |> Manipulators.Recipes.add_prefixes( prefix_list_from_options( options ) )
-    # |> remove_graph_statements # TODO when passing through this interface, the graph statements should be removed
-    # TODO: Should we select from our READ graphs, from our WRITE graphs or from something else?
     |> ALog.di( "Generated partial query" )
     |> Acl.process_query( Acl.UserGroups.for_use( :read_for_write ), authorization_groups )
     # |> Manipulators.Recipes.set_from_graph # This should be replaced by the previous rule in the future

@@ -61,7 +61,7 @@ defmodule Acl do
 
     active_user_groups_info( user_groups, authorization_groups )
     |> ALog.di( "Active User Groups Info" )
-    |> Enum.reduce( { query, [] }, fn ({user_group, ug_access_infos}, { query, access_infos } ) ->
+    |> Enum.reduce( { clean_query, [] }, fn ({user_group, ug_access_infos}, { query, access_infos } ) ->
       { new_query, new_access_info } =
         Enum.reduce( ug_access_infos, { query, access_infos },
           fn ( access_info, { query, access_infos } ) ->

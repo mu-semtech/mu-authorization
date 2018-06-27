@@ -186,7 +186,6 @@ defmodule SparqlServer.Router do
     else
       { query, _access_groups } =
         query
-        |> Manipulators.SparqlQuery.remove_graph_statements
         |> Manipulators.SparqlQuery.remove_from_statements # TODO: check how BaseDecl should be interpreted, possibly also remove that.
         |> Acl.process_query( Acl.UserGroups.for_use(:read), authorization_groups )
 
