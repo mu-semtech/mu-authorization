@@ -19,7 +19,7 @@ defmodule SparqlServer.Router do
     else
       body_params = URI.decode_query( body )
       cond do
-        body_params["query"] -> { :query, body_params["query"] }
+        body_params["query"] -> { :any, body_params["query"] } # apparently this can be both :query as well as :update in practice
         body_params["update"] -> { :update, body_params["update"] }
         true ->
           params =
