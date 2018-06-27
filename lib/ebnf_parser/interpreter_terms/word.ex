@@ -6,7 +6,7 @@ alias InterpreterTerms.Nothing, as: Nothing
 import Generator.State, only: [ drop_spaces: 1, is_terminal: 1 ]
 
 defmodule InterpreterTerms.WordMatch do
-  defstruct [:word]
+  defstruct [:word, {:whitespace, ""}]
 
   defimpl String.Chars do
     def to_string( %InterpreterTerms.WordMatch{ word: word } ) do
@@ -40,9 +40,11 @@ defmodule InterpreterTerms.Word do
       # we upcase both parts, because there's the 'a' case which is to be transformed as lowercase...
       if String.upcase(word) == String.upcase( to_string( Enum.take( chars, String.length( word ) ) ) ) do
         result = %Result{
+          # We don't drop whitespace, split_off_whitespace has done
+          # this for us.
           leftover: Enum.drop( chars, String.length( word ) ),
           matched_string: whitespace <> word,
-          match_construct: [%InterpreterTerms.WordMatch{word: word}]
+          match_construct: [%InterpreterTerms.WordMatch{word: word, whitespace: whitespace}]
         }
         { :ok, %Nothing{}, result }
       else
