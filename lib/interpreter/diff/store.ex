@@ -12,12 +12,16 @@ defmodule Interpreter.Diff.Store do
   calculated.
   """
   def parse( query_string, symbol\\:Sparql ) do
-    templates( symbol )
+    templates = templates( symbol )
+    IO.puts "templates: #{Enum.count(templates)}"
+    templates
     |> Enum.reduce_while( {:fail}, fn (template, _) ->
       case Interpreter.Diff.Template.fill( template, query_string ) do
         {:fail} ->
+          IO.puts "no"
           {:cont, {:fail}}
         solution ->
+          IO.puts "yes"
           Interpreter.Diff.Store.Manipulator.maybe_push_solution( template, solution )
           {:halt, solution}
       end
@@ -149,7 +153,7 @@ defmodule Interpreter.Diff.Store.Manipulator do
       Interpreter.Diff.Store.Storage.solutions(symbol)
       |> Enum.map( &Interpreter.Diff.Template.make_template( solution, &1 ) )
       |> Enum.reject( &match?({:fail},&1) )
-      |> Interpreter.Diff.Template.fold_duplicates # in case we mtach with multiple other queries
+      |> Interpreter.Diff.Template.fold_duplicates( limit: 7 ) # in case we match with multiple other queries
       |> Interpreter.Diff.Template.sort
 
     case new_templates do
@@ -159,16 +163,22 @@ defmodule Interpreter.Diff.Store.Manipulator do
       [new_template|_] ->
         # Remove the matches for our new template from the 
         new_template_solutions = Interpreter.Diff.Template.used_solutions( new_template )
-        new_solutions =
+        all_solutions =
           Interpreter.Diff.Store.Storage.solutions( symbol )
           |> Enum.reject( fn (x) -> Enum.member? new_template_solutions, x end )
+
+        new_solutions = if Enum.count( all_solutions ) > 7 do
+          Enum.take_random( all_solutions, 7 )
+        else
+          all_solutions
+        end
 
         GenServer.cast( Interpreter.Diff.Store.Storage, {:set_solutions, new_solutions, symbol} )
 
         # Try to push the highest scoring template into the store
         new_stored_templates =
           [new_template | Interpreter.Diff.Store.Storage.templates(symbol)]
-          |> Interpreter.Diff.Template.fold_duplicates # folding in case we fetched new matches
+          |> Interpreter.Diff.Template.fold_duplicates( limit: 7 ) # folding in case we fetched new matches
           |> Interpreter.Diff.Template.sort
 
         GenServer.cast( Interpreter.Diff.Store.Storage, {:set_templates, new_stored_templates, symbol} )

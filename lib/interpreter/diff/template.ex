@@ -78,11 +78,18 @@ defmodule Template do
   @doc """
   Folds duplicate templates onto each other.
   """
-  def fold_duplicates( templates ) do
+  def fold_duplicates( templates, [limit: limit]\\[limit: 1000] ) do
     Enum.group_by( templates, &tree/1 )
     |> Map.values
     |> Enum.map( fn ([template|_] = templates_to_join) ->
-      %{ template | used_solutions: Enum.flat_map( templates_to_join, &used_solutions/1 ) }
+      all_solutions = Enum.flat_map( templates_to_join, &used_solutions/1 )
+      new_solutions = if Enum.count( all_solutions ) > limit do
+        Enum.take_random( all_solutions, limit )
+      else
+        all_solutions
+      end
+
+      %{ template | used_solutions: new_solutions  }
     end )
   end
 
