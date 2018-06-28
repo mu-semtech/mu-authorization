@@ -22,7 +22,12 @@ defmodule Parser do
   end
 
   def parse_query_full( query, rule_name\\:Sparql, syntax\\Parser.parse_sparql ) do
-    Interpreter.CachedInterpreter.parse_query_full( query, rule_name, syntax )
+    case Interpreter.Diff.Store.parse( query, rule_name ) do
+      {:fail} ->
+        Interpreter.CachedInterpreter.parse_query_full( query, rule_name, syntax )
+        |> Interpreter.Diff.Store.maybe_push_solution
+      result -> result
+    end
   end
 
   @doc """

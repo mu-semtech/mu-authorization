@@ -10,6 +10,7 @@ defmodule Template do
   # Accessors
   def tree( %Template{ tree_template: tree_template }), do: tree_template
   def array( %Template{ array_template: array_template }), do: array_template
+  def used_solutions( %Template{ used_solutions: used_solutions }), do: used_solutions
 
   @doc """
   Constructs a template from two query solutions.  This is the
@@ -72,6 +73,17 @@ defmodule Template do
   """
   def sort( templates ) do
     Enum.sort_by( templates, &score/1, &>=/2 )
+  end
+
+  @doc """
+  Folds duplicate templates onto each other.
+  """
+  def fold_duplicates( templates ) do
+    Enum.group_by( templates, &tree/1 )
+    |> Map.values
+    |> Enum.map( fn ([template|_] = templates_to_join) ->
+      %{ template | used_solutions: Enum.flat_map( templates_to_join, &used_solutions/1 ) }
+    end )
   end
 
   def score( %Template{ used_solutions: solutions, array_template: var_arr } ) do
