@@ -5,7 +5,7 @@ alias InterpreterTerms.WordMatch, as: Word
 alias Interpreter.Diff.Variable, as: Variable
 
 defmodule Template do
-  defstruct [tree_template: nil, array_template: nil, used_solutions: []]
+  defstruct [tree_template: nil, array_template: nil, used_solutions: [], score: nil]
 
   # Accessors
   def tree( %Template{ tree_template: tree_template }), do: tree_template
@@ -21,8 +21,14 @@ defmodule Template do
     case tree_calc( solution_a, solution_b ) do
       {:fail} -> {:fail}
       tree ->
-        %Template{ tree_template: tree, used_solutions: [ solution_a, solution_b ] }
-        |> array_calc
+        template_with_array =
+          %Template{ tree_template: tree, used_solutions: [ solution_a, solution_b ] }
+          |> array_calc
+
+        case template_with_array do
+          {:fail} -> {:fail}
+          _ -> cache_score( template_with_array )
+        end
     end
   end
 
@@ -69,10 +75,15 @@ defmodule Template do
   end
 
   @doc """
-  Sorts an array of templates based on their score.
+  Sorts an array of templates based on how expensive they will likely be to match
   """
   def sort( templates ) do
-    Enum.sort_by( templates, &score/1, &>=/2 )
+    templates
+    |> Enum.sort_by(
+      fn (%Template{ array_template: [first_arr_elt|_rest] } = template ) ->
+        { byte_size(first_arr_elt), score( template ) }
+      end,
+      &>=/2 )
   end
 
   @doc """
@@ -93,6 +104,7 @@ defmodule Template do
     end )
   end
 
+  def score( %Template{ score: score } ) when is_number( score ), do: score
   def score( %Template{ used_solutions: solutions, array_template: var_arr } ) do
     total_elements =
       solutions
@@ -100,6 +112,23 @@ defmodule Template do
       |> Enum.sum
 
     total_elements / (total_elements + ( Enum.count( solutions ) * Enum.count( var_arr ) ))
+  end
+
+  @doc """
+  Returns the score and yields a template in which the score was set.
+  """
+  def cached_score( template ) do
+    score = score( template )
+    { score, %{ template | score: score } }
+  end
+
+  @doc """
+  Yields a template in which the score was cached.
+  """
+  def cache_score( template ) do
+    template
+    |> cached_score
+    |> elem( 1 )
   end
 
   defp element_count( %InterpreterTerms.SymbolMatch{ submatches: submatches } ) when is_list( submatches ) do

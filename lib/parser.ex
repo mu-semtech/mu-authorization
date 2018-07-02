@@ -25,7 +25,7 @@ defmodule Parser do
     case Interpreter.Diff.Store.parse( query, rule_name ) do
       {:fail} ->
         Interpreter.CachedInterpreter.parse_query_full( query, rule_name, syntax )
-        |> Interpreter.Diff.Store.maybe_push_solution
+        |> Interpreter.Diff.Store.maybe_push_solution( 0.2 )
       result -> result
     end
   end
