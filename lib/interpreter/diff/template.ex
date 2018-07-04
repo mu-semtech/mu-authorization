@@ -68,6 +68,14 @@ defmodule Template do
       cond do
         new_tree_template == original_template -> :skip
         array( new_template ) == [] -> :skip
+        # RE the following two clauses: I'm still in doubt as to
+        # whether we should also drop templates with no variables, or
+        # whether that's a good situation to have for polling
+        # microservices.  Services with only a %Variable{} should be
+        # dropped, as there's no speed gain to be gotten from filling
+        # them in through this system.
+        match?( [%Variable{}], array( new_template ) ) -> :skip
+        match?( [_], array( new_template ) ) -> :skip
         true -> new_template
       end
     end )
@@ -81,7 +89,16 @@ defmodule Template do
     templates
     |> Enum.sort_by(
       fn (%Template{ array_template: [first_arr_elt|_rest] } = template ) ->
-        { byte_size(first_arr_elt), score( template ) }
+        if is_binary( first_arr_elt ) do
+          { byte_size(first_arr_elt), score( template ) }
+        else
+          # With the current EBNF and the rejections in
+          # exhaustive_better_templates, this case can't happen.
+          # However, some bugs could lead to this happening and we'd
+          # more likely be on the defensive side in this case.
+          # Keeping the system up and running.
+          { 0, score( template ) }
+        end
       end,
       &>=/2 )
   end
