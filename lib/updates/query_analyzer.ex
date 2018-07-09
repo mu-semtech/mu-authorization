@@ -564,7 +564,7 @@ defmodule Updates.QueryAnalyzer do
 
     case submatches do
       [_,%Sym{ symbol: :LANGTAG, string: str }] ->
-        lang = String.slice( 1, String.length( str ) - 1 )
+        lang = String.slice( str, 1, String.length( str ) - 1 )
         Str.from_langstring( simple_string, lang )
       [_,%Word{},%Sym{ symbol: :iri } = type_sym] ->
         type = primitive_value( type_sym, options )
