@@ -184,6 +184,13 @@ defmodule Str do
 
   defimpl Updates.QueryAnalyzer.P do
     def to_solution_sym( %Str{ str: string, lang: lang, type: type } = str ) do
+      # TODO: handle escaping of strings correctly, depending where
+      # they came from.  This requires changes in from_string
+      # (optional argument), and Updates.QueryAnalyzer#primitive_value_from_binding
+      # and Updates.QueryAnalyzer#primitive_value.  We found no other
+      # uses of this at the time of writing.
+      triple_escaped_string = string
+
       case str do
         %Str{ lang: false, type: false } ->
           # it is a simple string
@@ -194,8 +201,8 @@ defmodule Str do
               symbol: :String,
               submatches: [
                 %InterpreterTerms.SymbolMatch{
-                  symbol: :STRING_LITERAL2,
-                  string: string,
+                  symbol: :STRING_LITERAL_LONG_2,
+                  string: triple_escaped_string,
                   submatches: :none } ] } ] }
         %Str{ lang: false } ->
           # it is a typed string
@@ -206,8 +213,8 @@ defmodule Str do
                 symbol: :String,
                 submatches: [
                   %InterpreterTerms.SymbolMatch{
-                    symbol: :STRING_LITERAL2,
-                    string: string,
+                    symbol: :STRING_LITERAL_LONG_2,
+                    string: triple_escaped_string,
                     submatches: :none } ] },
               %InterpreterTerms.WordMatch{ word: "^^" },
               Updates.QueryAnalyzer.P.to_solution_sym( type ) ] }
@@ -220,8 +227,8 @@ defmodule Str do
                 symbol: :String,
                 submatches: [
                   %InterpreterTerms.SymbolMatch{
-                    symbol: :STRING_LITERAL2,
-                    string: string,
+                    symbol: :STRING_LITERAL_LONG_2,
+                    string: triple_escaped_string,
                     submatches: :none } ] },
               %InterpreterTerms.SymbolMatch{
                 symbol: :LANGTAG,

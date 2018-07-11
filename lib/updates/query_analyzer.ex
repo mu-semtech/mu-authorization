@@ -607,6 +607,10 @@ defmodule Updates.QueryAnalyzer do
   end
 
   def primitive_value( %Sym{ symbol: string_literal_sym, string: str }, _options ) when string_literal_sym in [:STRING_LITERAL1, :STRING_LITERAL2, :STRING_LITERAL_LONG1, :STRING_LITERAL_LONG2] do
+    # TODO: by outputting this primitive value, we lack information on
+    # how to render it in the future.  Each of these should be
+    # rendered in a different way.  The enclosed content ",',""",'''
+    # is quite relevant to ensure valid output.
     Str.from_string( str )
   end
 
@@ -803,26 +807,32 @@ defmodule Updates.QueryAnalyzer do
 
   def primitive_value_from_binding( binding_value ) do
     # TODO convert binding_value to local value
+
+    # TODO: we should verify that the strings which are returned as a
+    # value, can always be dropped into a triple-quoted string, or
+    # whether some escaping may be necssary.  We should compare the
+    # SPARQL1.1 protocol, with the query syntax.
+
     case binding_value do
       %{ "type" => "uri", "value" => value } ->
         Iri.from_iri_string( "<" <> value <> ">", %{} ) # We supply an empty options object, it will not be used
       %{ "type" => "literal", "xml:lang" => lang, "value": value } ->
         value
         |> String.replace( "\"", "\\\"" )
-        |> (fn (x) -> "\"" <> x <> "\"" end).()
+        |> (fn (x) -> "\"\"\"" <> x <> "\"\"\"" end).()
         |> Str.from_langstring( lang )
       %{ "type" => type_name, "datatype" => datatype, "value" => value } when type_name in ["literal", "typed-literal"] -> # It seems Virtuoso emits typed-literal rather than literal
         type_iri = Iri.from_iri_string( "<" <> datatype <> ">", %{} ) # We supply an empty options object, it will not be used
         value
         |> String.replace( "\"", "\\\"" )
-        |> (fn (x) -> "\"" <> x <> "\"" end).()
+        |> (fn (x) -> "\"\"\"" <> x <> "\"\"\"" end).()
         |> Str.from_typestring( type_iri )
         # TODO it seems only URIs are allowed here, but we should be
         # certain stores don't break this assumption
       %{ "type" => "literal", "value" => value } ->
         value
         |> String.replace( "\"", "\\\"" )
-        |> (fn (x) -> "\"" <> x <> "\"" end).()
+        |> (fn (x) -> "\"\"\"" <> x <> "\"\"\"" end).()
         |> Str.from_string
       # %{ "type" => "bnode", "value": value } -> # <-- we don't do
       # blank nodes, we will crash when blank nodes arrive
