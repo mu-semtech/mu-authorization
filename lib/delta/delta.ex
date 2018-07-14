@@ -1,4 +1,9 @@
+alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+
 defmodule Delta do
+  require Logger
+  require ALog
+
   @type insert_type :: :update | :delete
   @type delta :: [{insert_type,[%Quad{}]}]
 
@@ -15,6 +20,11 @@ defmodule Delta do
   """
   @spec publish_updates( delta ) :: delta
   def publish_updates( delta  ) do
+    delta
+    |> Delta.Message.construct
+    |> ALog.ii( "Constructed body for clients" )
+    |> Delta.Messenger.inform_clients
+
     delta
   end
 end

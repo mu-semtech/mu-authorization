@@ -6,6 +6,8 @@ alias Updates.QueryAnalyzer.Variable, as: Var
 
 defprotocol Updates.QueryAnalyzer.P do
   def to_solution_sym( element )
+
+  def to_sparql_result_value( element )
 end
 
 
@@ -42,8 +44,16 @@ defmodule Iri do
     end
 
 
-    full_iri = "<" <> base_uri <> postfix <> ">"
+    full_iri = wrap_iri_string( base_uri <> postfix )
     %Iri{ iri: full_iri, real_name: prefixed_name }
+  end
+
+  def wrap_iri_string( iri_string ) do
+    "<" <> iri_string <> ">"
+  end
+
+  def unwrap_iri_string( iri_string ) do
+    String.slice( iri_string, 1, String.length( iri_string ) - 2 )
   end
 
   def make_a do
@@ -79,6 +89,10 @@ defmodule Iri do
             string: full_name,
             submatches: :none } ] }
     end
+
+    def to_sparql_result_value( %Iri{ iri: full_iri } ) do
+      %{ "type": "uri", "value": Iri.unwrap_iri_string( full_iri ) }
+    end
   end
 end
 
@@ -111,6 +125,9 @@ defmodule Var do
   defimpl Updates.QueryAnalyzer.P do
     def to_solution_sym( %Var{} = var ) do
       Var.to_solution_sym( var )
+    end
+    def to_sparql_result_value( %Var{} ) do
+      raise "Cannot convert Variable to SPARQL1.1 result"
     end
   end
 
@@ -165,6 +182,14 @@ defmodule Bool do
             submatches: [
               %InterpreterTerms.WordMatch{
                 word: word } ] } ] }
+    end
+
+    def to_sparql_result_value( %Bool{value: value} ) do
+      value_string = case value do
+                       true -> "true"
+                       false -> "false"
+                     end
+      %{ "type": "literal", "value": value_string, "datatype": "http://www.w3.org/2001/XMLSchema#boolean" }
     end
   end
 end
@@ -236,6 +261,19 @@ defmodule Str do
                 submatches: :none } ] }
       end
     end
+
+    def to_sparql_result_value( %Str{ str: str, lang: false, type: false } ) do
+      %{ "type": "literal", "value": str }
+    end
+    def to_sparql_result_value( %Str{ str: str, lang: lang, type: false } ) do
+      # TODO discuss whether it's really ok to write xml:lang here,
+      # instead of writing out the xml namespace.
+      %{ "type": "literal", "value": str, "xml:lang": lang }
+    end
+    def to_sparql_result_value( %Str{ str: str, lang: false, type: %Iri{ iri: type_iri } } ) do
+      type = Iri.unwrap_iri_string( type_iri )
+      %{ "type": "literal", "value": str, "datatype": type }
+    end
   end
 end
 
@@ -264,6 +302,14 @@ defmodule Number do
                     symbol: :DECIMAL,
                     string: str,
                     submatches: :none } ] } ] } ] }
+    end
+
+    def to_sparql_result_value( %Number{ str: str } ) do
+      # We do not know the type of the number, hence we output the
+      # string as a decimal.  We should verify whether or not there
+      # are formatting rules about this and/or whether we can import
+      # the specific type from the definition.
+      %{ "type": "literal", "value": str, "datatype": "http://www.w3.org/2001/XMLSchema#decimal" }
     end
   end
 end
