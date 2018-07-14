@@ -227,6 +227,7 @@ defmodule SparqlServer.Router do
 
           { statement, processed_quads }
         end)
+      |> Delta.publish_updates
       |> Enum.map(
         fn ({statement, processed_quads}) ->
           case statement do
