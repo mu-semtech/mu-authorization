@@ -14,22 +14,42 @@ defmodule Manipulators.Basics do
         { :insert_after, content }
       { :continue } ->
         map_submatches( result, functor )
+      { :skip } ->
+        result
+      { :exit, value } ->
+        { :exit, value }
     end
   end
 
   def map_submatches( %InterpreterTerms.SymbolMatch{ submatches: submatches } = symbolmatch, functor )
   when is_list( submatches ) do
-    %{ symbolmatch |
-       submatches: Enum.flat_map( submatches,
-         fn (sub) ->
+    case (
+      submatches
+      |> Enum.reduce_while( [],
+         fn (sub, acc) ->
            res = map_matches( sub, functor )
            case res do
              { :insert_after, elt } ->
-               [ sub, elt ]
+               new_acc = [[sub,elt] | acc]
+               { :continue, new_acc }
+             { :exit, value } ->
+               { :halt, { :exit, value } }
              _ ->
-               [ res ]
+               { :cont, [[ res ] | acc] }
            end
-         end ) }
+         end ) )
+    do
+      { :exit, value } ->
+        { :exit, value }
+      submatches ->
+        new_submatches =
+          submatches
+          |> Enum.reverse
+          |> Enum.flat_map( &(&1) )
+
+        %{ symbolmatch
+           | submatches: new_submatches }
+    end
   end
 
   def map_submatches( symbol, _ ) do
