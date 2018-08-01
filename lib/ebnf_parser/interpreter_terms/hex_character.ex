@@ -3,7 +3,7 @@ alias Generator.Result, as: Result
 alias InterpreterTerms.HexCharacter, as: HexCharacter
 
 defmodule InterpreterTerms.HexCharacterResult do
-  defstruct [ :character ]
+  defstruct [ :character, { :external, %{} } ]
 
   defimpl String.Chars do
     def to_string( %InterpreterTerms.HexCharacterResult{ character: char } ) do

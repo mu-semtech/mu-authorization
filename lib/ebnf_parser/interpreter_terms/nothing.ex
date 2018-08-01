@@ -4,7 +4,7 @@ alias Generator.State, as: State
 # end
 
 defmodule InterpreterTerms.Nothing do
-  defstruct [:spec, {:state, %State{}}]
+  defstruct [:spec, {:state, %State{}}, { :external, %{} }]
 end
 
 defimpl EbnfParser.GeneratorProtocol, for: InterpeterTerms.Nothing do

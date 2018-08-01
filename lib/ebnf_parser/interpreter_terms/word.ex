@@ -6,7 +6,7 @@ alias InterpreterTerms.Nothing, as: Nothing
 import Generator.State, only: [ is_terminal: 1 ]
 
 defmodule InterpreterTerms.WordMatch do
-  defstruct [:word, {:whitespace, ""}]
+  defstruct [:word, {:whitespace, ""}, { :external, %{} }]
 
   defimpl String.Chars do
     def to_string( %InterpreterTerms.WordMatch{ word: word } ) do

@@ -2,7 +2,7 @@ alias Generator.Result, as: Result
 alias InterpreterTerms.Symbol.Interpreter, as: SymbolEmitter
 
 defmodule InterpreterTerms.SymbolMatch do
-  defstruct [ :string, :symbol, { :submatches, :none }, { :whitespace, "" } ]
+  defstruct [ :string, :symbol, { :submatches, :none }, { :whitespace, "" }, { :external, %{} } ]
 
   defimpl Inspect do
     def inspect( %InterpreterTerms.SymbolMatch{} = dict, opts ) do
