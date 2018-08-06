@@ -35,8 +35,8 @@ defmodule GraphReasoner do
                      # PropertyListPathNotEmpty,
                      {:VerbSimple,:deep}, # these are variables
                      {:VerbPath,:deep}, # we will not accept complex paths, but this is simply a deep structure on which we mostly need to place cardinality constraints
-                     :ObjectList,:Object,:GraphNode,:VarOrTerm, # We drop TriplesNode
-                     :ObjectListPath,:ObjectPath,:GraphNodePath, #:VarOrTerm <- we already have this one
+                     :ObjectList,:Object,:GraphNode, # We drop TriplesNode, VarOrTerm is already deeply accepted
+                     :ObjectListPath,:ObjectPath,:GraphNodePath, # VarOrTerm is already deeply accepted
                     ]
 
   @symbols_fully_dispatched_to_children [
@@ -99,36 +99,40 @@ defmodule GraphReasoner do
   truethy, the query contain content which is not understood yet.
   """
   def is_acceptable_query( match ) do
-    case Manipulators.Basics.map_matches( match, fn (item) ->
-          case item do
-            %InterpreterTerms.SymbolMatch{ symbol: symbol } ->
-              case Enum.find_value( @accepted_symbols, fn (accepted_symbol) ->
-                    case accepted_symbol do
-                      { ^symbol, :deep } ->
-                        IO.inspect( accepted_symbol, label: "Skipping for this symbol" )
-                        { :skip }
-                      ^symbol ->
-                        IO.inspect( accepted_symbol, label: "Continuing on this symbol" )
-                        { :continue }
-                      _ ->
-                        false
-                    end
-                  end )
-                do
-                nil ->
-                  IO.inspect( symbol, label: "Could not find this symbol in accepted_symbols" )
-                  { :exit, false } # we did not find a match in the accepted_symbols
-                map_matches_command -> map_matches_command
-              end
-            _ ->
-              # It is not a SymbolMatch, hence we should continue
-              { :continue }
+    # We need to walk over the full tree to discover this is an
+    # acceptable query.
+    #
+    # Our reasoning goes as follows ::
+
+    discovery_result =
+      # :: Walk the tree of results
+      Manipulators.Basics.map_matches( match, fn (item) ->
+        unless match?( %InterpreterTerms.SymbolMatch{ symbol: symbol }, item ) do
+          # :: ignore the item if it is not a SymbolMatch
+          { :continue }
+        else
+          %InterpreterTerms.SymbolMatch{ symbol: symbol } = item
+          cond do
+            Enum.find( @accepted_symbols, &match?( {^symbol,:deep}, &1 ) ) ->
+              # :: deeply accepted symbols can just be accepted
+              # IO.inspect( symbol, label: "This symbol is allowed without walking children" )
+              {:skip}
+            Enum.find( @accepted_symbols, &match?( ^symbol, &1) ) ->
+              # :: accepted symbols are allowed, but their children have to be checked
+              # IO.inspect( symbol, label: "This symbol is allowed if children are allowed" )
+              {:continue}
+            true ->
+              # :: no match was found for this symbol, the query cannot be accepted
+              # IO.inspect( symbol, label: "This symbol is not allowed" )
+              {:exit, false}
           end
-        end )
-      do
-      { :exit, value } -> value # the value here should always be false
-      _ -> true
-    end
+        end
+      end)
+
+    # map_matches doesn't just exit with the exit result, it informs
+    # us that an exit happened.  We need to convert it to the expected
+    # result.
+    not match?( {:exit, false}, discovery_result )
   end
 
   defp fully_processed?( match ) do
