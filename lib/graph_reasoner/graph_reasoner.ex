@@ -146,8 +146,6 @@ defmodule GraphReasoner do
   end
 
   defp augment_with_terms_map( match ) do
-    # Stub implementation for augment_with_terms_map
-    #
     # This method consumes a match and generates a terms_map from the
     # statements.  The terms_map is a knowledge-base connecting terms
     # to the information derived from them (eg:
@@ -158,8 +156,49 @@ defmodule GraphReasoner do
     # term in the query, providing a new identifier for it, and
     # creating an entry in the terms map for it.
 
-    terms_map = %{}
-    { terms_map, match }
+    # As we can't store objects by reference and update them, we need
+    # to build our own pointer system to achieve state which can be
+    # manipulated.  There are many alternatives, we choose to identify
+    # each variable by a number.  Because we assume that we'll
+    # discover some variables overlap (eg: the variable ?s is used in
+    # multiple places and its meaning isn't shadowed), we need a way
+    # to group information later on.  As such, we have created a
+    # 'term_ids' map, which maps from the identifier of a variable, to
+    # its corresponding information in the 'terms_info' hash.  When we
+    # discover that we can group variables together, we can do so by
+    # manipulating these two hashes, rather than by finding and
+    # manipulating the complex query object.
+    state = [ term_ids: %{}, term_info: %{}, term_ids_index: 0, term_info_index: 0 ]
+
+    { state, query } = Manipulators.Basics.map_matches_with_state( state, match, fn ( state, item ) ->
+      [ term_ids: term_ids,
+        term_info: term_info,
+        term_ids_index: term_ids_index,
+        term_info_index: term_info_index
+      ] = state
+      case item do
+        %InterpreterTerms.SymbolMatch{ symbol: :Var, string: str } ->
+          new_term_ids_index = term_ids_index + 1
+          new_term_info_index = term_info_index + 1
+
+          new_term_ids = Map.put( term_ids, new_term_ids_index, new_term_info_index )
+          new_term_info = Map.put( term_info, new_term_info_index, %{symbol_string: str} )
+          new_item = ExternalInfo.put( item, GraphReasoner, :term_id, new_term_ids_index )
+
+          new_state = [
+            term_ids: new_term_ids,
+            term_info: new_term_info,
+            term_ids_index: new_term_ids_index,
+            term_info_index: new_term_info_index
+          ]
+
+          { :replace_and_traverse, new_state, new_item }
+        _ ->
+          { :continue, state }
+      end
+    end )
+
+    { state, query }
   end
 
   defp join_same_terms( { terms_map, match } ) do
