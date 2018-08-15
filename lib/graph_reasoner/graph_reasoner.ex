@@ -83,7 +83,7 @@ defmodule GraphReasoner do
       processed_query =
         match
         |> mark_non_graph_clauses
-        #|> derive_graph_statements
+        |> derive_graph_statements
 
       completeness = if fully_processed?( processed_query ) do :full else :partial end
 
@@ -91,6 +91,16 @@ defmodule GraphReasoner do
     else
       { :fail }
     end
+  end
+
+  defp derive_graph_statements( match ) do
+    match
+    |> augment_with_terms_map
+    |> join_same_terms
+    |> derive_terms_information
+    |> derive_triples_information
+    |> wrap_graph_queries
+    |> extract_match_from_augmented_query
   end
 
   @doc """
@@ -133,6 +143,82 @@ defmodule GraphReasoner do
     # us that an exit happened.  We need to convert it to the expected
     # result.
     not match?( {:exit, false}, discovery_result )
+  end
+
+  defp augment_with_terms_map( match ) do
+    # Stub implementation for augment_with_terms_map
+    #
+    # This method consumes a match and generates a terms_map from the
+    # statements.  The terms_map is a knowledge-base connecting terms
+    # to the information derived from them (eg:
+    # <http://example.com/cars/1> is of type
+    # <http://example.com/Car>).
+    #
+    # Construction of the terms map limits itself to identifying each
+    # term in the query, providing a new identifier for it, and
+    # creating an entry in the terms map for it.
+
+    terms_map = %{}
+    { terms_map, match }
+  end
+
+  defp join_same_terms( { terms_map, match } ) do
+    # Stub implementation for join_same_terms
+    #
+    # When interpreting the query we may start understanding more
+    # about its variables.  We parse the query, discover information
+    # about how the variables are related, and join up related
+    # variables.
+
+    { terms_map, match }
+  end
+
+  defp derive_terms_information( { terms_map, match } ) do
+    # Stub implementation for derive_terms_information
+    #
+    # Each of the terms in the query may express information about the
+    # variables.  For instance, when we see ?s a foaf:Agent, we know
+    # that ?s is of type foaf:Agent.  We can use this information in
+    # other places.  For each of these statements, we can augment the
+    # knowledge expressed in the terms_map.  This information is
+    # essential to later derive which information is likely stored in
+    # which place.
+    { terms_map, match }
+  end
+
+  defp derive_triples_information( { terms_map, match } ) do
+    # Stub implementation for derive_triples_information
+    #
+    # Each of the triples which needs to be fetched may be fetched
+    # from various graphs.  Based on the information in the terms_map,
+    # the access groups of the current user, and the specific triple
+    # to be discovered, we can detect where this information should
+    # come from.  We attach this information to the predicate as that
+    # will keep working when we decide to support subject paths.
+
+    { terms_map, match }
+  end
+
+  defp wrap_graph_queries( { terms_map, match } ) do
+    # Stub implementation for wrap_graph_queries
+    #
+    # As we know from which graphs various patterns will come from, we
+    # can now wrap statements in graphs.  For now, we only support
+    # simple patterns where the content comes from the same graph, we
+    # may introduce new variables to split subject paths in the
+    # future.
+
+    { terms_map, match }
+  end
+
+  defp extract_match_from_augmented_query( { _terms_map, match } ) do
+    # Stub implementation for extract_match_from_augmented_query
+    #
+    # Consumption of the wrapped graph will likely need access to the
+    # transformed query.  This function provides easy access to that
+    # match.
+
+    match
   end
 
   defp fully_processed?( match ) do
