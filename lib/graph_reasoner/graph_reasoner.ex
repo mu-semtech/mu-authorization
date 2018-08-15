@@ -201,15 +201,66 @@ defmodule GraphReasoner do
     { state, query }
   end
 
-  defp join_same_terms( { terms_map, match } ) do
-    # Stub implementation for join_same_terms
-    #
+  defp join_same_terms( { state, match } ) do
     # When interpreting the query we may start understanding more
     # about its variables.  We parse the query, discover information
     # about how the variables are related, and join up related
     # variables.
 
-    { terms_map, match }
+    # It is fairly easy to join terms together with our current
+    # assumptions.  Because we don't support subqueries, variables
+    # cannot be shadowed.  In the current implementation we can walk
+    # over the existing variables, without further analyzing the
+    # query.
+
+    # TODO: when subqueries are allowed: analyze the query to ensure
+    # shadewing variables are not merged with their shadowed
+    # name-fellow.
+
+    # Another assumption we can make in the current construction, is
+    # that there is virtually no information available on the items.
+    # Because this step is currently not called iteratively, we know
+    # there is only a name available.  Therefore, we don't need to
+    # group the statements together.
+
+    # TODO: perform logical joining of terms when terms are joined
+    # iteratively.
+
+    term_ids = state[:term_ids]
+    term_info = state[:term_info]
+
+    # helper function to get the identifier for a given name string
+    term_id_for_variable_name = fn (name_string) ->
+      Map.keys( term_info )
+      |> Enum.sort
+      |> Enum.find( fn(idx) ->
+        term_info
+        |> Map.get( idx )
+        |> Map.get( :symbol_string )
+        |> Kernel.==( name_string )
+      end )
+    end
+
+    new_term_ids =
+      Enum.reduce( Map.keys( term_ids ), term_ids, fn ( term_id, term_ids ) ->
+        new_index =
+          term_info
+          |> Map.get( term_id )
+          |> Map.get( :symbol_string )
+          |> term_id_for_variable_name.()
+
+        Map.put( term_ids, term_id, new_index )
+      end )
+
+    new_state = [ term_ids: new_term_ids ] ++ state
+
+    # TODO: Clean up the new_state so that it does not contain the
+    # duplicate term_ids anymore.  This may be handy during debugging.
+
+    # TODO: we could remove the term_info of unused keys to ease
+    # debugging.
+
+    { new_state, match }
   end
 
   defp derive_terms_information( { terms_map, match } ) do
