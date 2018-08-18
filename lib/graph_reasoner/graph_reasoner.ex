@@ -261,8 +261,6 @@ defmodule GraphReasoner do
   end
 
   defp derive_terms_information( { terms_map, match } ) do
-    # Stub implementation for derive_terms_information
-    #
     # Each of the terms in the query may express information about the
     # variables.  For instance, when we see ?s a foaf:Agent, we know
     # that ?s is of type foaf:Agent.  We can use this information in
@@ -270,7 +268,80 @@ defmodule GraphReasoner do
     # knowledge expressed in the terms_map.  This information is
     # essential to later derive which information is likely stored in
     # which place.
-    { terms_map, match }
+
+    # We currently assume only simple triple statements.  Furthermore,
+    # we ignore the prologue and assume all URIs are written in their
+    # long form (for now).  Because of this, we can limit ourselves to
+    # the most minimal interpretation of the query.
+
+    analyzeTriplesBlock = fn (state, symbol) ->
+      # Analyzes a single TriplesBlock
+
+      { subjectVarOrTerm, predicateElement, objectVarOrTerm } =
+        GraphReasoner.QueryMatching.TriplesBlock.single_triple!( symbol )
+
+      cond do
+        GraphReasoner.QueryMatching.VarOrTerm.var?( subjectVarOrTerm ) ->
+          # When it is a variable, we can update the state of that
+          # variable.  For this, we first search for the other two
+          # pieces of information (the predicate and the object) so we
+          # can relate each.
+
+          varSymbol = GraphReasoner.QueryMatching.VarOrTerm.var!( subjectVarOrTerm )
+
+          pathIri = GraphReasoner.QueryMatching.PathPrimary.iri!( predicateElement )
+
+          objectIri =
+            objectVarOrTerm
+            |> GraphReasoner.QueryMatching.VarOrTerm.iri!
+            |> Updates.QueryAnalyzer.Iri.from_symbol
+
+          # TODO: don't crash when predicates or objects are not URIs.
+          # The previous section assumes both will be an Iri, but
+          # there are absolutely no guarantees that will be the case.
+          # In both of these cases, we want to refer to the identifier
+          # available in the external_info of the symbol so we can
+          # keep updating its contents.
+
+          # Now that we know the variable, the path's iri and the
+          # object's iri, we can add that information to the content
+          # we've discovered.
+
+          term_id = ExternalInfo.get( varSymbol, GraphReasoner, :term_id )
+          renamed_term_id = state.terms_map.term_ids[term_id]
+
+          new_state =
+            update_in(
+              state[:terms_map][:term_info][renamed_term_id][:related_paths],
+              fn (related_paths) ->
+                [ %{ predicate: pathIri, object: objectIri } | (related_paths || []) ]
+              end )
+
+          new_state
+
+        # GraphReasoner.QueryMatching.VarOrTerm.iri?( subjectVarOrTerm ) ->
+        #   IO.puts "Subject is an IRI, no information is derived yet"
+        true ->
+          IO.inspect subjectVarOrTerm, label: "Subject of TripleBlock not supported"
+      end
+    end
+
+
+    tree_state = %{ terms_map: terms_map }
+
+    { new_tree_state, _ } =
+      Manipulators.Basics.map_matches_with_state( tree_state, match, fn (state, element) ->
+        case element do
+          %InterpreterTerms.SymbolMatch{
+            symbol: :TriplesBlock
+          } ->
+            new_state = analyzeTriplesBlock.( state, element )
+            { :continue, new_state }
+          _ -> { :continue, state }
+        end
+      end )
+
+    { new_tree_state, match }
   end
 
   defp derive_triples_information( { terms_map, match } ) do
