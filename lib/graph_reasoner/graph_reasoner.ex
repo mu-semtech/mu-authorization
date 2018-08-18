@@ -274,7 +274,7 @@ defmodule GraphReasoner do
     # long form (for now).  Because of this, we can limit ourselves to
     # the most minimal interpretation of the query.
 
-    analyzeTriplesBlock = fn (state, symbol) ->
+    analyzeTriplesBlock = fn (terms_map, symbol) ->
       # Analyzes a single TriplesBlock
 
       { subjectVarOrTerm, predicateElement, objectVarOrTerm } =
@@ -308,16 +308,16 @@ defmodule GraphReasoner do
           # we've discovered.
 
           term_id = ExternalInfo.get( varSymbol, GraphReasoner, :term_id )
-          renamed_term_id = state.terms_map.term_ids[term_id]
+          renamed_term_id = terms_map.term_ids[term_id]
 
-          new_state =
+          new_terms_map =
             update_in(
-              state[:terms_map][:term_info][renamed_term_id][:related_paths],
+              terms_map[:term_info][renamed_term_id][:related_paths],
               fn (related_paths) ->
                 [ %{ predicate: pathIri, object: objectIri } | (related_paths || []) ]
               end )
 
-          new_state
+          new_terms_map
 
         # GraphReasoner.QueryMatching.VarOrTerm.iri?( subjectVarOrTerm ) ->
         #   IO.puts "Subject is an IRI, no information is derived yet"
@@ -327,21 +327,19 @@ defmodule GraphReasoner do
     end
 
 
-    tree_state = %{ terms_map: terms_map }
-
-    { new_tree_state, _ } =
-      Manipulators.Basics.map_matches_with_state( tree_state, match, fn (state, element) ->
+    { new_terms_map, _ } =
+      Manipulators.Basics.map_matches_with_state( terms_map, match, fn (terms_map, element) ->
         case element do
           %InterpreterTerms.SymbolMatch{
             symbol: :TriplesBlock
           } ->
-            new_state = analyzeTriplesBlock.( state, element )
-            { :continue, new_state }
-          _ -> { :continue, state }
+            new_terms_map = analyzeTriplesBlock.( terms_map, element )
+            { :continue, new_terms_map }
+          _ -> { :continue, terms_map }
         end
       end )
 
-    { new_tree_state, match }
+    { new_terms_map, match }
   end
 
   defp derive_triples_information( { terms_map, match } ) do
