@@ -117,7 +117,7 @@ defmodule GraphReasoner do
     discovery_result =
       # :: Walk the tree of results
       Manipulators.Basics.map_matches( match, fn (item) ->
-        unless match?( %InterpreterTerms.SymbolMatch{ symbol: symbol }, item ) do
+        unless match?( %InterpreterTerms.SymbolMatch{ symbol: _symbol }, item ) do
           # :: ignore the item if it is not a SymbolMatch
           { :continue }
         else
@@ -379,7 +379,7 @@ defmodule GraphReasoner do
 
   defp fully_processed?( match ) do
     case Manipulators.Basics.map_matches( match, fn (item) ->
-          if may_need_graph_clause?( match ) do
+          if may_need_graph_clause?( item ) do
             { :exit, false }
           else
             { :continue }
@@ -395,11 +395,9 @@ defmodule GraphReasoner do
     Manipulators.Basics.map_matches( match, fn (item) ->
       case item do
         %InterpreterTerms.SymbolMatch{ symbol: symbol } when symbol in @non_graph_symbols ->
-          IO.inspect symbol, label: "Not a graph symbol"
           new_item = ExternalInfo.put item, GraphReasoner, :non_graph_clause, true
           { :replace_and_traverse, new_item }
         %InterpreterTerms.SymbolMatch{ symbol: symbol } ->
-          IO.inspect symbol, label: "Skipping symbol"
           { :continue }
         _ ->
           # non-symbols can be marked as safe for now
@@ -421,7 +419,6 @@ defmodule GraphReasoner do
           Enum.any? children, &may_need_graph_clause?/1
         %InterpreterTerms.SymbolMatch{ symbol: symbol } ->
           # If it's a non-marked symbol
-          IO.inspect symbol, label: "May needs graph clause"
           true
         _ ->
           false
