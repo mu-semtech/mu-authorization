@@ -168,14 +168,14 @@ defmodule GraphReasoner do
     # discover that we can group variables together, we can do so by
     # manipulating these two hashes, rather than by finding and
     # manipulating the complex query object.
-    state = [ term_ids: %{}, term_info: %{}, term_ids_index: 0, term_info_index: 0 ]
+    state = %{ term_ids: %{}, term_info: %{}, term_ids_index: 0, term_info_index: 0 }
 
     { state, query } = Manipulators.Basics.map_matches_with_state( state, match, fn ( state, item ) ->
-      [ term_ids: term_ids,
-        term_info: term_info,
-        term_ids_index: term_ids_index,
-        term_info_index: term_info_index
-      ] = state
+      %{ term_ids: term_ids,
+         term_info: term_info,
+         term_ids_index: term_ids_index,
+         term_info_index: term_info_index
+       } = state
       case item do
         %InterpreterTerms.SymbolMatch{ symbol: :Var, string: str } ->
           new_term_ids_index = term_ids_index + 1
@@ -185,12 +185,12 @@ defmodule GraphReasoner do
           new_term_info = Map.put( term_info, new_term_info_index, %{symbol_string: str} )
           new_item = ExternalInfo.put( item, GraphReasoner, :term_id, new_term_ids_index )
 
-          new_state = [
-            term_ids: new_term_ids,
-            term_info: new_term_info,
-            term_ids_index: new_term_ids_index,
-            term_info_index: new_term_info_index
-          ]
+          new_state =
+            state
+            |> Map.put( :term_ids, new_term_ids )
+            |> Map.put( :term_info, new_term_info )
+            |> Map.put( :term_ids_index, new_term_ids_index )
+            |> Map.put( :term_info_index, new_term_info_index )
 
           { :replace_and_traverse, new_state, new_item }
         _ ->
@@ -226,8 +226,8 @@ defmodule GraphReasoner do
     # TODO: perform logical joining of terms when terms are joined
     # iteratively.
 
-    term_ids = state[:term_ids]
-    term_info = state[:term_info]
+    term_ids = Map.get(state, :term_ids)
+    term_info = Map.get(state, :term_info)
 
     # helper function to get the identifier for a given name string
     term_id_for_variable_name = fn (name_string) ->
@@ -252,10 +252,7 @@ defmodule GraphReasoner do
         Map.put( term_ids, term_id, new_index )
       end )
 
-    new_state = [ term_ids: new_term_ids ] ++ state
-
-    # TODO: Clean up the new_state so that it does not contain the
-    # duplicate term_ids anymore.  This may be handy during debugging.
+    new_state = Map.put( state, :term_ids, new_term_ids )
 
     # TODO: we could remove the term_info of unused keys to ease
     # debugging.
