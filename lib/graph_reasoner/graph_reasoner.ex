@@ -98,7 +98,7 @@ defmodule GraphReasoner do
     |> augment_with_terms_map
     |> join_same_terms
     |> derive_terms_information
-    |> derive_triples_information
+    |> derive_triples_information( Acl.UserGroups.for_use( :read ) ) # TODO: supply authorization groups
     |> wrap_graph_queries
     |> extract_match_from_augmented_query
   end
@@ -177,7 +177,11 @@ defmodule GraphReasoner do
          term_info_index: term_info_index
        } = state
       case item do
-        %InterpreterTerms.SymbolMatch{ symbol: :Var, string: str } ->
+        %InterpreterTerms.SymbolMatch{ symbol: :Var, string: str_with_space } ->
+          # TODO: In the case of a :Var, we need to strip the spaces from the :Var element in order to get the new string.  This probably needs a fix elsewhere...
+
+          str = String.trim( str_with_space )
+
           new_term_ids_index = term_ids_index + 1
           new_term_info_index = term_info_index + 1
 
@@ -307,6 +311,10 @@ defmodule GraphReasoner do
           # object's iri, we can add that information to the content
           # we've discovered.
 
+          # TODO: Discover types based on where the content may reside
+          # (eg: if the predicate foaf:name can only originate from a
+          # foaf:Agent, we should use this information).
+
           term_id = ExternalInfo.get( varSymbol, GraphReasoner, :term_id )
           renamed_term_id = terms_map.term_ids[term_id]
 
@@ -342,9 +350,18 @@ defmodule GraphReasoner do
     { new_terms_map, match }
   end
 
-  defp derive_triples_information( { terms_map, match } ) do
-    # Stub implementation for derive_triples_information
-    #
+  # Calculates the intersection of two lists
+  def intersection( arr_a, arr_b ) do
+    Enum.reduce( arr_a, [], fn( a_elt, result ) ->
+      if( Enum.find( arr_b, fn (b_elt) -> b_elt == a_elt end ) ) do
+        [ a_elt | result ]
+      else
+        result
+      end
+    end )
+  end
+
+  defp derive_triples_information( { terms_map, match }, authorization_groups ) do
     # Each of the triples which needs to be fetched may be fetched
     # from various graphs.  Based on the information in the terms_map,
     # the access groups of the current user, and the specific triple
@@ -352,7 +369,214 @@ defmodule GraphReasoner do
     # come from.  We attach this information to the predicate as that
     # will keep working when we decide to support subject paths.
 
-    { terms_map, match }
+    # In order for this approach to work, we have to assume a closed
+    # world assumption with respect to the Acl.UserGroups
+    # configuration.  This implicit assumption is also made for
+    # determining the graphs where content should come from.
+
+    # Based on the information known in the variables, and the
+    # information of the UserGroups, we derive *each* graph from which
+    # the information could be read.
+
+    # We make the same assumptions as above, where we state that we
+    # only support trivial `s p o` matches, and nothing with real
+    # paths or variables.
+
+    deriveTriplesBlockInformation = fn (terms_map, element) ->
+      # We need to discover if the current TriplesBlock means anything
+      # specific.
+
+      # First we need to fetch the information for our processing.
+      # The triple's contents and the subject variable are the most
+      # important in our current case.
+      { subjectVarOrTerm, predicateElement, objectVarOrTerm } =
+        GraphReasoner.QueryMatching.TriplesBlock.single_triple!( element )
+
+      # TODO: how will we push the predicate back into the
+      # TriplesBlock?  Should that be a helper supplied from there?
+
+      cond do
+        GraphReasoner.QueryMatching.VarOrTerm.var?( subjectVarOrTerm ) ->
+          varSymbol = GraphReasoner.QueryMatching.VarOrTerm.var!( subjectVarOrTerm )
+
+          pathIri = GraphReasoner.QueryMatching.PathPrimary.iri!( predicateElement )
+
+          objectIri =
+            objectVarOrTerm
+            |> GraphReasoner.QueryMatching.VarOrTerm.iri!
+            |> Updates.QueryAnalyzer.Iri.from_symbol
+
+          term_id = ExternalInfo.get( varSymbol, GraphReasoner, :term_id )
+          renamed_term_id = terms_map.term_ids[term_id]
+          subject_info = terms_map[:term_info][renamed_term_id][:related_paths]
+          {subject_types, related_predicates} =
+            subject_info
+            |> Enum.reduce( {[],[]}, fn (%{predicate: predicate, object: object} = pred_obj, {types,preds}) ->
+              # TODO: Accept different information than only subject and predicate
+              if Updates.QueryAnalyzer.Iri.is_a?( predicate ) do
+                # Add the object to the types
+                {[object|types],preds}
+              else
+                # Add the pred_obj to the related predicates
+                {types,[pred_obj|preds]}
+              end
+            end )
+
+          subject_type_strings =
+            subject_types
+            |> Enum.map( fn (%Updates.QueryAnalyzer.Iri{iri: str} ) ->
+                 Updates.QueryAnalyzer.Iri.unwrap_iri_string( str )
+               end )
+
+          # Next up, we need to discover which graphs match the
+          # information we've gathered so far.  Based on the
+          # information attached to the subject, we can figure out in
+          # which graphs this piece of information could be stored.
+
+          # For this, we need to compare the information we have about
+          # the subject, and compare it with the information we have
+          # on the graph clauses.  For each clause that may match, we
+          # have to remember the ACL specification and the resulting
+          # graphs.
+
+          # Note: in order to achieve this, we need to validate *all*
+          # groups, and identify which groups can *not* match.  By
+          # ensuring we remove all places from which the content could
+          # never come, we are sure to have understood all rules, and
+          # not accidentally dropped something off.  For some specific
+          # rules, we may choose to 'drop' them unless certain
+          # information is known.
+
+          # We do a first filtering based on the subject types
+          resource_filtered_groups =
+            authorization_groups
+            |> Enum.reduce( [], fn ({group_spec, parameters}, matching_groups) ->
+                 # We return the relevant information for the next
+                 # steps this means we are searching for the graph
+                 # specs with the right resource types.  If such
+                 # GraphSpec exists, we return a new object with only
+                 # the allowed GraphSpec instances.  This makes the
+                 # content much easier to process in followup steps.
+                 matching_graph_specs =
+                   group_spec.graphs
+                   |> Enum.reduce( [], fn (graph_spec, acc) ->
+                        if ! Map.has_key?( graph_spec.constraint, :resource_types )
+                           || intersection( graph_spec.constraint.resource_types,
+                                            subject_type_strings ) != []
+                         do
+                           [ graph_spec | acc ]
+                         else
+                           acc
+                        end
+                      end )
+
+                 # If there are graphs matching, create a new
+                 # group_spec with only these graphs.  Push the result
+                 # onto the filtered groups.  If note, leave the
+                 # matching_groups accumulator alone.
+                 case matching_graph_specs do
+                   nil -> matching_groups
+                   _ -> [ %{ group_spec | graphs: matching_graph_specs } | matching_groups ]
+                 end
+               end )
+            # TODO: we should cope with descriptions which don't have a resource constraint too
+            |> Enum.filter( fn (constraint) ->
+              constraint.graphs != [] &&
+              Enum.all?( constraint.graphs, fn (graph_spec) ->
+                Map.has_key?( graph_spec.constraint, :resource_types )
+              end )
+            end )
+
+          # Based on the subject types, we can execute a filter for
+          # the predicate of this triple.
+
+          # TODO: Inverse predicates are currently not
+          # supported.  Discover how to handle inverse predicates.
+
+          # TODO: Much of the code for this step (the structure,
+          # basically) is shared with the previous step.  Removing
+          # duplication will likely make the code easier to read.
+          predicate_filtered_groups =
+            resource_filtered_groups
+            |> Enum.reduce( [], fn (group_spec, matching_groups) ->
+                 # We need to verify whether or not the predicate
+                 # match works for any of the graph specs.  We return
+                 # the graph specs for which this is the case.
+                 matching_graph_specs =
+                   group_spec.graphs
+                   |> Enum.reduce( [], fn (graph_spec, acc) ->
+                        if Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.member?(
+                              graph_spec.constraint.predicates,
+                              pathIri )
+                        do
+                          [ graph_spec | acc ]
+                        else
+                          acc
+                        end
+                      end )
+                 # If there are graphs matching, create a new
+                 # group_spec with only these graphs.  Push the result
+                 # onto the filtered groups.  If note, leave the
+                 # matching_groups accumulator alone.
+                 case matching_graph_specs do
+                   nil -> matching_groups
+                   _ -> [ %{ group_spec | graphs: matching_graph_specs } | matching_groups ]
+                 end
+               end )
+
+          # The result of these steps would boil down to
+          # predicate_filtered_groups =
+          # groups
+          # |> filter_groups_by_resource_type
+          # |> filter_groups_by_predicate
+
+          # We attach this information to the predicate so it can be
+          # used in a later step.
+
+          new_predicate_element =
+            predicateElement
+            |> ExternalInfo.put( GraphReasoner, :matching_acl_groups, predicate_filtered_groups )
+
+          # We update the triples_block so the new predicate is in our
+          # query.
+          new_triples_block = GraphReasoner.QueryMatching.TriplesBlock.update_predicate( element, new_predicate_element )
+
+          {:replace_by, terms_map, new_triples_block}
+
+          # TODO: understand other Graph clauses, like the structure
+          # of the URI << does this require us to add a transform
+          # and always fetch for its information??? :(
+
+        # GraphReasoner.QueryMatching.VarOrTerm.iri?( subjectVarOrTerm ) ->
+        #   IO.puts "Subject is an IRI, no information is derived yet"
+        true ->
+          IO.inspect subjectVarOrTerm, label: "Subject of TripleBlock not supported"
+          {:continue, terms_map}
+      end
+
+      # IO.puts "Should derive TriplesBlock information here, and attach it to the predicate."
+      # IO.inspect( authorization_groups, label: "Authorization groups" )
+      # { :continue, terms_map }
+    end
+
+    { new_terms_map, new_match } =
+      Manipulators.Basics.map_matches_with_state( terms_map, match, fn (terms_map, element) ->
+        case element do
+          %InterpreterTerms.SymbolMatch{
+            symbol: :TriplesBlock
+          } ->
+            # We want to replace the triplesblock with our new
+            # triplesblock.  The new TriplesBlock contains information
+            # about the new element.
+            #
+            # The triplesblock is a fairly simple element.  Hence we
+            # should be able to update its contents.
+            deriveTriplesBlockInformation.( terms_map, element )
+          _ -> { :continue, terms_map }
+        end
+      end )
+
+    { new_terms_map, new_match }
   end
 
   defp wrap_graph_queries( { terms_map, match } ) do

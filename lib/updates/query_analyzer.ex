@@ -647,6 +647,10 @@ defmodule Updates.QueryAnalyzer do
     Number.from_string( str )
   end
 
+  ## Primitive values for queries
+  def primitive_value( %Sym{ symbol: :PathPrimary, submatches: [ %Word{ word: "a" } ] }, _options ) do
+    Iri.make_a
+  end
 
 
   def import_prologue( %Sym{ symbol: :Prologue, submatches: matches }, options ) do

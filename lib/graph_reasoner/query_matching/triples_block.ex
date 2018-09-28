@@ -40,4 +40,12 @@ defmodule GraphReasoner.QueryMatching.TriplesBlock do
       objectVarOrTerm }
   end
   
+  def update_predicate( triples_block, new_predicate ) do
+    Manipulators.DeepUpdates.update_deep_submatch(
+      triples_block, new_predicate,
+      [ :TriplesBlock, {:TriplesSameSubjectPath,1}, :PropertyListPathNotEmpty, :VerbPath, :Path, :PathAlternative, :PathSequence, :PathEltOrInverse, :PathElt ])
+  end
+
 end
+
+

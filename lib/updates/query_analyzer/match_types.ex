@@ -48,6 +48,19 @@ defmodule Iri do
     %Iri{ iri: full_iri, real_name: prefixed_name }
   end
 
+  @doc """
+
+  A best effort to convert a symbol containing an Iri into an Iri object
+
+  """
+  def from_symbol( %InterpreterTerms.WordMatch{ word: "a" } ) do
+    Iri.make_a
+  end
+  def from_symbol( %InterpreterTerms.SymbolMatch{ symbol: :iri,
+                         submatches: [ %InterpreterTerms.SymbolMatch{ symbol: :IRIREF, string: str } ] } ) do
+    Iri.from_iri_string( str )
+  end
+
   def wrap_iri_string( iri_string ) do
     "<" <> iri_string <> ">"
   end
@@ -62,6 +75,13 @@ defmodule Iri do
 
   def is_a?( %Iri{ iri: iri } ) do
     iri == "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"
+  end
+
+  def same?( %Iri{ iri: iri }, %Iri{ iri: iri } ) do
+    true
+  end
+  def same?( _, _ ) do
+    false
   end
 
   @doc """
