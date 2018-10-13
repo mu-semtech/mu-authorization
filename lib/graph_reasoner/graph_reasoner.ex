@@ -218,7 +218,7 @@ defmodule GraphReasoner do
     # query.
 
     # TODO: when subqueries are allowed: analyze the query to ensure
-    # shadewing variables are not merged with their shadowed
+    # shadowing variables are not merged with their shadowed
     # name-fellow.
 
     # Another assumption we can make in the current construction, is
@@ -256,10 +256,22 @@ defmodule GraphReasoner do
         Map.put( term_ids, term_id, new_index )
       end )
 
-    new_state = Map.put( state, :term_ids, new_term_ids )
+    # Remove unused term_info keys
+    leftover_terms =
+      new_term_ids
+      |> Map.values
+      |> Enum.dedup
 
-    # TODO: we could remove the term_info of unused keys to ease
-    # debugging.
+    leftover_term_info =
+      leftover_terms
+      |> Enum.reduce( %{}, fn (elem, acc) ->
+           Map.put( acc, elem, Map.get( term_info, elem ) )
+         end )
+
+    new_state =
+      state
+      |> Map.put( :term_ids, new_term_ids )
+      |> Map.put( :term_info, leftover_term_info )
 
     { new_state, match }
   end
