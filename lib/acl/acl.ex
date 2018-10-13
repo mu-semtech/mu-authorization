@@ -27,7 +27,8 @@ defmodule Acl do
     ALog.di user_groups, "User groups for quad update"
     ALog.di authorization_groups, "Authorization groups for quad update"
 
-    active_groups_info = active_user_groups_info( user_groups, authorization_groups )
+    active_groups_info =
+      active_user_groups_info( user_groups, authorization_groups )
 
     all_group_specs =
         active_groups_info
@@ -40,6 +41,8 @@ defmodule Acl do
       active_groups_info
       |> ALog.di( "Active Groups Info" )
       |> Enum.reduce( quads, fn ({active_group, active_group_specs} , acc) ->
+        ALog.di( active_group, "Processing quads through active group" )
+        ALog.di( Process.info(self(), :current_stacktrace), "Stack trace process_quads_for_update" )
         # active_group_spec should be an array of specs
         Enum.reduce( active_group_specs, acc,
           &Acl.GroupSpec.Protocol.process( active_group, &1, &2 ) )
@@ -73,10 +76,16 @@ defmodule Acl do
     end)
   end
 
-  defp active_user_groups_info( user_groups, authorization_groups ) do
-    authorization_groups_by_name =
+  def active_user_groups_info( user_groups, authorization_groups ) do
+    ALog.di( authorization_groups, "Authorization groups" )
+    ALog.di( user_groups, "User groups" )
+
+    authorization_groups_by_name = if authorization_groups do
       authorization_groups
       |> Enum.group_by( &elem( &1, 0 ) )
+    else
+      %{}
+    end
 
     user_groups
     |> Enum.flat_map( fn (user_group) ->

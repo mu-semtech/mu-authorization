@@ -99,7 +99,7 @@ defmodule GraphReasoner do
     |> join_same_terms
     |> derive_terms_information
     |> derive_triples_information( Acl.UserGroups.for_use( :read ) ) # TODO: supply authorization groups
-    |> wrap_graph_queries
+    |> wrap_graph_queries( nil )
     |> extract_match_from_augmented_query
   end
 
@@ -579,16 +579,118 @@ defmodule GraphReasoner do
     { new_terms_map, new_match }
   end
 
-  defp wrap_graph_queries( { terms_map, match } ) do
-    # Stub implementation for wrap_graph_queries
-    #
+  defp wrap_graph_queries( { terms_map, match }, authorization_specifications ) do
     # As we know from which graphs various patterns will come from, we
     # can now wrap statements in graphs.  For now, we only support
     # simple patterns where the content comes from the same graph, we
     # may introduce new variables to split subject paths in the
     # future.
 
-    { terms_map, match }
+    wrap_triples_blocks_with_graphs = fn (terms_map, element) ->
+      # element is a %InterpreterTerms.SymbolMatch{ symbol: :GroupGraphPattern }
+
+      element
+      # 1. Ensure this only consists of TriplesBlock instances
+      |> GraphReasoner.QueryMatching.GroupGraphPattern.only_triples_blocks!
+      # 2. Extract each of the TriplesBlock instances
+      |> GraphReasoner.QueryMatching.GroupGraphPattern.extract_triples_blocks
+      # |> IO.inspect( label: "Extracted triples blocks" )
+      # 3. Wrap the TriplesBlock in the correct graph
+      |> Enum.map( fn (triple) ->
+        predicate = GraphReasoner.QueryMatching.TriplesBlock.predicate( triple )
+        matching_acl_groups = ExternalInfo.get( predicate, GraphReasoner, :matching_acl_groups )
+
+        predicate
+        |> ExternalInfo.get( GraphReasoner, :matching_acl_groups )
+        # |> IO.inspect( label: "Matching ACL groups" )
+
+        # Figure out the graphs to use.  This should be added to the respective protocol
+        # TODO: support more than one graph
+        [ acl_group ] = matching_acl_groups
+
+        # IO.inspect( authorization_specifications, label: "Authorization specification" )
+        # IO.inspect( acl_group, label: "ACL group to match" )
+
+        # TODO: this should be a method (or use methods) from
+        # Acl.GraphSpec or corresponding protocols
+        matching_graphs =
+          matching_acl_groups
+          |> Enum.flat_map( fn (acl_group) ->
+            acl_group_name = Map.get( acl_group, :name )
+
+            # get the authorization specifications
+            Enum.filter( authorization_specifications, fn (authorization_specification) ->
+              elem( authorization_specification, 0 ) == acl_group_name
+            end )
+            # convert them into graphs
+            |> Enum.flat_map( fn (matching_specification) ->
+              Enum.map( Map.get( acl_group, :graphs ), fn (graph_spec) ->
+                base_graph = Map.get(graph_spec, :graph)
+                parameters = elem( matching_specification, 1 )
+                base_graph <> Enum.join( parameters, "/" )
+              end )
+            end )
+            # remove duplicates
+            |> Enum.dedup
+          end )
+          # |> IO.inspect( label: "Matching graphs" )
+
+        # TODO: support more than one matching graph
+        [matching_graph] = matching_graphs
+
+        # Convert the TriplesBlock into a GraphPatternNotTriples>GraphGraphPattern>GroupGraphPattern>GroupGraphPatternSub>TriplesBlock
+        # This last one can be inlined as a GroupGraphPattern>GroupGraphPatternSub may have many GraphPatternNotTriples subexpressions.
+
+        # TODO: If multiple access graphs would match, this would require a UNION pattern
+        GraphReasoner.QueryMatching.TriplesBlock.wrap_in_graph( triple, matching_graph )
+      end )
+      # |> IO.inspect( label: "Wrapped triplesblocks" )
+      # >> Will yield a new array of GraphPatternNotTriples elements
+      #    which we can wire together ourselves.  4. Combine the
+      #    transformed TriplesBlock list (which is now a
+      #    GraphPatternNotTriples list) into the received
+      #    GroupGraphPattern.
+      |> (fn (graph_pattern_not_triples_elements) ->
+            %{ element |
+               submatches: [
+                 %InterpreterTerms.WordMatch{ word: "{" },
+                 %InterpreterTerms.SymbolMatch{
+                   symbol: :GroupGraphPatternSub,
+                   submatches: graph_pattern_not_triples_elements
+                 },
+                 %InterpreterTerms.WordMatch{ word: "}" }
+               ] }
+          end).()
+      # |> IO.inspect( label: "New GroupGraphPatternSub" )
+      # >> The list of TriplesBlock items can be combined into a
+      #    :GroupGraphPatternSub in which you can just dump them all.
+      # 4. Execute!
+      # >> Will yield a { :replace_by, terms_map, new_element }
+      |> (fn (updated_group_graph_pattern) ->
+            { :replace_by, terms_map, updated_group_graph_pattern }
+          end ).()
+      # |> IO.inspect( label: "Replacement request" )
+    end
+
+    { new_terms_map, new_match } =
+      Manipulators.Basics.map_matches_with_state( terms_map, match, fn (terms_map, element) ->
+        case element do
+          %InterpreterTerms.SymbolMatch{
+            symbol: :GroupGraphPattern
+          } ->
+            # We assume a GroupGraphPatternSub with multiple
+            # TriplesBlock.  This can then be replaced by
+            # GroupGraphPattern|>GroupGraphPatternSub>GraphPatternNotTriples|>GraphGraphPattern|>GroupGraphPattern|>GroupGraphPatternSub
+            #
+            # The EBNF does not make working with this construction
+            # easy.  Hence we first extract all TriplesBlock instances
+            # from the GroupGraphPatternSub.  Then we convert each of
+            # them into either a TriplesBlock (if we didn't understand
+            # it), or to the construction mentioned above.
+            wrap_triples_blocks_with_graphs.(terms_map, element)
+          _ -> { :continue, terms_map }
+        end
+      end )
   end
 
   defp extract_match_from_augmented_query( { _terms_map, match } ) do
