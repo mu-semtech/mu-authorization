@@ -694,8 +694,6 @@ defmodule GraphReasoner do
   end
 
   defp extract_match_from_augmented_query( { _terms_map, match } ) do
-    # Stub implementation for extract_match_from_augmented_query
-    #
     # Consumption of the wrapped graph will likely need access to the
     # transformed query.  This function provides easy access to that
     # match.
