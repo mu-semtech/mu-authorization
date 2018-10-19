@@ -129,4 +129,46 @@ defmodule Manipulators.Basics do
     { state, symbol }
   end
 
+
+
+  defmacro do_state_map( { terms_map, match }, { map_var, element_var }, do: case_content ) do
+    manipulated_case_content =
+      Enum.map( case_content,
+        fn (expr) ->
+          case expr do
+            ({:->, _, [[{_,_,_}]|_]} = expression) ->
+              # An expression
+              expression
+            ({:->, _ctx, [[symbol] | rest]}) ->
+              {:->, [],
+              [[
+                {:%, [],
+                 [
+                   {:__aliases__, [alias: false], [:InterpreterTerms, :SymbolMatch]},
+                   {:%{}, [], [symbol: symbol]}
+                 ]}
+              ] | rest ]}
+          end
+        end )
+
+    manipulated_case_content =
+      if Enum.find( manipulated_case_content, fn (content) ->
+        match?( {:->, [], [[{:_, [], Elixir}] | _rest]}, content )
+      end )
+      do
+        manipulated_case_content
+      else
+        manipulated_case_content ++ [{:->, [], [[{:_, [], Elixir}], {:continue, map_var}]}]
+      end
+
+    quote do
+      Manipulators.Basics.map_matches_with_state( unquote( terms_map ), unquote( match ),
+        fn (unquote(map_var), unquote(element_var)) ->
+          case unquote(element_var) do
+            unquote(manipulated_case_content)
+          end
+        end )
+    end
+  end
+
 end

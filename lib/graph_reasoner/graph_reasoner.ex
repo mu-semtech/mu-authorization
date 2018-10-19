@@ -1,4 +1,6 @@
 defmodule GraphReasoner do
+  require Manipulators.Basics
+
   @non_graph_symbols [:Prologue,
                       :SelectClause,
                       :DatasetClause, # When everything is moved to
@@ -346,18 +348,11 @@ defmodule GraphReasoner do
       end
     end
 
-
     { new_terms_map, _ } =
-      Manipulators.Basics.map_matches_with_state( terms_map, match, fn (terms_map, element) ->
-        case element do
-          %InterpreterTerms.SymbolMatch{
-            symbol: :TriplesBlock
-          } ->
-            new_terms_map = analyzeTriplesBlock.( terms_map, element )
-            { :continue, new_terms_map }
-          _ -> { :continue, terms_map }
-        end
-      end )
+      Manipulators.Basics.do_state_map( {terms_map, match}, {map, element} ) do
+        :TriplesBlock ->
+          { :continue, analyzeTriplesBlock.( map, element ) }
+      end
 
     { new_terms_map, match }
   end
@@ -571,24 +566,16 @@ defmodule GraphReasoner do
       # { :continue, terms_map }
     end
 
-    { new_terms_map, new_match } =
-      Manipulators.Basics.map_matches_with_state( terms_map, match, fn (terms_map, element) ->
-        case element do
-          %InterpreterTerms.SymbolMatch{
-            symbol: :TriplesBlock
-          } ->
-            # We want to replace the triplesblock with our new
-            # triplesblock.  The new TriplesBlock contains information
-            # about the new element.
-            #
-            # The triplesblock is a fairly simple element.  Hence we
-            # should be able to update its contents.
-            deriveTriplesBlockInformation.( terms_map, element )
-          _ -> { :continue, terms_map }
-        end
-      end )
-
-    { new_terms_map, new_match }
+    Manipulators.Basics.do_state_map( {terms_map, match}, {terms_map, element} ) do
+      :TriplesBlock ->
+        # We want to replace the triplesblock with our new
+        # triplesblock.  The new TriplesBlock contains information
+        # about the new element.
+        #
+        # The triplesblock is a fairly simple element.  Hence we
+        # should be able to update its contents.
+        deriveTriplesBlockInformation.( terms_map, element )
+    end
   end
 
   defp wrap_graph_queries( { terms_map, match }, authorization_specifications ) do
@@ -684,25 +671,19 @@ defmodule GraphReasoner do
       # |> IO.inspect( label: "Replacement request" )
     end
 
-    { new_terms_map, new_match } =
-      Manipulators.Basics.map_matches_with_state( terms_map, match, fn (terms_map, element) ->
-        case element do
-          %InterpreterTerms.SymbolMatch{
-            symbol: :GroupGraphPattern
-          } ->
-            # We assume a GroupGraphPatternSub with multiple
-            # TriplesBlock.  This can then be replaced by
-            # GroupGraphPattern|>GroupGraphPatternSub>GraphPatternNotTriples|>GraphGraphPattern|>GroupGraphPattern|>GroupGraphPatternSub
-            #
-            # The EBNF does not make working with this construction
-            # easy.  Hence we first extract all TriplesBlock instances
-            # from the GroupGraphPatternSub.  Then we convert each of
-            # them into either a TriplesBlock (if we didn't understand
-            # it), or to the construction mentioned above.
-            wrap_triples_blocks_with_graphs.(terms_map, element)
-          _ -> { :continue, terms_map }
-        end
-      end )
+    Manipulators.Basics.do_state_map( { terms_map, match }, { terms_map, element } ) do
+      :GroupGraphPattern ->
+        # We assume a GroupGraphPatternSub with multiple
+        # TriplesBlock.  This can then be replaced by
+        # GroupGraphPattern|>GroupGraphPatternSub>GraphPatternNotTriples|>GraphGraphPattern|>GroupGraphPattern|>GroupGraphPatternSub
+        #
+        # The EBNF does not make working with this construction
+        # easy.  Hence we first extract all TriplesBlock instances
+        # from the GroupGraphPatternSub.  Then we convert each of
+        # them into either a TriplesBlock (if we didn't understand
+        # it), or to the construction mentioned above.
+        wrap_triples_blocks_with_graphs.(terms_map, element)
+    end
   end
 
   defp extract_match_from_augmented_query( { _terms_map, match } ) do
