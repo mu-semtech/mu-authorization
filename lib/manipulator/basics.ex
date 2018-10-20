@@ -130,40 +130,75 @@ defmodule Manipulators.Basics do
   end
 
 
-
   defmacro do_state_map( { terms_map, match }, { map_var, element_var }, do: case_content ) do
     manipulated_case_content =
-      Enum.map( case_content,
-        fn (expr) ->
-          case expr do
-            ({:->, _, [[{_,_,_}]|_]} = expression) ->
-              # An expression
-              expression
-            ({:->, _ctx, [[symbol] | rest]}) ->
-              {:->, [],
-              [[
-                {:%, [],
-                 [
-                   {:__aliases__, [alias: false], [:InterpreterTerms, :SymbolMatch]},
-                   {:%{}, [], [symbol: symbol]}
-                 ]}
-              ] | rest ]}
-          end
-        end )
-
-    manipulated_case_content =
-      if Enum.find( manipulated_case_content, fn (content) ->
-        match?( {:->, [], [[{:_, [], Elixir}] | _rest]}, content )
-      end )
-      do
-        manipulated_case_content
-      else
-        manipulated_case_content ++ [{:->, [], [[{:_, [], Elixir}], {:continue, map_var}]}]
-      end
+      case_content
+      |> do_state_map_alter_symbols
+      |> do_state_map_ensure_default_option( {:continue, map_var} )
 
     quote do
       Manipulators.Basics.map_matches_with_state( unquote( terms_map ), unquote( match ),
         fn (unquote(map_var), unquote(element_var)) ->
+          case unquote(element_var) do
+            unquote(manipulated_case_content)
+          end
+        end )
+    end
+  end
+
+  defp do_state_map_alter_symbols( case_content ) do
+    # Ensures :MySymbol -> ... is converted to
+    # %InterpreterTerms.SymbolMatch{ symbol: :MySymbol } -> ...
+    Enum.map( case_content,
+      fn (expr) ->
+        case expr do
+          ({:->, _, [[{_,_,_}]|_]} = expression) ->
+            # An expression
+            expression
+            ({:->, _ctx, [[symbol] | rest]}) ->
+            {:->, [],
+            [[
+              {:%, [],
+               [
+                 {:__aliases__, [alias: false], [:InterpreterTerms, :SymbolMatch]},
+                 {:%{}, [], [symbol: symbol]}
+               ]}
+            ] | rest ]}
+        end
+      end )
+  end
+
+  defp do_state_map_ensure_default_option( case_content, default_option ) do
+    # Appends a default option for _ -> ... unless such an option was
+    # already provided.
+    if Enum.find( case_content, fn (content) ->
+          match?( {:->, [], [[{:_, [], Elixir}] | _rest]}, content )
+        end )
+      do
+      case_content
+    else
+      case_content ++ [{:->, [], [[{:_, [], Elixir}], default_option]}]
+    end
+  end
+
+  # defmacro do_state_map( { terms_map, match }, do: case_content ) do
+  #   quote do
+  #     do_state_map( { unquote( terms_map ), unquote( match ) }, { var!( state ), var!( element ) } ) do
+  #       unquote( case_content )
+  #     end
+  #   end
+  # end
+
+
+  defmacro do_map( symbol, element_var, do: case_content ) do
+    manipulated_case_content =
+      case_content
+      |> do_state_map_alter_symbols
+      |> do_state_map_ensure_default_option( quote do {:continue} end )
+
+    quote do
+      Manipulators.Basics.map_matches( unquote( symbol ),
+        fn (unquote(element_var)) ->
           case unquote(element_var) do
             unquote(manipulated_case_content)
           end

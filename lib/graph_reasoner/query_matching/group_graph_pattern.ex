@@ -10,19 +10,14 @@ defmodule GraphReasoner.QueryMatching.GroupGraphPattern do
     # >> disallowed keys: :SubSelect, :GraphPatternNotTriples (this
     #    is simplistic, some of these are ok)
     # TODO: make this approach smarter
-    case Manipulators.Basics.map_matches( symbol,
-          fn (match) ->
-            case match do
-              %Sym{ symbol: :SubSelect } -> 
-                { :exit, :not_only_triples_block }
-              %Sym{ symbol: :GraphPatternNotTriples } ->
-                { :exit, :not_only_triples_block }
-              _ -> { :continue }
-            end
-          end ) do
-      { :exit, :not_only_triples_block } -> false
-      _ -> true
-    end
+
+    map_result =
+      Manipulators.Basics.do_map( symbol, submatch ) do
+        :SubSelect -> { :exit, :not_only_triples_block }
+        :GroupGraphPatternNotTriples -> { :exit, :not_only_triples_block }
+      end
+
+    not match?( { :exit, :not_only_triples_block }, map_result )
   end
 
   def only_triples_blocks!( symbol ) do
