@@ -12,7 +12,8 @@ defmodule GraphReasoner.QueryMatching.TriplesBlock do
 
   
   @doc """
-  Assuming the supplied SymbolMatch contains a simple triple, extract
+  Assuming the supplied SymbolMatch contains only one simple triple,
+  extract
 
   - subject: the VarOrTerm element
   - predicate: the PathPrimary element
@@ -33,13 +34,59 @@ defmodule GraphReasoner.QueryMatching.TriplesBlock do
                             %Sym{ symbol: :ObjectListPath, submatches: [
                                     %Sym{ symbol: :ObjectPath, submatches: [
                                             %Sym{ symbol: :GraphNodePath, submatches: [ objectVarOrTerm ] } ] } ] } ] } ] }
-            | _maybe_a_dot ] }
+            | maybe_a_dot ] }
   ) do
+    case maybe_a_dot do
+      [] -> nil
+      [%Word{}] -> nil
+      _ -> raise "TriplesBlock is not a single triple"
+    end
+
     { subjectVarOrTerm,
       predicateElement,
       objectVarOrTerm }
   end
   
+  @doc """
+  Assuming the supplied SymbolMatch contains a simple triple, extract
+
+  - subject: the VarOrTerm element
+  - predicate: the PathPrimary element
+  - object: the VarOrTerm element
+  """
+  def first_triple!(
+    %Sym{ symbol: :TriplesBlock, submatches: [
+            %Sym{ symbol: :TriplesSameSubjectPath, submatches: [
+                    subjectVarOrTerm,
+                    %Sym{ symbol: :PropertyListPathNotEmpty, submatches: [
+                            %Sym{ symbol: :VerbPath, submatches: [
+                                    %Sym{ symbol: :Path, submatches: [
+                                            %Sym{ symbol: :PathAlternative, submatches: [
+                                                    %Sym{ symbol: :PathSequence, submatches: [
+                                                            %Sym{ symbol: :PathEltOrInverse, submatches: [
+                                                                    %Sym{ symbol: :PathElt, submatches: [
+                                                                            %Sym{ symbol: :PathPrimary } = predicateElement ] } ] } ] } ] } ] } ] },
+                            %Sym{ symbol: :ObjectListPath, submatches: [
+                                    %Sym{ symbol: :ObjectPath, submatches: [
+                                            %Sym{ symbol: :GraphNodePath, submatches: [ objectVarOrTerm ] } ] } ] } ] } ] }
+            | _maybe_other_content ] }
+  ) do
+
+    { subjectVarOrTerm,
+      predicateElement,
+      objectVarOrTerm }
+  end
+
+  @doc """
+  Overwrites the submatches of the parent_triples_block to contain only the supplied child_triples_block.
+  """
+  def set_child(
+    %Sym{ symbol: :TriplesBlock, submatches: [ first_elt | _rest_elts ] } = parent_triples_block,
+    %Sym{ symbol: :TriplesBlock } = child_triples_block
+  ) do
+    %{ parent_triples_block | submatches: [ first_elt, %Word{ word: "." }, child_triples_block ] }
+  end
+
   @doc """
   Easy updating of the predicate of a TriplesBlock
   """
@@ -51,7 +98,7 @@ defmodule GraphReasoner.QueryMatching.TriplesBlock do
 
   def predicate( triples_block ) do
     triples_block
-    |> single_triple!
+    |> first_triple!
     |> elem(1)
   end
 

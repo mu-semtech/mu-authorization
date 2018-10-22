@@ -292,11 +292,9 @@ defmodule GraphReasoner do
     # long form (for now).  Because of this, we can limit ourselves to
     # the most minimal interpretation of the query.
 
-    analyzeTriplesBlock = fn (terms_map, symbol) ->
-      # Analyzes a single TriplesBlock
-
+    analyze_single_triples_block = fn (terms_map, symbol) ->
       { subjectVarOrTerm, predicateElement, objectVarOrTerm } =
-        GraphReasoner.QueryMatching.TriplesBlock.single_triple!( symbol )
+        GraphReasoner.QueryMatching.TriplesBlock.first_triple!( symbol )
 
       cond do
         GraphReasoner.QueryMatching.VarOrTerm.var?( subjectVarOrTerm ) ->
@@ -309,10 +307,32 @@ defmodule GraphReasoner do
 
           pathIri = GraphReasoner.QueryMatching.PathPrimary.iri!( predicateElement )
 
-          objectIri =
-            objectVarOrTerm
-            |> GraphReasoner.QueryMatching.VarOrTerm.iri!
-            |> Updates.QueryAnalyzer.Iri.from_symbol
+
+          object =
+            cond do
+            GraphReasoner.QueryMatching.VarOrTerm.iri?( objectVarOrTerm ) ->
+              # IO.inspect( objectVarOrTerm, label: "is a term" )
+              iri =
+                objectVarOrTerm
+                |> GraphReasoner.QueryMatching.VarOrTerm.iri!
+                |> Updates.QueryAnalyzer.Iri.from_symbol
+
+              { :iri, iri }
+            GraphReasoner.QueryMatching.VarOrTerm.var?( objectVarOrTerm ) ->
+              # IO.inspect( objectVarOrTerm, label: "is a var" )
+              var =
+                objectVarOrTerm
+                |> GraphReasoner.QueryMatching.VarOrTerm.var!
+
+              { :var, var }
+            GraphReasoner.QueryMatching.VarOrTerm.term?( objectVarOrTerm ) ->
+              # IO.inspect( objectVarOrTerm, label: "is a term" )
+              term =
+                objectVarOrTerm
+                |> GraphReasoner.QueryMatching.VarOrTerm.term!
+
+              { :term, term }
+          end
 
           # TODO: don't crash when predicates or objects are not URIs.
           # The previous section assumes both will be an Iri, but
@@ -336,7 +356,7 @@ defmodule GraphReasoner do
             update_in(
               terms_map[:term_info][renamed_term_id][:related_paths],
               fn (related_paths) ->
-                [ %{ predicate: pathIri, object: objectIri } | (related_paths || []) ]
+                [ %{ predicate: pathIri, object: object } | (related_paths || []) ]
               end )
 
           new_terms_map
@@ -346,6 +366,19 @@ defmodule GraphReasoner do
         true ->
           IO.inspect subjectVarOrTerm, label: "Subject of TripleBlock not supported"
       end
+    end
+
+    analyzeTriplesBlock = fn (terms_map, symbol) ->
+      # Analyzes a single TriplesBlock
+
+      # We need to extract all the TriplesBlock elements, enrich their
+      # predicates, and recombine them.
+
+      symbol
+      |> GraphReasoner.QueryMatching.GroupGraphPattern.extract_triples_blocks
+      |> Enum.reduce( terms_map, fn (triples_block, terms_map) ->
+           _new_terms_map = analyze_single_triples_block.(terms_map, triples_block)
+         end )
     end
 
     { new_terms_map, _ } =
@@ -389,7 +422,7 @@ defmodule GraphReasoner do
     # only support trivial `s p o` matches, and nothing with real
     # paths or variables.
 
-    deriveTriplesBlockInformation = fn (terms_map, element) ->
+    derive_triples_block_info_for_single_triple = fn (terms_map, element) ->
       # We need to discover if the current TriplesBlock means anything
       # specific.
 
@@ -397,173 +430,197 @@ defmodule GraphReasoner do
       # The triple's contents and the subject variable are the most
       # important in our current case.
       { subjectVarOrTerm, predicateElement, objectVarOrTerm } =
-        GraphReasoner.QueryMatching.TriplesBlock.single_triple!( element )
+        GraphReasoner.QueryMatching.TriplesBlock.first_triple!( element )
 
-      # TODO: how will we push the predicate back into the
-      # TriplesBlock?  Should that be a helper supplied from there?
+      # We should accept more than only variables in the subject
+      varSymbol = GraphReasoner.QueryMatching.VarOrTerm.var!( subjectVarOrTerm )
 
-      cond do
-        GraphReasoner.QueryMatching.VarOrTerm.var?( subjectVarOrTerm ) ->
-          varSymbol = GraphReasoner.QueryMatching.VarOrTerm.var!( subjectVarOrTerm )
+      pathIri = GraphReasoner.QueryMatching.PathPrimary.iri!( predicateElement )
 
-          pathIri = GraphReasoner.QueryMatching.PathPrimary.iri!( predicateElement )
+      # objectIri =
+      #   objectVarOrTerm
+      #   |> GraphReasoner.QueryMatching.VarOrTerm.iri!
+      #   |> Updates.QueryAnalyzer.Iri.from_symbol
 
-          objectIri =
-            objectVarOrTerm
-            |> GraphReasoner.QueryMatching.VarOrTerm.iri!
-            |> Updates.QueryAnalyzer.Iri.from_symbol
+      term_id = ExternalInfo.get( varSymbol, GraphReasoner, :term_id )
+      renamed_term_id = terms_map.term_ids[term_id]
+      subject_info = terms_map[:term_info][renamed_term_id][:related_paths]
+      {subject_types, related_predicates} =
+        subject_info
+        |> Enum.reduce( {[],[]}, fn (%{predicate: predicate, object: object} = pred_obj, {types,preds}) ->
+          # TODO: Accept different information than only subject and predicate
+          if Updates.QueryAnalyzer.Iri.is_a?( predicate ) do
+            # Add the object to the types
+            { :iri, object_iri } = object
+            {[object_iri|types],preds}
+          else
+            # Add the pred_obj to the related predicates
+            {types,[pred_obj|preds]}
+          end
+        end )
+        # |> IO.inspect( label: "Learned subject types and related predicates" )
 
-          term_id = ExternalInfo.get( varSymbol, GraphReasoner, :term_id )
-          renamed_term_id = terms_map.term_ids[term_id]
-          subject_info = terms_map[:term_info][renamed_term_id][:related_paths]
-          {subject_types, related_predicates} =
-            subject_info
-            |> Enum.reduce( {[],[]}, fn (%{predicate: predicate, object: object} = pred_obj, {types,preds}) ->
-              # TODO: Accept different information than only subject and predicate
-              if Updates.QueryAnalyzer.Iri.is_a?( predicate ) do
-                # Add the object to the types
-                {[object|types],preds}
-              else
-                # Add the pred_obj to the related predicates
-                {types,[pred_obj|preds]}
-              end
-            end )
+      subject_type_strings =
+        subject_types
+        |> Enum.map( fn (%Updates.QueryAnalyzer.Iri{iri: str} ) ->
+             Updates.QueryAnalyzer.Iri.unwrap_iri_string( str )
+           end )
+        # |> IO.inspect( label: "Subject type strings" )
 
-          subject_type_strings =
-            subject_types
-            |> Enum.map( fn (%Updates.QueryAnalyzer.Iri{iri: str} ) ->
-                 Updates.QueryAnalyzer.Iri.unwrap_iri_string( str )
-               end )
+      # Next up, we need to discover which graphs match the
+      # information we've gathered so far.  Based on the
+      # information attached to the subject, we can figure out in
+      # which graphs this piece of information could be stored.
 
-          # Next up, we need to discover which graphs match the
-          # information we've gathered so far.  Based on the
-          # information attached to the subject, we can figure out in
-          # which graphs this piece of information could be stored.
+      # For this, we need to compare the information we have about
+      # the subject, and compare it with the information we have
+      # on the graph clauses.  For each clause that may match, we
+      # have to remember the ACL specification and the resulting
+      # graphs.
 
-          # For this, we need to compare the information we have about
-          # the subject, and compare it with the information we have
-          # on the graph clauses.  For each clause that may match, we
-          # have to remember the ACL specification and the resulting
-          # graphs.
+      # Note: in order to achieve this, we need to validate *all*
+      # groups, and identify which groups can *not* match.  By
+      # ensuring we remove all places from which the content could
+      # never come, we are sure to have understood all rules, and
+      # not accidentally dropped something off.  For some specific
+      # rules, we may choose to 'drop' them unless certain
+      # information is known.
 
-          # Note: in order to achieve this, we need to validate *all*
-          # groups, and identify which groups can *not* match.  By
-          # ensuring we remove all places from which the content could
-          # never come, we are sure to have understood all rules, and
-          # not accidentally dropped something off.  For some specific
-          # rules, we may choose to 'drop' them unless certain
-          # information is known.
+      # We do a first filtering based on the subject types
+      resource_filtered_groups =
+        authorization_groups
+        |> Enum.reduce( [], fn ({group_spec, parameters}, matching_groups) ->
+             # We return the relevant information for the next
+             # steps this means we are searching for the graph
+             # specs with the right resource types.  If such
+             # GraphSpec exists, we return a new object with only
+             # the allowed GraphSpec instances.  This makes the
+             # content much easier to process in followup steps.
+             matching_graph_specs =
+               group_spec.graphs
+               |> Enum.reduce( [], fn (graph_spec, acc) ->
+                    if ! Map.has_key?( graph_spec.constraint, :resource_types )
+                       || intersection( graph_spec.constraint.resource_types,
+                                        subject_type_strings ) != []
+                     do
+                       [ graph_spec | acc ]
+                     else
+                       acc
+                    end
+                  end )
 
-          # We do a first filtering based on the subject types
-          resource_filtered_groups =
-            authorization_groups
-            |> Enum.reduce( [], fn ({group_spec, parameters}, matching_groups) ->
-                 # We return the relevant information for the next
-                 # steps this means we are searching for the graph
-                 # specs with the right resource types.  If such
-                 # GraphSpec exists, we return a new object with only
-                 # the allowed GraphSpec instances.  This makes the
-                 # content much easier to process in followup steps.
-                 matching_graph_specs =
-                   group_spec.graphs
-                   |> Enum.reduce( [], fn (graph_spec, acc) ->
-                        if ! Map.has_key?( graph_spec.constraint, :resource_types )
-                           || intersection( graph_spec.constraint.resource_types,
-                                            subject_type_strings ) != []
-                         do
-                           [ graph_spec | acc ]
-                         else
-                           acc
-                        end
-                      end )
+             # If there are graphs matching, create a new
+             # group_spec with only these graphs.  Push the result
+             # onto the filtered groups.  If note, leave the
+             # matching_groups accumulator alone.
+             case matching_graph_specs do
+               nil -> matching_groups
+               _ -> [ %{ group_spec | graphs: matching_graph_specs } | matching_groups ]
+             end
+           end )
+        # TODO: we should cope with descriptions which don't have a resource constraint too
+        |> Enum.filter( fn (constraint) ->
+          constraint.graphs != [] &&
+          Enum.all?( constraint.graphs, fn (graph_spec) ->
+            Map.has_key?( graph_spec.constraint, :resource_types )
+          end )
+        end )
 
-                 # If there are graphs matching, create a new
-                 # group_spec with only these graphs.  Push the result
-                 # onto the filtered groups.  If note, leave the
-                 # matching_groups accumulator alone.
-                 case matching_graph_specs do
-                   nil -> matching_groups
-                   _ -> [ %{ group_spec | graphs: matching_graph_specs } | matching_groups ]
-                 end
-               end )
-            # TODO: we should cope with descriptions which don't have a resource constraint too
-            |> Enum.filter( fn (constraint) ->
-              constraint.graphs != [] &&
-              Enum.all?( constraint.graphs, fn (graph_spec) ->
-                Map.has_key?( graph_spec.constraint, :resource_types )
-              end )
-            end )
+      # Based on the subject types, we can execute a filter for
+      # the predicate of this triple.
 
-          # Based on the subject types, we can execute a filter for
-          # the predicate of this triple.
+      # TODO: Inverse predicates are currently not
+      # supported.  Discover how to handle inverse predicates.
 
-          # TODO: Inverse predicates are currently not
-          # supported.  Discover how to handle inverse predicates.
+      # TODO: Much of the code for this step (the structure,
+      # basically) is shared with the previous step.  Removing
+      # duplication will likely make the code easier to read.
+      predicate_filtered_groups =
+        resource_filtered_groups
+        |> Enum.reduce( [], fn (group_spec, matching_groups) ->
+             # We need to verify whether or not the predicate
+             # match works for any of the graph specs.  We return
+             # the graph specs for which this is the case.
+             matching_graph_specs =
+               group_spec.graphs
+               |> Enum.reduce( [], fn (graph_spec, acc) ->
+                    if Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.member?(
+                          graph_spec.constraint.predicates,
+                          pathIri )
+                    do
+                      [ graph_spec | acc ]
+                    else
+                      acc
+                    end
+                  end )
+             # If there are graphs matching, create a new
+             # group_spec with only these graphs.  Push the result
+             # onto the filtered groups.  If note, leave the
+             # matching_groups accumulator alone.
+             case matching_graph_specs do
+               nil -> matching_groups
+               _ -> [ %{ group_spec | graphs: matching_graph_specs } | matching_groups ]
+             end
+           end )
 
-          # TODO: Much of the code for this step (the structure,
-          # basically) is shared with the previous step.  Removing
-          # duplication will likely make the code easier to read.
-          predicate_filtered_groups =
-            resource_filtered_groups
-            |> Enum.reduce( [], fn (group_spec, matching_groups) ->
-                 # We need to verify whether or not the predicate
-                 # match works for any of the graph specs.  We return
-                 # the graph specs for which this is the case.
-                 matching_graph_specs =
-                   group_spec.graphs
-                   |> Enum.reduce( [], fn (graph_spec, acc) ->
-                        if Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.member?(
-                              graph_spec.constraint.predicates,
-                              pathIri )
-                        do
-                          [ graph_spec | acc ]
-                        else
-                          acc
-                        end
-                      end )
-                 # If there are graphs matching, create a new
-                 # group_spec with only these graphs.  Push the result
-                 # onto the filtered groups.  If note, leave the
-                 # matching_groups accumulator alone.
-                 case matching_graph_specs do
-                   nil -> matching_groups
-                   _ -> [ %{ group_spec | graphs: matching_graph_specs } | matching_groups ]
-                 end
-               end )
+      # The result of these steps would boil down to
+      # predicate_filtered_groups =
+      # groups
+      # |> filter_groups_by_resource_type
+      # |> filter_groups_by_predicate
 
-          # The result of these steps would boil down to
-          # predicate_filtered_groups =
-          # groups
-          # |> filter_groups_by_resource_type
-          # |> filter_groups_by_predicate
+      # We attach this information to the predicate so it can be
+      # used in a later step.
 
-          # We attach this information to the predicate so it can be
-          # used in a later step.
+      new_predicate_element =
+        predicateElement
+        |> ExternalInfo.put( GraphReasoner, :matching_acl_groups, predicate_filtered_groups )
 
-          new_predicate_element =
-            predicateElement
-            |> ExternalInfo.put( GraphReasoner, :matching_acl_groups, predicate_filtered_groups )
+      # IO.inspect( predicateElement, label: "Predicate element to enrich" )
+      # IO.inspect( predicate_filtered_groups, label: "Groups matching above predicate" )
 
-          # We update the triples_block so the new predicate is in our
-          # query.
-          new_triples_block = GraphReasoner.QueryMatching.TriplesBlock.update_predicate( element, new_predicate_element )
+      # We update the triples_block so the new predicate is in our
+      # query.
+      new_triples_block = GraphReasoner.QueryMatching.TriplesBlock.update_predicate( element, new_predicate_element )
 
-          {:replace_by, terms_map, new_triples_block}
+      # Let's check the linked content of our new triplesblock
+      { _subjectVarOrTerm, newly_fetched_predicate, _objectVarOrTerm } =
+        GraphReasoner.QueryMatching.TriplesBlock.single_triple!( new_triples_block )
 
-          # TODO: understand other Graph clauses, like the structure
-          # of the URI << does this require us to add a transform
-          # and always fetch for its information??? :(
+      newly_fetched_predicate
+      |> ExternalInfo.get( GraphReasoner, :matching_acl_groups )
+      # |> IO.inspect( label: "ACL groups on the new predicate" )
 
-        # GraphReasoner.QueryMatching.VarOrTerm.iri?( subjectVarOrTerm ) ->
-        #   IO.puts "Subject is an IRI, no information is derived yet"
-        true ->
-          IO.inspect subjectVarOrTerm, label: "Subject of TripleBlock not supported"
-          {:continue, terms_map}
-      end
+      # {:replace_by, terms_map, new_triples_block}
+      new_triples_block
+
+      # TODO: understand other Graph clauses, like the structure
+      # of the URI << does this require us to add a transform
+      # and always fetch for its information??? :(
+
 
       # IO.puts "Should derive TriplesBlock information here, and attach it to the predicate."
       # IO.inspect( authorization_groups, label: "Authorization groups" )
       # { :continue, terms_map }
+    end
+
+    derive_triples_block_info = fn (terms_map, element) ->
+      new_element =
+        element
+        |> GraphReasoner.QueryMatching.GroupGraphPattern.extract_triples_blocks
+        |> Enum.map( fn (triples_block) ->
+             derive_triples_block_info_for_single_triple.( terms_map, triples_block )
+           end )
+        # Recombine the triples_block elements
+        |> Enum.reverse
+        |> Enum.reduce( fn (parent_triples_block, child_triples_block) ->
+             GraphReasoner.QueryMatching.TriplesBlock.set_child(
+               parent_triples_block,
+               child_triples_block )
+           end )
+        # |> IO.inspect( label: "Combined triples_block" )
+
+      { :replace_by, terms_map, new_element }
     end
 
     Manipulators.Basics.do_state_map( {terms_map, match}, {terms_map, element} ) do
@@ -574,7 +631,7 @@ defmodule GraphReasoner do
         #
         # The triplesblock is a fairly simple element.  Hence we
         # should be able to update its contents.
-        deriveTriplesBlockInformation.( terms_map, element )
+        derive_triples_block_info.( terms_map, element )
     end
   end
 
@@ -600,6 +657,7 @@ defmodule GraphReasoner do
         matching_acl_groups = ExternalInfo.get( predicate, GraphReasoner, :matching_acl_groups )
 
         predicate
+        # |> IO.inspect( label: "Predicate" )
         |> ExternalInfo.get( GraphReasoner, :matching_acl_groups )
         # |> IO.inspect( label: "Matching ACL groups" )
 
@@ -636,6 +694,11 @@ defmodule GraphReasoner do
 
         # TODO: support more than one matching graph
         [matching_graph] = matching_graphs
+
+        # TODO: support no matching graphs (this requires joining
+        # subsequent TriplesBlock entities, as GroupGraphPatternSub
+        # needs to have GraphPatternNotTriples in between the
+        # TriplesBlock entities)
 
         # Convert the TriplesBlock into a GraphPatternNotTriples>GraphGraphPattern>GroupGraphPattern>GroupGraphPatternSub>TriplesBlock
         # This last one can be inlined as a GroupGraphPattern>GroupGraphPatternSub may have many GraphPatternNotTriples subexpressions.

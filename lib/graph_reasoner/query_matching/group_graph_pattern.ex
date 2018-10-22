@@ -30,6 +30,10 @@ defmodule GraphReasoner.QueryMatching.GroupGraphPattern do
     # Extract each of the TriplesBlock instances
     # >> Must yield a list of TriplesBlock elements
     #    with no nested TriplesBlocks elements inside of them
+
+    # TODO: move this function to
+    # GraphReasoner.QueryMatching.TriplesBlock or similar to indicate
+    # its generic nature.
     Manipulators.Basics.do_state_map( { [], symbol }, { state, match } ) do
       :TriplesBlock ->
         new_triples_blocks = extract_triples_blocks_from_triples_block( match )

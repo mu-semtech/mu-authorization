@@ -36,7 +36,7 @@ defmodule GraphReasoner.QueryMatching.VarOrTerm do
   def iri?( term ) do
     if term?( term ) do
       term = term!( term )
-      match?( %Sym{ symbol: GraphTerm, submatches: [ %Sym{ symbol: Iri } ] }, term )
+      match?( %Sym{ symbol: :GraphTerm, submatches: [ %Sym{ symbol: :iri } ] }, term )
     else
       false
     end
