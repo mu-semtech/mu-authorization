@@ -1,3 +1,5 @@
+alias GraphReasoner.QueryInfo, as: QueryInfo
+
 defmodule GraphReasoner do
   require Manipulators.Basics
 
@@ -204,10 +206,10 @@ defmodule GraphReasoner do
       end
     end )
 
-    { state, query }
+    { %QueryInfo{ terms_map: state }, query }
   end
 
-  defp join_same_terms( { state, match } ) do
+  defp join_same_terms( { %QueryInfo{ terms_map: state } = query_info, match } ) do
     # When interpreting the query we may start understanding more
     # about its variables.  We parse the query, discover information
     # about how the variables are related, and join up related
@@ -275,10 +277,12 @@ defmodule GraphReasoner do
       |> Map.put( :term_ids, new_term_ids )
       |> Map.put( :term_info, leftover_term_info )
 
-    { new_state, match }
+    updated_query_info = QueryInfo.set_terms_map( query_info, new_state )
+
+    { updated_query_info , match }
   end
 
-  defp derive_terms_information( { terms_map, match } ) do
+  defp derive_terms_information( { query_info, match } ) do
     # Each of the terms in the query may express information about the
     # variables.  For instance, when we see ?s a foaf:Agent, we know
     # that ?s is of type foaf:Agent.  We can use this information in
@@ -381,13 +385,16 @@ defmodule GraphReasoner do
          end )
     end
 
+    %QueryInfo{ terms_map: terms_map } = query_info
+
     { new_terms_map, _ } =
       Manipulators.Basics.do_state_map( {terms_map, match}, {map, element} ) do
         :TriplesBlock ->
           { :continue, analyzeTriplesBlock.( map, element ) }
       end
 
-    { new_terms_map, match }
+    updated_query_info = QueryInfo.set_terms_map( query_info, new_terms_map )
+    { updated_query_info , match }
   end
 
   # Calculates the intersection of two lists
@@ -401,7 +408,7 @@ defmodule GraphReasoner do
     end )
   end
 
-  defp derive_triples_information( { terms_map, match }, authorization_groups ) do
+  defp derive_triples_information( { query_info, match }, authorization_groups ) do
     # Each of the triples which needs to be fetched may be fetched
     # from various graphs.  Based on the information in the terms_map,
     # the access groups of the current user, and the specific triple
@@ -422,7 +429,7 @@ defmodule GraphReasoner do
     # only support trivial `s p o` matches, and nothing with real
     # paths or variables.
 
-    derive_triples_block_info_for_single_triple = fn (terms_map, element) ->
+    derive_triples_block_info_for_single_triple = fn (query_info, element) ->
       # We need to discover if the current TriplesBlock means anything
       # specific.
 
@@ -442,6 +449,7 @@ defmodule GraphReasoner do
       #   |> GraphReasoner.QueryMatching.VarOrTerm.iri!
       #   |> Updates.QueryAnalyzer.Iri.from_symbol
 
+      %QueryInfo{ terms_map: terms_map } = query_info
       term_id = ExternalInfo.get( varSymbol, GraphReasoner, :term_id )
       renamed_term_id = terms_map.term_ids[term_id]
       subject_info = terms_map[:term_info][renamed_term_id][:related_paths]
@@ -591,7 +599,7 @@ defmodule GraphReasoner do
       |> ExternalInfo.get( GraphReasoner, :matching_acl_groups )
       # |> IO.inspect( label: "ACL groups on the new predicate" )
 
-      # {:replace_by, terms_map, new_triples_block}
+      # {:replace_by, query_info, new_triples_block}
       new_triples_block
 
       # TODO: understand other Graph clauses, like the structure
@@ -601,15 +609,15 @@ defmodule GraphReasoner do
 
       # IO.puts "Should derive TriplesBlock information here, and attach it to the predicate."
       # IO.inspect( authorization_groups, label: "Authorization groups" )
-      # { :continue, terms_map }
+      # { :continue, query_info }
     end
 
-    derive_triples_block_info = fn (terms_map, element) ->
+    derive_triples_block_info = fn (query_info, element) ->
       new_element =
         element
         |> GraphReasoner.QueryMatching.GroupGraphPattern.extract_triples_blocks
         |> Enum.map( fn (triples_block) ->
-             derive_triples_block_info_for_single_triple.( terms_map, triples_block )
+             derive_triples_block_info_for_single_triple.( query_info, triples_block )
            end )
         # Recombine the triples_block elements
         |> Enum.reverse
@@ -620,10 +628,10 @@ defmodule GraphReasoner do
            end )
         # |> IO.inspect( label: "Combined triples_block" )
 
-      { :replace_by, terms_map, new_element }
+      { :replace_by, query_info, new_element }
     end
 
-    Manipulators.Basics.do_state_map( {terms_map, match}, {terms_map, element} ) do
+    Manipulators.Basics.do_state_map( {query_info, match}, {query_info, element} ) do
       :TriplesBlock ->
         # We want to replace the triplesblock with our new
         # triplesblock.  The new TriplesBlock contains information
@@ -631,18 +639,18 @@ defmodule GraphReasoner do
         #
         # The triplesblock is a fairly simple element.  Hence we
         # should be able to update its contents.
-        derive_triples_block_info.( terms_map, element )
+        derive_triples_block_info.( query_info, element )
     end
   end
 
-  defp wrap_graph_queries( { terms_map, match }, authorization_specifications ) do
+  defp wrap_graph_queries( { query_info, match }, authorization_specifications ) do
     # As we know from which graphs various patterns will come from, we
     # can now wrap statements in graphs.  For now, we only support
     # simple patterns where the content comes from the same graph, we
     # may introduce new variables to split subject paths in the
     # future.
 
-    wrap_triples_blocks_with_graphs = fn (terms_map, element) ->
+    wrap_triples_blocks_with_graphs = fn (query_info, element) ->
       # element is a %InterpreterTerms.SymbolMatch{ symbol: :GroupGraphPattern }
 
       element
@@ -752,14 +760,14 @@ defmodule GraphReasoner do
       # >> The list of TriplesBlock items can be combined into a
       #    :GroupGraphPatternSub in which you can just dump them all.
       # 4. Execute!
-      # >> Will yield a { :replace_by, terms_map, new_element }
+      # >> Will yield a { :replace_by, query_info, new_element }
       |> (fn (updated_group_graph_pattern) ->
-            { :replace_by, terms_map, updated_group_graph_pattern }
+            { :replace_by, query_info, updated_group_graph_pattern }
           end ).()
       # |> IO.inspect( label: "Replacement request" )
     end
 
-    Manipulators.Basics.do_state_map( { terms_map, match }, { terms_map, element } ) do
+    Manipulators.Basics.do_state_map( { query_info, match }, { query_info, element } ) do
       :GroupGraphPattern ->
         # We assume a GroupGraphPatternSub with multiple
         # TriplesBlock.  This can then be replaced by
@@ -770,11 +778,11 @@ defmodule GraphReasoner do
         # from the GroupGraphPatternSub.  Then we convert each of
         # them into either a TriplesBlock (if we didn't understand
         # it), or to the construction mentioned above.
-        wrap_triples_blocks_with_graphs.(terms_map, element)
+        wrap_triples_blocks_with_graphs.(query_info, element)
     end
   end
 
-  defp extract_match_from_augmented_query( { _terms_map, match } ) do
+  defp extract_match_from_augmented_query( { _query_info, match } ) do
     # Consumption of the wrapped graph will likely need access to the
     # transformed query.  This function provides easy access to that
     # match.
