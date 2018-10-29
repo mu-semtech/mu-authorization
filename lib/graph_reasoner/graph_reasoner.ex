@@ -663,7 +663,7 @@ defmodule GraphReasoner do
 
         # Figure out the graphs to use.  This should be added to the respective protocol
         # TODO: support more than one graph
-        [ acl_group ] = matching_acl_groups
+        # [ acl_group ] = matching_acl_groups
 
         # IO.inspect( authorization_specifications, label: "Authorization specification" )
         # IO.inspect( acl_group, label: "ACL group to match" )
@@ -692,19 +692,44 @@ defmodule GraphReasoner do
           end )
           # |> IO.inspect( label: "Matching graphs" )
 
-        # TODO: support more than one matching graph
-        [matching_graph] = matching_graphs
+          # IO.inspect( matching_graphs, label: "matching graphs" )
+          case matching_graphs do
+            [] ->
+              triple # TODO: check whether yielding the original block
+                      # is sufficient in this case.  I believe we need
+                      # to add support for merging subsequent
+                      # TriplesBlock items if multiple TripleBlock
+                      # items are returned after each other.
+            [matching_graph] ->
+                # Convert the TriplesBlock into a
+                # GraphPatternNotTriples>GraphGraphPattern>GroupGraphPattern>GroupGraphPatternSub>TriplesBlock
+                # This last one can be inlined as a
+                # GroupGraphPattern>GroupGraphPatternSub may have many
+                # GraphPatternNotTriples subexpressions.
+                GraphReasoner.QueryMatching.TriplesBlock.wrap_in_graph( triple, matching_graph )
+            _ ->
+                # Multiple graphs may match, we need to create a UNION
+                # query.
+                matching_graphs
+                # |> IO.inspect(label: "matching graphs")
+                |> Enum.map( &GraphReasoner.QueryMatching.TriplesBlock.wrap_in_graph( triple, &1 ) )
+                # |> IO.inspect(label: "wrapped in graph")
+                |> Enum.map( &GraphReasoner.QueryMatching.GraphPatternNotTriples.wrap_in_group_graph_pattern/1 )
+                # |> IO.inspect(label: "wrapped in group graph pattern")
+                |> GraphReasoner.QueryMatching.GroupGraphPattern.make_union
+                # |> IO.inspect(label: "made union")
+                |> GraphReasoner.QueryMatching.GroupGraphPattern.wrap_in_graph_pattern_not_triples
+                # |> IO.inspect(label: "Wrapped in graph pattern without triples" )
+          end
 
         # TODO: support no matching graphs (this requires joining
         # subsequent TriplesBlock entities, as GroupGraphPatternSub
         # needs to have GraphPatternNotTriples in between the
         # TriplesBlock entities)
 
-        # Convert the TriplesBlock into a GraphPatternNotTriples>GraphGraphPattern>GroupGraphPattern>GroupGraphPatternSub>TriplesBlock
-        # This last one can be inlined as a GroupGraphPattern>GroupGraphPatternSub may have many GraphPatternNotTriples subexpressions.
 
         # TODO: If multiple access graphs would match, this would require a UNION pattern
-        GraphReasoner.QueryMatching.TriplesBlock.wrap_in_graph( triple, matching_graph )
+                
       end )
       # |> IO.inspect( label: "Wrapped triplesblocks" )
       # >> Will yield a new array of GraphPatternNotTriples elements

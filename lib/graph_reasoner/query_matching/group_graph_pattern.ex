@@ -52,4 +52,30 @@ defmodule GraphReasoner.QueryMatching.GroupGraphPattern do
     end
   end
 
+  def make_union( group_graph_patterns ) do
+    # GroupGraphPattern>GraphPatternNotTriples>GroupOrUnionGraphPattern(+'UNION')>GroupGraphPattern>GroupGraphPatternSub>GraphPatternNotTriples
+
+    %Sym{ symbol: :GroupGraphPattern,
+          submatches: [
+            %Word{ word: "{" },
+            %Sym{ symbol: :GroupGraphPatternSub,
+                  submatches: [
+                    %Sym{ symbol: :GraphPatternNotTriples,
+                          submatches: [
+                            %Sym{ symbol: :GroupOrUnionGraphPattern,
+                                  submatches: Enum.intersperse( group_graph_patterns, %Word{ word: "UNION" } ) }
+                          ] } ] },
+            %Word{ word: "}" }
+          ] }
+  end
+
+  def wrap_in_graph_pattern_not_triples( group_graph_pattern ) do
+    %Sym{ symbol: :GraphPatternNotTriples,
+          submatches: [
+            %Sym{ symbol: :GroupOrUnionGraphPattern,
+                  submatches: [ group_graph_pattern ]
+                }
+          ] }
+  end
+
 end
