@@ -36,4 +36,8 @@ defmodule State do
       Enum.take(chars, drop_count) |> List.to_string }
   end
 
+  def chars_as_string( %State{ chars: chars } ) do
+    to_string chars
+  end
+
 end

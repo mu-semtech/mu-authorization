@@ -53,14 +53,24 @@ defmodule EbnfParser.Sparql do
   def parse_sparql() do
     %{non_terminal: non_terminal_forms, terminal: terminal_forms} = EbnfParser.Forms.sparql
 
-    my_map =
+    non_terminal_map =
       non_terminal_forms
       |> Enum.map( fn x -> split_single_form( x, false ) end )
       |> Enum.into( %{} )
 
-    terminal_forms
-    |> Enum.map( fn x -> split_single_form( x, true ) end )
-    |> Enum.into( my_map )
+    full_syntax_map =
+      terminal_forms
+      |> Enum.map( fn x -> split_single_form( x, true ) end )
+      |> Enum.into( non_terminal_map )
+
+    _regexp_empowered_map =
+      full_syntax_map
+      |> augment_with_regexp_terminators
+  end
+
+  def augment_with_regexp_terminators( map ) do
+    map
+    |> Map.put( :STRING_LITERAL_LONG2, {true, [ regex: ~r/^"""(""|")?([^\\"]|(\\[tbnrf"'\\]))*"""/m ]} )
   end
 
 

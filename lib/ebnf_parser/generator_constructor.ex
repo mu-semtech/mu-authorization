@@ -10,6 +10,7 @@ alias InterpreterTerms.Minus, as: Minus
 alias InterpreterTerms.Symbol, as: Symbol
 alias InterpreterTerms.Maybe, as: Maybe
 alias InterpreterTerms.HexCharacter, as: HexCharacter
+alias InterpreterTerms.Regex, as: RegexTerm
 
 alias EbnfParser.GeneratorProtocol, as: GP
 
@@ -67,6 +68,10 @@ defmodule EbnfParser.GeneratorConstructor do
 
   def dispatch_generation( { :one_of, elements }, %State{} = state ) do
     GP.make_generator( %Choice{ options: elements, state: state } )
+  end
+
+  def dispatch_generation( { :regex, regex }, %State{} = state ) do
+    GP.make_generator( %RegexTerm{ regex: regex, state: state } )
   end
 
   def dispatch_generation( { string_type, string }, %State{} = state ) when string_type in [ :single_quoted_string, :double_quoted_string ] do
