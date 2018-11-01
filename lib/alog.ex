@@ -27,6 +27,17 @@ defmodule ALog do
   end
 
   @doc """
+  Equivalent to ALog.di, but for warnings.
+  """
+  defmacro wi( item, name ) do
+    quote do
+      result = unquote( item )
+      Logger.warn( fn -> unquote( name ) <> ": " <> inspect( result ) end )
+      result
+    end
+  end
+
+  @doc """
   Works like inspect, but is sufficiently smart to never inspect the
   supplied item when going through info.  It just passes the item through.
   Note that the form may be evaluated twice.
