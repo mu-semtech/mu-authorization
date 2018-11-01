@@ -31,7 +31,7 @@ defmodule Manipulators.Basics do
            case res do
              { :insert_after, elt } ->
                new_acc = [[sub,elt] | acc]
-               { :continue, new_acc }
+               { :cont, new_acc }
              { :exit, value } ->
                { :halt, { :exit, value } }
              _ ->
