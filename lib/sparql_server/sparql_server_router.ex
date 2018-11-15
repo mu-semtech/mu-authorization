@@ -113,7 +113,9 @@ defmodule SparqlServer.Router do
       |> String.trim
       |> String.replace( "\r", "" ) # TODO: check if this is valid and/or ensure parser skips \r between words.
       |> Parser.parse_query_full( top_level_key )
+      |> ALog.di( "Parsed query" )
       |> wrap_query_in_toplevel
+      |> ALog.di( "Wrapped parsed query" )
 
     { conn, new_parsed_forms } =
       if is_select_query( parsed_form ) do

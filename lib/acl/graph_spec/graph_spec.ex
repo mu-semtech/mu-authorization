@@ -16,6 +16,9 @@ defmodule Acl.GraphSpec do
   Processes the currently available quads.  First collecting the quads based on the Constraint, then moving the new quads into the new graph.
   """
   def process_quads( %GraphSpec{ constraint: constraint } = graph_spec, info, quads, extra_quads ) do
+    ALog.di( graph_spec, "Process quads for GraphSpec graph_spec" )
+    ALog.di( quads, "Process quads for GraphSpec quads" )
+
     constraint
     |> Acl.GraphSpec.Constraint.Protocol.matching_quads( quads, extra_quads )
     |> ALog.di( "Matching quads" )

@@ -44,6 +44,9 @@ defmodule Acl.GroupSpec do
   def process( %GroupSpec{ graphs: graph_specs }, info, quads ) do
     # TODO: we should accept extra quads in order to limit the amount
     # of queries to be executed on the server in the long run.
+    ALog.di( graph_specs, "Processing graph specs" )
+    ALog.di( quads, "Processing quads in graph_specs" )
+
     graph_specs
     |> Enum.flat_map( &Acl.GraphSpec.process_quads( &1, info, quads, [] ) ) # We should cache and supply extra quads
     |> ALog.di( "Flat mapped processed quads" )
