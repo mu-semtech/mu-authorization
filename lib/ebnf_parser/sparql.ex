@@ -70,9 +70,26 @@ defmodule EbnfParser.Sparql do
 
   def augment_with_regexp_terminators( map ) do
     map
+    # TODO add other string literals
     |> Map.put( :STRING_LITERAL_LONG2, {true, [ regex: ~r/^"""(""|")?([^\\"]|(\\[tbnrf"'\\]))*"""/m ]} )
+    |> Map.put( :VARNAME, {true, [ regex: ~r/^[A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}_0-9][A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}_0-9\x{00B7}\x{0300}-\x{036F}\x{203F}-\x{2040}]*/u ]} )
+    |> Map.put( :PN_PREFIX, {true, [ regex: ~r/^[A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]([A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}_\-0-9\x{00B7}\x{0300}-\x{036F}\x{203F}-\x{2040}\.]*[A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}_\-0-9\x{00B7}\x{0300}-\x{036F}\x{203F}-\x{2040}])?/u ]} )
+    |> Map.put( :PN_LOCAL, {true, [ regex: ~r/^([A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}_:0-9]|(%[0-9A-Fa-f][0-9A-Fa-f])|(\\[_~\.\-!$&'()*+,;=\/?#@%]))(([A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}_\-0-9\x{00B7}\x{0300}-\x{036F}\x{203F}-\x{2040}\.:]|(%[0-9A-Fa-f][0-9A-Fa-f])|(\\[_~\.\-!$&'()*+,;=\/?#@%]))*(([A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}_\-0-9\x{00B7}\x{0300}-\x{036F}\x{203F}-\x{2040}:])|(%[0-9a-zA-Z][0-9a-zA-Z])|(\\[_~\.\-!$&'()*+,;=\/?\#@%])))?/u ]} )
+    |> Map.put( :IRIREF, {true, [ regex: ~r/^<([^<>\\"{}|^`\x{00}-\x{20}])*>/um ]} )
   end
 
+  def parse_sparql_as_ordered_array do
+    %{non_terminal: non_terminal_forms, terminal: terminal_forms} = EbnfParser.Forms.sparql
 
+    parsed_non_terminal_forms =
+      non_terminal_forms
+      |> Enum.map( fn x -> { x, split_single_form( x, false ) } end )
+
+    parsed_terminal_forms =
+      terminal_forms
+      |> Enum.map( fn x -> { x, split_single_form( x, true ) } end )
+
+    parsed_non_terminal_forms ++ parsed_terminal_forms
+  end
 
 end

@@ -66,7 +66,8 @@ defmodule InterpreterTerms.Regex do
       # TODO be smart and use Regex.run instead
       matching_strings =
         regex
-        |> Regex.scan( char_string )
+        |> Regex.scan( char_string, [capture: :first] )
+        |> ( fn (results) -> results || [] end ).()
         |> Enum.map( &(Enum.at(&1, 0)) )
         # |> IO.inspect( label: "Matching strings" )
 
