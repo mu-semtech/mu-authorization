@@ -6,7 +6,9 @@ defmodule SparqlServer do
   require Logger
 
   def start(_type, _args) do
-    port = Application.get_env(:"mu-authorization", :"sparql-port", 8890)
+    public_port_env = System.get_env("SPARQL_PORT") &&
+      elem( Integer.parse( System.get_env("SPARQL_PORT") ), 0 )
+    port = public_port_env || Application.get_env(:"mu-authorization", :sparql_port)
 
     children = [
       {Cache.Types,%{}},
@@ -17,7 +19,7 @@ defmodule SparqlServer do
       {Plug.Adapters.Cowboy2, scheme: :http, plug: SparqlServer.Router, options: [port: port]}
     ]
 
-    Logger.info "SPARQL Endpoint started on " <> to_string(port)
+    Logger.info "SPARQL Endpoint started on #{port}"
 
     Supervisor.start_link(children, strategy: :one_for_one)
   end

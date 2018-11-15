@@ -22,9 +22,18 @@ config :"mu-authorization", author: :"mu-semtech"
 #     config :logger, level: :info
 #
 
+# config :logger,
+#   compile_time_purge_level: :debug,
+#   level: :info
+
 config :logger,
   compile_time_purge_level: :debug,
-  level: :info
+  level: :warn
+
+if Mix.env == :test do
+  config :junit_formatter,
+  report_dir: "/tmp/repo-example-test-results/exunit"
+end
 
 # It is also possible to import configuration files, relative to this
 # directory. For example, you can emulate configuration per environment
@@ -34,7 +43,4 @@ config :logger,
 #
 #     import_config "#{Mix.env}.exs"
 
-if Mix.env == :test do
-  config :junit_formatter,
-  report_dir: "/tmp/repo-example-test-results/exunit"
-end
+import_config "#{Mix.env}.exs"

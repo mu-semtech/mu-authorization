@@ -48,9 +48,10 @@ defmodule MuAuthorization.MixProject do
     [
       extra_applications: [:logger, :httpoison, :poison, :plug, :cowboy],
       mod: {SparqlServer, []},
-      env: ["sparql-port": 8890]
+      env: []
     ]
   end
+
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
