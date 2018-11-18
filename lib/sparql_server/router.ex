@@ -15,6 +15,42 @@ defmodule SparqlServer.Router do
     args
   end
 
+
+  ################
+  ### Routing code
+
+  post "/sparql" do
+    {:ok, body, _} = read_body(conn)
+
+    ALog.di conn, "Received POST connection"
+    conn = downcase_request_headers( conn )
+    debug_log_request_id( conn )
+
+    { method, query } = get_query_from_post( conn, body ) |> ALog.di( "Received query" )
+
+    Support.handle_query query, method, conn
+    |> send_sparql_response
+  end
+
+  get "/sparql" do
+    params = conn.query_string |> URI.decode_query
+
+    ALog.di conn, "Received GET connection"
+    conn = downcase_request_headers( conn )
+    debug_log_request_id( conn )
+
+    query = params["query"]
+
+    Support.handle_query query, :query, conn
+    |> send_sparql_response
+  end
+
+  match _, do: send_resp(conn, 404, "404 error not found")
+
+
+  ################
+  ### Internal logic
+
   defp get_query_from_post( conn, body ) do
     if Plug.Conn.get_req_header(conn, "content-type") == ["application/sparql-update"] do
       { :update, body }
@@ -32,7 +68,7 @@ defmodule SparqlServer.Router do
     end
   end
 
-  defp process_request_headers( conn ) do
+  defp downcase_request_headers( conn ) do
     new_request_headers =
       conn
       |> Map.get(:req_headers)
@@ -42,54 +78,23 @@ defmodule SparqlServer.Router do
     |> Map.put( :req_headers, new_request_headers )
   end
 
-  # TODO these methods are still very similar, I need to spent time
-  #      to get the proper abstractions out
-  post "/sparql" do
-    {:ok, body, _} = read_body(conn)
-
-    ALog.di conn, "Received POST connection"
-    conn = process_request_headers( conn )
-
-    { method, query } = get_query_from_post( conn, body ) |> ALog.di( "Received query" )
-
-    { conn, response } = Support.handle_query query, method, conn
-
-    ALog.di conn.req_headers, "Request headers"
-    ALog.di conn.resp_headers, "Response headers"
-    ALog.di response, "Response content"
-
-    _session_id =
-      conn
-      |> Plug.Conn.get_req_header( "mu-session-id" )
-      |> List.first
-      |> ALog.di( "session id" )
-
+  ### Sends the supplied results on the connection, setting the
+  ### necessary header and response type.
+  defp send_sparql_response( { conn, response } ) do
     conn
-    # |> put_resp_content_type( "application/json" )
     |> put_resp_content_type( "application/sparql-results+json" )
     |> send_resp(200, response)
   end
 
-  get "/sparql" do
-    params = conn.query_string |> URI.decode_query
-
-    ALog.di conn, "Received GET connection"
-    conn = process_request_headers( conn )
-
-    query = params["query"]
-
-    { conn, response } = Support.handle_query query, :query, conn
-
-    ALog.di conn.req_headers, "Request headers"
-    ALog.di conn.resp_headers, "Response headers"
-    ALog.di response, "Response content"
-
-    conn
-    # |> put_resp_content_type( "application/json" )
-    |> put_resp_content_type( "application/sparql-results+json" )
-    |> send_resp(200, response)
+  ### Allows us to debug log the request id.  Currently doesn't
+  ### execute any code.
+  defp debug_log_request_id( _conn ) do
+    # conn
+    # |> Plug.Conn.get_req_header( "mu-session-id" )
+    # |> List.first
+    # |> ALog.di( "session id" )
   end
 
-  match _, do: send_resp(conn, 404, "404 error not found")
+
 
 end
