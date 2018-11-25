@@ -430,11 +430,10 @@ defmodule Updates.QueryAnalyzer do
       ({%Sym{ symbol: :Verb } = verb,
         %Sym{ symbol: :ObjectList } = object_list},
         acc)  ->
-        predicate_uri =
+        predicate =
           verb
           |> primitive_value( options )
-          |> is_uri_like!
-        new_options = Map.put( options, :predicate, predicate_uri )
+        new_options = Map.put( options, :predicate, predicate )
         new_quads = quads( object_list, new_options )
 
         Quad.append( acc, new_quads )
