@@ -19,6 +19,8 @@ defmodule Interpreter.CachedInterpreter do
   end
 
   def handle_call( :list, _from, elements ) do
+    # TODO: We should calculate the keys in the consuming code, or
+    # maintain a corresponding list
     { :reply, Map.keys( elements ), elements }
   end
 
@@ -27,15 +29,19 @@ defmodule Interpreter.CachedInterpreter do
   end
 
   def handle_cast( { :add, prologue_string, prologue_element }, elements ) do
+    # TODO: We should set a maximum and see how many times the
+    # solution was used.  There may be cases with dynamic prefixes
+    # which would cause something similar to a memory leak.
     { :noreply, Map.put( elements, prologue_string, prologue_element ) }
   end
 
   # Tries to find a full solution for the query parsing.
   def parse_query_full( query, :Sparql, syntax ) do
-    query_unit_solution = parse_query_full( query, :QueryUnit, syntax )
+    query_unit_solution =
+      parse_query_full( query, :QueryUnit, syntax )
 
     sub_solution = %Sym{ string: substring } =
-      query_unit_solution || parse_query_full( query, :UpdateUnit, syntax )
+      (query_unit_solution || parse_query_full( query, :UpdateUnit, syntax ))
 
     %Sym{ symbol: :Sparql,
           string: substring,

@@ -11,19 +11,89 @@ defmodule SparqlServer.Router.HandlerSupport do
   together with the response which should be set on the client.
   """
   def handle_query(query, kind, conn) do
+    # top_level_key = case kind do
+    #                   :query -> :QueryUnit
+    #                   :update -> :UpdateUnit
+    #                   :any -> :Sparql
+    #                 end
+
+    # parsed_form =
+    #   query
+    #   |> ALog.di( "Raw received query" )
+    #   |> String.trim
+    #   |> String.replace( "\r", "" ) # TODO: check if this is valid and/or ensure parser skips \r between words.
+    #   |> Parser.parse_query_full( top_level_key )
+    #   |> ALog.di( "Parsed query" )
+    #   |> wrap_query_in_toplevel
+    #   |> ALog.di( "Wrapped parsed query" )
+
+    # { conn, new_parsed_forms } =
+    #   if is_select_query( parsed_form ) do
+    #     manipulate_select_query( parsed_form, conn )
+    #   else
+    #     manipulate_update_query( parsed_form, conn )
+    #   end
+
+    # encoded_response =
+    #   new_parsed_forms
+    #   |> ALog.di( "New parsed forms" )
+    #   |> Enum.reduce( true, fn( elt, _ ) ->
+    #     elt
+    #     |> Regen.result
+    #     |> ALog.di( "Posing query to backend" )
+    #     |> SparqlClient.query
+    #     end )
+    #   |> Poison.encode!
+
+    # { conn, encoded_response }
+
+    handle_query_with_worker( query, kind, conn )
+  end
+
+  @doc """
+  Handles the query, like handle_query/3 but using a worker instead.
+  This should speed up the execution.
+  """
+  def handle_query_with_worker(query, kind, conn) do
+    timeout = 300_000
+    :poolboy.transaction(
+      :worker,
+      fn (pid) ->
+        GenServer.call( pid, {:handle_query, query, kind, conn}, timeout )
+      end,
+      timeout)
+  end
+
+  @doc """
+  Ensure the syntax is stored in the template local store.
+  """
+  def ensure_syntax_in_store( template_local_store ) do
+    if Map.has_key?( template_local_store, :sparql_syntax ) do
+      template_local_store
+    else
+      Map.put template_local_store, :sparql_syntax, Parser.parse_sparql
+    end
+  end
+
+  def handle_query_with_template_local_store( query, kind, conn, template_local_store ) do
     top_level_key = case kind do
                       :query -> :QueryUnit
                       :update -> :UpdateUnit
                       :any -> :Sparql
                     end
 
-    parsed_form =
+    new_template_local_store = ensure_syntax_in_store( template_local_store )
+    %{ sparql_syntax: sparql_syntax } = new_template_local_store
+
+    { parsed_form, new_template_local_store } =
       query
       |> ALog.di( "Raw received query" )
       |> String.trim
       |> String.replace( "\r", "" ) # TODO: check if this is valid and/or ensure parser skips \r between words.
-      |> Parser.parse_query_full( top_level_key )
-      |> ALog.di( "Parsed query" )
+      |> Parser.parse_query_full_local( top_level_key, new_template_local_store )
+
+    parsed_form =
+      parsed_form
       |> wrap_query_in_toplevel
       |> ALog.di( "Wrapped parsed query" )
 
@@ -41,11 +111,12 @@ defmodule SparqlServer.Router.HandlerSupport do
         elt
         |> Regen.result
         |> ALog.di( "Posing query to backend" )
+        # |> IO.inspect( label: "Query to backend" )
         |> SparqlClient.query
         end )
       |> Poison.encode!
 
-    { conn, encoded_response }
+    { conn, encoded_response, new_template_local_store }
   end
 
   def wrap_query_in_toplevel( %InterpreterTerms.SymbolMatch{ symbol: :Sparql } = matched ) do

@@ -64,6 +64,7 @@ defmodule MuAuthorization.MixProject do
       {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
       {:httpoison, "~> 1.1"},
       {:poison, "~> 3.1"},
+      {:poolboy, "~> 1.5.1"},
       {:plug, "~> 1.5"},
       {:cowboy, "~> 2.4"}
     ]

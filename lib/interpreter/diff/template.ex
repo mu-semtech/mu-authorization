@@ -110,7 +110,8 @@ defmodule Template do
     Enum.group_by( templates, &tree/1 )
     |> Map.values
     |> Enum.map( fn ([template|_] = templates_to_join) ->
-      all_solutions = Enum.flat_map( templates_to_join, &used_solutions/1 )
+      all_solutions =
+        Enum.flat_map( templates_to_join, &used_solutions/1 )
       new_solutions = if Enum.count( all_solutions ) > limit do
         Enum.take_random( all_solutions, limit )
       else

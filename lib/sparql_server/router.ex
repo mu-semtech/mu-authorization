@@ -28,7 +28,7 @@ defmodule SparqlServer.Router do
 
     { method, query } = get_query_from_post( conn, body ) |> ALog.di( "Received query" )
 
-    Support.handle_query query, method, conn
+    Support.handle_query( query, method, conn )
     |> send_sparql_response
   end
 

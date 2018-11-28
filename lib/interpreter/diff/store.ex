@@ -47,6 +47,35 @@ defmodule Interpreter.Diff.Store do
     end )
   end
 
+  def parse_with_local_store( query_string, rule_name, local_template_store ) do
+    arrays = Interpreter.Diff.Store.Storage.arrays( rule_name, local_template_store )
+    # IO.puts "templates: #{Enum.count(arrays)} in #{inspect self()}"
+    # IO.inspect arrays, label: "Arrays in #{inspect self()}"
+
+    arrays
+    |> Enum.reduce_while( {:fail}, fn (array, _) ->
+      case Interpreter.Diff.Template.fill_array( array, query_string ) do
+        {:fail} ->
+          {:cont, {:fail}}
+        filled_array ->
+          { tree, score } = Interpreter.Diff.Store.Storage.template_tree_and_score_for_array_sync( array, rule_name, local_template_store )
+          if tree do
+            # IO.puts "Build solution from tree"
+            {solution,[]} = Interpreter.Diff.Template.fill_tree( filled_array, tree )
+            new_store =
+              if score > 0.9 do
+                Interpreter.Diff.Store.Manipulator.maybe_push_template_solution_for_array_sync( array, solution, rule_name, 0.02, local_template_store )
+              else
+                Interpreter.Diff.Store.Manipulator.maybe_push_template_solution_for_array_sync( array, solution, rule_name, 0.2, local_template_store )
+              end
+            {:halt, {solution, new_store}}
+          else
+            {:cont, {:fail}}
+          end
+      end
+    end )
+  end
+
   @doc """
   Pushes a query solution which was not based on a template into the
   store.
@@ -65,6 +94,18 @@ defmodule Interpreter.Diff.Store do
       Interpreter.Diff.Store.Manipulator.push_solution( solution )
     end
     solution
+  end
+
+  @doc """
+  Pushes a query solution which was not based on a template into the
+  store.
+  """
+  def maybe_push_solution_sync( solution, chance, rule_name, template_local_store ) do
+    if :rand.uniform <= chance do
+      Interpreter.Diff.Store.Manipulator.push_single_solution_sync( solution, rule_name, template_local_store )
+    else
+      template_local_store
+    end
   end
 
   @doc """
@@ -165,22 +206,88 @@ defmodule Interpreter.Diff.Store.Storage do
     GenServer.call( __MODULE__, { :templates, symbol } )
   end
 
+  def templates_sync( rule_name, %{ template_store: template_store } ) do
+    {templates,_} = Map.get( template_store, rule_name, {[],[]} )
+    templates
+  end
+
   def solutions( symbol\\:Sparql ) do
     GenServer.call( __MODULE__, { :solutions, symbol } )
+  end
+
+  def solutions_sync( rule_name, %{ template_store: template_store } ) do
+    {_,solutions} = Map.get(template_store, rule_name, {[],[]})
+    solutions
+  end
+
+  def push_solution_sync( query_solution, rule_name, %{ template_store: _template_store } = local_template_store ) do
+    Map.update! local_template_store, :template_store, fn (template_store) ->
+      template_store
+      # Ensure value exists
+      |> Map.update( rule_name, {[],[]}, fn (x) -> x end )
+      # Update value
+      |> Map.update!( rule_name, fn ({templates, solutions}) ->
+        { templates, [query_solution|solutions] }
+      end )
+    end
+  end
+
+  def set_solutions( solutions, rule_name, %{ template_store: _template_store } = local_template_store ) do
+    Map.update! local_template_store, :template_store, fn (template_store) ->
+      template_store
+      # Ensure value exists
+      |> Map.update( rule_name, {[],[]}, fn (x) -> x end )
+      # Update value
+      |> Map.update!( rule_name, fn ({templates, _solutions}) ->
+        { templates, solutions }
+      end )
+    end
+  end
+
+  def set_templates_sync( templates, rule_name, %{ template_store: _template_store } = local_template_store ) do
+    Map.update! local_template_store, :template_store, fn (template_store) ->
+      template_store
+      # Ensure value exists
+      |> Map.update( rule_name, {[],[]}, fn (x) -> x end )
+      # Update value
+      |> Map.update!( rule_name, fn ({_templates, solutions}) ->
+        { templates, solutions }
+      end )
+    end
   end
 
   def arrays( symbol\\:Sparql ) do
     GenServer.call( __MODULE__, { :arrays, symbol } )
   end
 
+  def arrays( rule_name, %{ template_store: template_store } ) do
+    {templates,_} = Map.get(template_store, rule_name, {[],[]})
+    Enum.map( templates, &Interpreter.Diff.Template.array/1 )
+  end
+
   def template_for_array( array, symbol\\:Sparql ) do
     GenServer.call( __MODULE__, { :template_for_array, array, symbol } )
+  end
+
+  def template_for_array_sync( array, rule_name, %{ template_store: template_store } ) do
+    {templates,_} = Map.get(template_store, rule_name, {[],[]})
+    Enum.find( templates, fn (template) -> Interpreter.Diff.Template.array(template) == array end )
   end
 
   def template_tree_and_score_for_array( array, symbol\\:Sparql ) do
     GenServer.call( __MODULE__, { :template_tree_and_score_for_array, array, symbol } )
   end
 
+  def template_tree_and_score_for_array_sync( array, rule_name, %{ template_store: template_store } ) do
+    {templates,_} = Map.get(template_store, rule_name, {[],[]})
+    template = Enum.find( templates, fn (template) -> Interpreter.Diff.Template.array(template) == array end )
+
+    if template do
+      {Interpreter.Diff.Template.tree( template ), Interpreter.Diff.Template.score( template )}
+    else
+      {nil,nil}
+    end
+  end
 end
 
 defmodule Interpreter.Diff.Store.Manipulator do
@@ -273,7 +380,87 @@ defmodule Interpreter.Diff.Store.Manipulator do
     end
   end
 
-  defp main_symbol( %InterpreterTerms.SymbolMatch{symbol: symbol} ), do: symbol
+  def push_solution_for_array_sync( array, solution, rule_name, local_template_store ) do
+    template = Interpreter.Diff.Store.Storage.template_for_array_sync( array, rule_name, local_template_store )
+    if template do
+      push_solution_sync( template, rule_name, solution, local_template_store )
+    else
+      local_template_store
+    end
+  end
+
+  def push_solution_sync( template, rule_name, solution, local_template_store ) do
+    new_templates =
+      # Get the new templates
+      Interpreter.Diff.Template.exhaustive_better_templates( template, solution )
+      # Add them to the existing tepmplates
+      |> Kernel.++( Interpreter.Diff.Store.Storage.templates_sync( rule_name, local_template_store ) )
+      |> Interpreter.Diff.Template.fold_duplicates( limit: 20 ) # folding in case we fetched new matches
+      |> Enum.map( &Interpreter.Diff.Template.cache_score/1 )
+      |> Interpreter.Diff.Template.sort
+
+    Enum.map( new_templates, fn (%Interpreter.Diff.Template{ array_template: var_arr }) ->
+      Enum.count var_arr
+    end )
+
+    # Set the solution
+    Interpreter.Diff.Store.Storage.set_templates_sync( new_templates, rule_name, local_template_store )
+  end
+
+  def push_single_solution_sync( solution, rule_name, local_template_store ) do
+    # Try to construct a template between this solution and any other solutions
+    current_solutions =
+      Interpreter.Diff.Store.Storage.solutions_sync(rule_name, local_template_store)
+
+    new_local_template_store =
+      Interpreter.Diff.Store.Storage.push_solution_sync( solution, rule_name, local_template_store )
+
+    current_solutions =
+      Interpreter.Diff.Store.Storage.solutions_sync(rule_name, new_local_template_store)
+
+    new_templates =
+      current_solutions
+      |> Enum.map( &Interpreter.Diff.Template.make_template( solution, &1 ) )
+      |> Enum.reject( &match?({:fail},&1) )
+      |> Enum.reject( fn (%Interpreter.Diff.Template{ array_template: var_arr }) -> Enum.count( var_arr ) == 1 end )
+      |> Interpreter.Diff.Template.fold_duplicates( limit: 10 ) # in case we match with multiple other queries
+      |> Interpreter.Diff.Template.sort
+
+    case new_templates do
+      [] ->
+        Interpreter.Diff.Store.Storage.push_solution_sync( solution, rule_name, local_template_store )
+      [new_template|_] ->
+        # Remove the matches for our new template from the
+        new_template_solutions =
+          Interpreter.Diff.Template.used_solutions( new_template )
+        all_solutions =
+          Interpreter.Diff.Store.Storage.solutions( rule_name )
+          |> Enum.reject( fn (x) -> Enum.member? new_template_solutions, x end )
+
+        new_solutions = if Enum.count( all_solutions ) > 4 do
+          Enum.take_random( all_solutions, 4 )
+        else
+          all_solutions
+        end
+
+        new_local_template_store =
+          Interpreter.Diff.Store.Storage.set_solutions( new_solutions, rule_name, local_template_store )
+
+        # Try to push the highest scoring template into the store
+        new_stored_templates =
+          [new_template | Interpreter.Diff.Store.Storage.templates_sync(rule_name, new_local_template_store)]
+          |> Interpreter.Diff.Template.fold_duplicates( limit: 4 ) # folding in case we fetched new matches
+          |> Enum.take_random( 7 )
+          |> Enum.map( &Interpreter.Diff.Template.cache_score/1 )
+          |> Interpreter.Diff.Template.sort
+
+        # IO.puts "Storing #{Enum.count(new_stored_templates)} templates at #{inspect self()}"
+        Interpreter.Diff.Store.Storage.set_templates_sync( new_stored_templates, rule_name, new_local_template_store )
+    end
+  end
+
+
+  def main_symbol( %InterpreterTerms.SymbolMatch{symbol: symbol} ), do: symbol
 
   @doc """
   Pushes the solution into the store, without a template being
@@ -315,4 +502,13 @@ defmodule Interpreter.Diff.Store.Manipulator do
       GenServer.cast( __MODULE__, {:push_solution_for_array, array, solution, symbol } )
     end
   end
+
+  def maybe_push_template_solution_for_array_sync( array, solution, rule_name, chance, %{ template_store: _template_store } = local_template_store ) do
+    if :rand.uniform < chance do
+      push_solution_for_array_sync( array, solution, rule_name, local_template_store )
+    else
+      local_template_store
+    end
+  end
+
 end

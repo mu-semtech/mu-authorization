@@ -30,6 +30,25 @@ defmodule Parser do
     end
   end
 
+  def parse_query_full_local( query, rule_name, template_local_store ) do
+    %{ sparql_syntax: sparql_syntax } = template_local_store
+
+    case Interpreter.Diff.Store.parse_with_local_store( query, rule_name, template_local_store ) do
+      {:fail} ->
+        IO.puts "template: no"
+        result =
+          Interpreter.CachedInterpreter.parse_query_full( query, rule_name, sparql_syntax )
+
+        new_template_local_store =
+          Interpreter.Diff.Store.maybe_push_solution_sync( result, 0.2, rule_name, template_local_store )
+
+        { result, new_template_local_store }
+      response ->
+        IO.puts "template: yes"
+        response
+    end
+  end
+
   @doc """
   Parses the query and yields the first (possibly non-complete) match.
   """
