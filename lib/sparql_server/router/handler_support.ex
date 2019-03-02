@@ -183,7 +183,7 @@ defmodule SparqlServer.Router.HandlerSupport do
                    "foaf" => Updates.QueryAnalyzer.Iri.from_iri_string("<http://xmlns.com/foaf/0.1/>") }
     }
 
-    executable_queries =
+    updated_quads =
       query
       |> ALog.di( "Parsed query" )
       |> Updates.QueryAnalyzer.quads( %{
@@ -200,19 +200,24 @@ defmodule SparqlServer.Router.HandlerSupport do
 
           { statement, processed_quads }
         end)
-      |> Delta.publish_updates
-      |> Enum.map(
-        fn ({statement, processed_quads}) ->
-          case statement do
-            :insert ->
-              Updates.QueryAnalyzer.construct_insert_query_from_quads( processed_quads, options )
-            :delete ->
-              Updates.QueryAnalyzer.construct_delete_query_from_quads( processed_quads, options )
-          end end )
 
-      # TODO should we set the access groups on update queries too?
-      # see AccessGroupSupport.put_access_groups/2 ( conn, authorization_groups )
-      { conn, executable_queries }
+    executable_queries =
+      updated_quads
+      |> Enum.map(
+         fn ({statement, processed_quads}) ->
+           case statement do
+             :insert ->
+               Updates.QueryAnalyzer.construct_insert_query_from_quads( processed_quads, options )
+             :delete ->
+               Updates.QueryAnalyzer.construct_delete_query_from_quads( processed_quads, options )
+           end end )
+
+    updated_quads
+    |> Delta.publish_updates # TODO: we should publish the updates *after* writing to the store and allow external services to rewrite be
+
+    # TODO should we set the access groups on update queries too?
+    # see AccessGroupSupport.put_access_groups/2 ( conn, authorization_groups )
+    { conn, executable_queries }
   end
 
   defp enforce_write_rights( quads, authorization_groups ) do
