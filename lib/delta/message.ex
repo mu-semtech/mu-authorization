@@ -18,6 +18,12 @@ defmodule Delta.Message do
   """
   @spec construct( Delta.delta ) :: Delta.Message.t
   def construct( delta ) do
+    # TODO we should include the current access rigths and an
+    # identifier for the originating service.  This would help
+    # services ignore content which came from their end and would
+    # allow services to perform updates in the name of a specific
+    # user.
+
     json_model = %{
       "changeSets" => Enum.map( delta, &convert_delta_item/1 )
     }

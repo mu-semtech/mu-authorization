@@ -46,7 +46,9 @@ defmodule Acl.GraphSpec do
   end
 
   def process_query( %GraphSpec{} = graph_spec, info, query ) do
+    IO.puts( "Processing query" )
     new_graph = matching_graph( graph_spec, info )
+    IO.inspect( new_graph, label: "Graph to add" )
 
     new_query =
       query

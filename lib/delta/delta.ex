@@ -22,7 +22,7 @@ defmodule Delta do
   def publish_updates( delta  ) do
     delta
     |> Delta.Message.construct
-    |> ALog.ii( "Constructed body for clients" )
+    |> Logging.EnvLog.inspect( :log_delta_messages, label: "Constructed body for clients" )
     |> Delta.Messenger.inform_clients
 
     delta
