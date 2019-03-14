@@ -47,6 +47,9 @@ defmodule SparqlServer.Router.HandlerSupport do
 
     # { conn, encoded_response }
 
+    Logging.EnvLog.log( :log_incoming_sparql_queries, "Incoming SPARQL query: #{query}" )
+    Logging.EnvLog.inspect( query, :inspect_incoming_sparql_queries, label: "Incoming SPARQL query" )
+
     handle_query_with_worker( query, kind, conn )
   end
 

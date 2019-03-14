@@ -92,6 +92,10 @@ Logging can be configured using environment variables.  These properties can be 
 
 Flags which can be either on or off translate the environment variable string to an understood configuration.  Following are considered true: ["true", "yes", "1", "on"], all other strings are considered to be false.
 
+- `LOG_OUTGOING_SPARQL_QUERIES` Logs outgoing SPARQL queries by printing them on the console
+- `INSPECT_OUTGOING_SPARQL_QUERIES`: Logs outgoing SPARQL queries by inspecting them (native string format)
+- `LOG_INCOMING_SPARQL_QUERIES`: Logs incoming SPARQL queries by printing them on the console
+- `INSPECT_INCOMING_SPARQL_QUERIES`: Logs incoming SPARQL queries by inspecting them (native string format)
 - `LOG_DELTA_MESSAGES` Allows logging of delta messages as they're sent to other consumers
 - `LOG_DELTA_CLIENT_COMMUNICATION` Allows logging of the communication caused by the delta system
 - `LOG_TEMPLATE_MATCHER_PERFORMANCE` Emits information regarding use of precalculated templates when analysing queries
