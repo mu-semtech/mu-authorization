@@ -1,9 +1,9 @@
 defmodule Logging.EnvLog do
-  def log( content, name ) do
+  def log( name, content ) do
     if Application.get_env( :"mu-authorization", name ) do
       IO.puts( content )
     else
-      content
+      :ok
     end
   end
 
