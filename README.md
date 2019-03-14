@@ -87,6 +87,13 @@ There are two kinds of constraints, a `ResourceFormatConstraint` and a `Resource
 -   Services should always strive to use SEAS to access the database. If session information is not necessary or should not be applied because the service validates access rights in its own way, the header `mu-auth-sudo` should be set to `true` in the SPARQL request sent to the service.
 -   not all services can always use the SEAS because some triple patterns may not be understood by the service's rewrite rules. Note that a service should strive to be compliant with the SEAS service and I have yet to see a case where this is not possible. In a case where it is not possible to use SEAS, the service needs to write it's data to all graphs SEAS would normally write to. This is tough, hence the advice to always use SEAS.
 
+## Logging
+
+Logging can be configured using environment variables.  These properties can be set in the environment block in the docker-compose.yml
+
+Flags which can be either on or off translate the environment variable string to an understood configuration.  Following are considered true: ["true", "yes", "1", "on"], all other strings are considered to be false.
+
+- `LOG_DELTA_MESSAGES` Allows logging of delta messages as they're sent to other consumers
 
 
 # Sparql parsing and rewriting
