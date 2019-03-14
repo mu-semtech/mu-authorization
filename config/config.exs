@@ -2,6 +2,18 @@
 # and its dependencies with the aid of the Mix.Config module.
 use Mix.Config
 
+defmodule CH do
+  def system_boolean( name ) do
+    case String.downcase( System.get_env( name ) || "" ) do
+      "true" -> true
+      "yes" -> true
+      "1" -> true
+      "on" -> true
+      _ -> false
+    end
+  end
+end
+
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
 # file won't be loaded nor affect the parent project. For this reason,
@@ -11,8 +23,9 @@ use Mix.Config
 # You can configure your application as:
 #
 #     config :sparqlex, key: :value
-config :"mu-authorization", author: :"mu-semtech"
-#
+config :"mu-authorization",
+  author: :"mu-semtech",
+  log_delta_messages: CH.system_boolean("LOG_DELTA_MESSAGES"),
 # and access this configuration in your application as:
 #
 #     Application.get_env(:sparql, :key)
