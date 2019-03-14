@@ -26,6 +26,7 @@ end
 config :"mu-authorization",
   author: :"mu-semtech",
   log_delta_messages: CH.system_boolean("LOG_DELTA_MESSAGES"),
+  log_delta_client_communication: CH.system_boolean("LOG_DELTA_CLIENT_COMMUNICATION"),
 # and access this configuration in your application as:
 #
 #     Application.get_env(:sparql, :key)

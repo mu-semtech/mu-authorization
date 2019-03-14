@@ -9,7 +9,6 @@ The SPARQL endpoint authorization service (SEAS) is a layer that is placed in fr
 
 The idea is that data is organized into graphs and the access to these graphs is restricted to a certain set of roles. When an INSERT query is sent to the SPARQL endpoint it is intercepted by SEAS. SEAS then loops through its different group specifications and, per specification, distributes the triples across different graphs when they match the graph's constraint. When a service later tries to read data through SEAS, the session is examined and the access criterion of every group is evaluated. If the user has access to the group, the service is allowed to read from the group's graph.
 
-
 <a id="orgf415637"></a>
 
 ## Session information
@@ -94,7 +93,7 @@ Logging can be configured using environment variables.  These properties can be 
 Flags which can be either on or off translate the environment variable string to an understood configuration.  Following are considered true: ["true", "yes", "1", "on"], all other strings are considered to be false.
 
 - `LOG_DELTA_MESSAGES` Allows logging of delta messages as they're sent to other consumers
-
+- `LOG_DELTA_CLIENT_COMMUNICATION` Allows logging of the communication caused by the delta system
 
 # Sparql parsing and rewriting
 This module offers a SPARQL parser for elixir.

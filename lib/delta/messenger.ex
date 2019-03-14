@@ -31,11 +31,16 @@ defmodule Delta.Messenger do
     # backoff if the sending of the message failed.
     headers = [{"Content-Type", "application/json"}]
     options = [recv_timeout: 50000] # we expect clients to respond to our request
-    Logger.debug( "Sending message to <#{client_url}>: #{message}" )
+
+    Logging.EnvLog.log(
+      :log_delta_client_communication,
+      "Sending message to <#{client_url}>: #{message}")
+
     case HTTPoison.post( client_url, message, headers, options ) do
       {:ok, _response } ->
-        IO.puts( "Sent delta to #{client_url}" )
-        Logger.debug( "Sent delta to #{client_url}" )
+        Logging.EnvLog.log(
+          :log_delta_client_communication,
+          "Sent delta to #{client_url}")
         :ok
       {:error, reason } ->
         Logger.warn( fn -> { "Could not send delta to #{client_url}", [reason: reason] } end )
