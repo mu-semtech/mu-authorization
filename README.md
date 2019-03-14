@@ -95,6 +95,22 @@ Flags which can be either on or off translate the environment variable string to
 - `LOG_DELTA_MESSAGES` Allows logging of delta messages as they're sent to other consumers
 - `LOG_DELTA_CLIENT_COMMUNICATION` Allows logging of the communication caused by the delta system
 
+# Configuration files
+
+mu-authorization can receive a configuration file for the user groups as well as for the delta system.
+
+A standard mu-semtech stack ensures the configuration files are stored in `./config/authorization/`.  This can then be mounted with the volume `./config/authorization:/config`.
+
+
+## User groups
+
+The user groups should be accessible either on `/config/user_groups.ex` or in `/config/config.ex`.  In your standard mu-semtech stack you'll probably save this in `./config/authorization/user_groups.ex`.
+
+## Delta
+
+The delta system allows to configure which clients will receive messages.  This file needs to be accessible on `/config/delta.ex`.  In your standard mu-semtech stack you'll probably save this in `./config/deltas.ex`.
+
+
 # Sparql parsing and rewriting
 This module offers a SPARQL parser for elixir.
 
