@@ -94,6 +94,7 @@ Flags which can be either on or off translate the environment variable string to
 
 - `LOG_DELTA_MESSAGES` Allows logging of delta messages as they're sent to other consumers
 - `LOG_DELTA_CLIENT_COMMUNICATION` Allows logging of the communication caused by the delta system
+- `LOG_TEMPLATE_MATCHER_PERFORMANCE` Emits information regarding use of precalculated templates when analysing queries
 
 # Configuration files
 

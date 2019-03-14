@@ -35,7 +35,8 @@ defmodule Parser do
 
     case Interpreter.Diff.Store.parse_with_local_store( query, rule_name, template_local_store ) do
       {:fail} ->
-        IO.puts "template: no"
+        Logging.EnvLog.log( :log_template_matcher_performance, "Template: no" )
+
         result =
           Interpreter.CachedInterpreter.parse_query_full( query, rule_name, sparql_syntax )
 
@@ -44,7 +45,7 @@ defmodule Parser do
 
         { result, new_template_local_store }
       response ->
-        IO.puts "template: yes"
+        Logging.EnvLog.log( :log_template_matcher_performance, "Template: yes" )
         response
     end
   end

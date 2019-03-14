@@ -28,6 +28,7 @@ config :"mu-authorization",
   log_outgoing_sparql_queries: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERIES"),
   log_incoming_sparql_queries: CH.system_boolean("LOG_INCOMING_SPARQL_QUERIES"),
   log_delta_messages: CH.system_boolean("LOG_DELTA_MESSAGES"),
+  log_template_matcher_performance: CH.system_boolean("LOG_TEMPLATE_MATCHER_PERFORMANCE"),
   log_delta_client_communication: CH.system_boolean("LOG_DELTA_CLIENT_COMMUNICATION"),
   log_access_rights: CH.system_boolean("LOG_ACCESS_RIGHTS")
 
