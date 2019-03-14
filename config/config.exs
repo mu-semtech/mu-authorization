@@ -25,8 +25,12 @@ end
 #     config :sparqlex, key: :value
 config :"mu-authorization",
   author: :"mu-semtech",
+  log_outgoing_sparql_queries: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERIES"),
+  log_incoming_sparql_queries: CH.system_boolean("LOG_INCOMING_SPARQL_QUERIES"),
   log_delta_messages: CH.system_boolean("LOG_DELTA_MESSAGES"),
   log_delta_client_communication: CH.system_boolean("LOG_DELTA_CLIENT_COMMUNICATION"),
+  log_access_rights: CH.system_boolean("LOG_ACCESS_RIGHTS")
+
 # and access this configuration in your application as:
 #
 #     Application.get_env(:sparql, :key)
