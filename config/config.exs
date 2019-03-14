@@ -32,7 +32,8 @@ config :"mu-authorization",
   log_delta_messages: CH.system_boolean("LOG_DELTA_MESSAGES"),
   log_template_matcher_performance: CH.system_boolean("LOG_TEMPLATE_MATCHER_PERFORMANCE"),
   log_delta_client_communication: CH.system_boolean("LOG_DELTA_CLIENT_COMMUNICATION"),
-  log_access_rights: CH.system_boolean("LOG_ACCESS_RIGHTS")
+  log_access_rights: CH.system_boolean("LOG_ACCESS_RIGHTS"),
+  inspect_access_rights_processing: CH.system_boolean("INSPECT_ACCESS_RIGHTS_PROCESSING")
 
 # and access this configuration in your application as:
 #

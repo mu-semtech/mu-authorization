@@ -96,6 +96,8 @@ Flags which can be either on or off translate the environment variable string to
 - `INSPECT_OUTGOING_SPARQL_QUERIES`: Logs outgoing SPARQL queries by inspecting them (native string format)
 - `LOG_INCOMING_SPARQL_QUERIES`: Logs incoming SPARQL queries by printing them on the console
 - `INSPECT_INCOMING_SPARQL_QUERIES`: Logs incoming SPARQL queries by inspecting them (native string format)
+- `LOG_ACCESS_RIGHTS` Logs the incoming access rights
+- `INSPECT_ACCESS_RIGHTS_PROCESSING` Logs the processing of the access rights (verbose debugging)
 - `LOG_DELTA_MESSAGES` Allows logging of delta messages as they're sent to other consumers
 - `LOG_DELTA_CLIENT_COMMUNICATION` Allows logging of the communication caused by the delta system
 - `LOG_TEMPLATE_MATCHER_PERFORMANCE` Emits information regarding use of precalculated templates when analysing queries

@@ -54,13 +54,18 @@ defmodule Acl.GroupSpec do
   end
 
   def process_query( %GroupSpec{ graphs: graph_specs }, info, query ) do
-    IO.inspect( graph_specs, label: "processing specification" )
+    Logging.EnvLog.inspect( graph_specs, :inspect_access_rights_processing, label: "processing specification" )
 
     graph_specs
     |> Enum.reduce( {query,[]}, fn (graph_spec, {query,auths}) ->
-      IO.inspect( Regen.result( query ), label: "ACL graph_spec initial query" )
+      Logging.EnvLog.inspect(  Regen.result( query ),
+        :inspect_access_rights_processing, label: "ACL graph_spec initial query" )
+
       { new_query, new_auths } = Acl.GraphSpec.process_query( graph_spec, info, query )
-      IO.inspect( Regen.result( new_query ), label: "ACL graph_spec transformed query" )
+
+      Logging.EnvLog.inspect( Regen.result( new_query ),
+        :inspect_access_rights_processing, label: "ACL graph_spec transformed query" )
+
       { new_query, auths ++ new_auths }
     end )
   end
