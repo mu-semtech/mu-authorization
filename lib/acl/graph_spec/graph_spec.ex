@@ -19,12 +19,19 @@ defmodule Acl.GraphSpec do
     ALog.di( graph_spec, "Process quads for GraphSpec graph_spec" )
     ALog.di( quads, "Process quads for GraphSpec quads" )
 
+    Logging.EnvLog.inspect( graph_spec, :inspect_access_rights_processing, label: "processing for graph_spec" )
+    Logging.EnvLog.inspect( quads, :inspect_access_rights_processing, label: "- quads to process" )
+    Logging.EnvLog.inspect( extra_quads, :inspect_access_rights_processing, label: "- background knowledge quads" )
+
     constraint
     |> Acl.GraphSpec.Constraint.Protocol.matching_quads( quads, extra_quads )
+    |> Logging.EnvLog.inspect( :inspect_access_rights_processing, label: "matching quads for processing" )
     |> ALog.di( "Matching quads" )
     |> Enum.map( &alter_quad_graph(&1, graph_spec, info) )
     |> ALog.di( "Renamed quads" )
+    |> Logging.EnvLog.inspect( :inspect_access_rights_processing, label: "renamed quads in processing" )
     |> (fn (new_quads) -> quads ++ new_quads end).()
+    |> Logging.EnvLog.inspect( :inspect_access_rights_processing, label: "resulting quads by processing" )
     |> ALog.di( "All quads" )
   end
 

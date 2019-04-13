@@ -46,9 +46,11 @@ defmodule Acl.GroupSpec do
     # of queries to be executed on the server in the long run.
     ALog.di( graph_specs, "Processing graph specs" )
     ALog.di( quads, "Processing quads in graph_specs" )
+    Logging.EnvLog.inspect( graph_specs, :inspect_access_rights_processing, label: "processing specification" )
 
     graph_specs
     |> Enum.flat_map( &Acl.GraphSpec.process_quads( &1, info, quads, [] ) ) # We should cache and supply extra quads
+    |> Logging.EnvLog.inspect( :inspect_access_rights_processing, label: "processing specification" )
     |> ALog.di( "Flat mapped processed quads" )
     |> Enum.uniq # TODO We should do a uniq_by and supply the IRI instead
   end
