@@ -10,6 +10,9 @@ defmodule SparqlServer do
       elem( Integer.parse( System.get_env("SPARQL_PORT") ), 0 )
     port = public_port_env || Application.get_env(:"mu-authorization", :sparql_port)
 
+    Logging.EnvLog.inspect( port, :log_server_configuration, label: "server setup, sparql port" )
+    Logging.EnvLog.inspect( Acl.UserGroups.Config.user_groups, :log_server_configuration, label: "server setup, user groups" )
+
     children = [
       {Cache.Types,%{}},
       {EbnfParser.Sparql,nil},

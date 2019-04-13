@@ -25,6 +25,7 @@ end
 #     config :sparqlex, key: :value
 config :"mu-authorization",
   author: :"mu-semtech",
+  log_server_configuration: CH.system_boolean("LOG_SERVER_CONFIGURATION"),
   log_outgoing_sparql_queries: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERIES"),
   log_incoming_sparql_queries: CH.system_boolean("LOG_INCOMING_SPARQL_QUERIES"),
   inspect_outgoing_sparql_queries: CH.system_boolean("INSPECT_OUTGOING_SPARQL_QUERIES"),
