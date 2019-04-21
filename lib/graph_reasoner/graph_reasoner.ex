@@ -1,4 +1,5 @@
 alias GraphReasoner.QueryInfo, as: QueryInfo
+alias GraphReasoner.Support.TermsMap, as: TermsMap
 
 defmodule GraphReasoner do
   require Manipulators.Basics
@@ -353,15 +354,9 @@ defmodule GraphReasoner do
           # (eg: if the predicate foaf:name can only originate from a
           # foaf:Agent, we should use this information).
 
-          term_id = ExternalInfo.get( varSymbol, GraphReasoner, :term_id )
-          renamed_term_id = terms_map.term_ids[term_id]
-
-          new_terms_map =
-            update_in(
-              terms_map[:term_info][renamed_term_id][:related_paths],
-              fn (related_paths) ->
-                [ %{ predicate: pathIri, object: object } | (related_paths || []) ]
-              end )
+          new_terms_map = TermsMap.push_term_info(
+            terms_map, varSymbol, :related_paths,
+            %{ predicate: pathIri, object: object })
 
           new_terms_map
 
