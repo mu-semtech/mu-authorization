@@ -67,14 +67,14 @@ defmodule GraphReasoner do
 
 
   @doc """
-  Processes the supplied parced query, yielding a new query and
+  Processes the supplied parsed query, yielding a new query and
   whether or not it was fully understood.  Queries which could not be
   processed just return {:fail}
 
   The first element in the response is whether or not the query was
   fully understood.  The answer is either :partial, or :full.
 
-  The secend element in the response is the new query.  In the new
+  The second element in the response is the new query.  In the new
   query certain statements may have been added, removed, or altered in
   order to help the query execution.  The answers to the traversed
   query must always be equivalent to the answers of the original
@@ -99,12 +99,21 @@ defmodule GraphReasoner do
   end
 
   defp derive_graph_statements( match ) do
+    # TODO: supply matching authorization groups Current code is
+    #   incorrect and assumes no UserGroup receives a parameter.
+    matching_authorization_groups =
+      Enum.map( Acl.UserGroups.for_use( :read ), fn (g) ->
+        { g.name, [] }
+      end )
+
     match
     |> augment_with_terms_map
     |> join_same_terms
     |> derive_terms_information
+    # |> IO.inspect( label: "Derived terms information" )
     |> derive_triples_information( Acl.UserGroups.for_use( :read ) ) # TODO: supply authorization groups
-    |> wrap_graph_queries( nil )
+    # |> IO.inspect( label: "Derived triples information" )
+    |> wrap_graph_queries( matching_authorization_groups )
     |> extract_match_from_augmented_query
   end
 
@@ -424,6 +433,9 @@ defmodule GraphReasoner do
     # only support trivial `s p o` matches, and nothing with real
     # paths or variables.
 
+    # IO.inspect( query_info, label: "Query Info in derive_triples_information" )
+    # IO.inspect( authorization_groups, label: "Authorization Groups in derive_triples_information" )
+
     derive_triples_block_info_for_single_triple = fn (query_info, element) ->
       # We need to discover if the current TriplesBlock means anything
       # specific.
@@ -492,13 +504,14 @@ defmodule GraphReasoner do
       # We do a first filtering based on the subject types
       resource_filtered_groups =
         authorization_groups
-        |> Enum.reduce( [], fn ({group_spec, parameters}, matching_groups) ->
+        |> Enum.reduce( [], fn (group_spec, matching_groups) ->
              # We return the relevant information for the next
              # steps this means we are searching for the graph
              # specs with the right resource types.  If such
              # GraphSpec exists, we return a new object with only
              # the allowed GraphSpec instances.  This makes the
              # content much easier to process in followup steps.
+             # IO.inspect( group_spec, label: "Group spec to process" )
              matching_graph_specs =
                group_spec.graphs
                |> Enum.reduce( [], fn (graph_spec, acc) ->
@@ -522,6 +535,7 @@ defmodule GraphReasoner do
              end
            end )
         # TODO: we should cope with descriptions which don't have a resource constraint too
+        # |> IO.inspect(label: "before constraint filter")
         |> Enum.filter( fn (constraint) ->
           constraint.graphs != [] &&
           Enum.all?( constraint.graphs, fn (graph_spec) ->
