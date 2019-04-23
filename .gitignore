@@ -25,3 +25,4 @@ sparql-*.tar
 current_todos.txt
 
 *~
+.elixir_ls
