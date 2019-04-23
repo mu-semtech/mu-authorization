@@ -106,13 +106,15 @@ defmodule GraphReasoner do
         { g.name, [] }
       end )
 
+    prologue_map = Manipulators.Info.prologue_map( match )
+
     match
     |> augment_with_terms_map
     |> join_same_terms
-    |> derive_terms_information
+    |> derive_terms_information( prologue_map )
     # |> IO.inspect( label: "Derived terms information" )
-    |> derive_triples_information( Acl.UserGroups.for_use( :read ) ) # TODO: supply authorization groups
     # |> IO.inspect( label: "Derived triples information" )
+    |> derive_triples_information( Acl.UserGroups.for_use( :read ), prologue_map ) # TODO: supply authorization groups
     |> wrap_graph_queries( matching_authorization_groups )
     |> extract_match_from_augmented_query
   end
@@ -292,7 +294,7 @@ defmodule GraphReasoner do
     { updated_query_info , match }
   end
 
-  defp derive_terms_information( { query_info, match } ) do
+  defp derive_terms_information( { query_info, match }, prologue_map ) do
     # Each of the terms in the query may express information about the
     # variables.  For instance, when we see ?s a foaf:Agent, we know
     # that ?s is of type foaf:Agent.  We can use this information in
@@ -319,7 +321,7 @@ defmodule GraphReasoner do
 
           varSymbol = GraphReasoner.QueryMatching.VarOrTerm.var!( subjectVarOrTerm )
 
-          pathIri = GraphReasoner.QueryMatching.PathPrimary.iri!( predicateElement )
+          pathIri = GraphReasoner.QueryMatching.PathPrimary.iri!( predicateElement, prologue_map )
 
 
           object =
@@ -404,7 +406,7 @@ defmodule GraphReasoner do
     end )
   end
 
-  defp derive_triples_information( { query_info, match }, authorization_groups ) do
+  defp derive_triples_information( { query_info, match }, authorization_groups, prologue_map ) do
     # Each of the triples which needs to be fetched may be fetched
     # from various graphs.  Based on the information in the terms_map,
     # the access groups of the current user, and the specific triple
@@ -441,7 +443,7 @@ defmodule GraphReasoner do
       # We should accept more than only variables in the subject
       varSymbol = GraphReasoner.QueryMatching.VarOrTerm.var!( subjectVarOrTerm )
 
-      pathIri = GraphReasoner.QueryMatching.PathPrimary.iri!( predicateElement )
+      pathIri = GraphReasoner.QueryMatching.PathPrimary.iri!( predicateElement, prologue_map )
 
       # objectIri =
       #   objectVarOrTerm

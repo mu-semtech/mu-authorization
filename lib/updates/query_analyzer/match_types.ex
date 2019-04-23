@@ -4,6 +4,9 @@ alias Updates.QueryAnalyzer.Boolean, as: Bool
 alias Updates.QueryAnalyzer.NumericLiteral, as: Number
 alias Updates.QueryAnalyzer.Variable, as: Var
 
+alias InterpreterTerms.SymbolMatch, as: Sym
+alias InterpreterTerms.WordMatch, as: Word
+
 defprotocol Updates.QueryAnalyzer.P do
   def to_solution_sym( element )
 
@@ -19,33 +22,39 @@ defmodule Iri do
     %Iri{ iri: new_iri, real_name: new_iri }
   end
 
-  def from_prefix_string( prefixed_name, options ) do
+  def from_prefix_string(prefixed_name, options) do
     prefixes = Map.get(options, :prefixes, %{})
 
-    [ prefix, postfix ] =
+    [prefix, postfix] =
       prefixed_name
-      |> String.trim( " " ) # TODO remove trimming when terminal symbols don't emit spaces anymore
-      |> String.split( ":", parts: 2 )
+      # TODO remove trimming when terminal symbols don't emit spaces anymore
+      |> String.trim(" ")
+      |> String.split(":", parts: 2)
 
-    base_uri = cond do
-      prefix == "" -> # no prefix was supplied
-        %Iri{ iri: default_graph } = Map.get(options, :default_graph)
-        default_graph
-        |> String.trim( " " ) # TODO remove trimming when terminal symbols don't emit spaces anymore
-        |> String.slice( 1, String.length( default_graph ) - 2 )
-      Map.has_key?( prefixes, prefix ) -> # the supplied prefix is in our options
-        %Iri{ iri: iri } =
-          Map.get( prefixes, prefix )
-        strip_iri_marks( iri )
-      true -> # the supplied prefix is a default prefix
-        %Iri{ iri: iri } =
-          Map.get( default_prefixes(), prefix )
-        strip_iri_marks( iri )
-    end
+    base_uri =
+      cond do
+        # no prefix was supplied
+        prefix == "" ->
+          %Iri{iri: default_graph} = Map.get(options, :default_graph)
 
+          default_graph
+          # TODO remove trimming when terminal symbols don't emit spaces anymore
+          |> String.trim(" ")
+          |> String.slice(1, String.length(default_graph) - 2)
 
-    full_iri = wrap_iri_string( base_uri <> postfix )
-    %Iri{ iri: full_iri, real_name: prefixed_name }
+        # the supplied prefix is in our options
+        Map.has_key?(prefixes, prefix) ->
+          %Iri{iri: iri} = Map.get(prefixes, prefix)
+          strip_iri_marks(iri)
+
+        # the supplied prefix is a default prefix
+        true ->
+          %Iri{iri: iri} = Map.get(default_prefixes(), prefix)
+          strip_iri_marks(iri)
+      end
+
+    full_iri = wrap_iri_string(base_uri <> postfix)
+    %Iri{iri: full_iri, real_name: prefixed_name}
   end
 
   @doc """
