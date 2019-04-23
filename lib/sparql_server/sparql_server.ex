@@ -12,6 +12,7 @@ defmodule SparqlServer do
 
     Logging.EnvLog.inspect( port, :log_server_configuration, label: "server setup, sparql port" )
     Logging.EnvLog.inspect( Acl.UserGroups.Config.user_groups, :log_server_configuration, label: "server setup, user groups" )
+    Logging.EnvLog.inspect( Delta.Config.targets, :log_server_configuration, label: "server setup, delta targets" )
 
     children = [
       {Cache.Types,%{}},
