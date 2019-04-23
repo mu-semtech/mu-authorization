@@ -67,8 +67,12 @@ defmodule GraphReasoner.QueryMatching.VarOrTerm do
   not contain an Iri).
   """
   def iri!( symbol ) do
+    iri!( symbol, %{} )
+  end
+
+  def iri!( symbol, prologue_info ) do
     %Sym{ symbol: :GraphTerm, submatches: [ %Sym{ symbol: :iri } = iri ] } = term!( symbol )
 
-    iri
+    Updates.QueryAnalyzer.Iri.from_symbol( iri, prologue_info )
   end
 end

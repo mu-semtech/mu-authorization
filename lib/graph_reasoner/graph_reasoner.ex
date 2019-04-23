@@ -330,8 +330,7 @@ defmodule GraphReasoner do
                 # IO.inspect( objectVarOrTerm, label: "is a term" )
                 iri =
                   objectVarOrTerm
-                  |> GraphReasoner.QueryMatching.VarOrTerm.iri!
-                  |> Updates.QueryAnalyzer.Iri.from_symbol
+                  |> GraphReasoner.QueryMatching.VarOrTerm.iri!( prologue_map )
 
                 { :iri, iri }
               GraphReasoner.QueryMatching.VarOrTerm.var?( objectVarOrTerm ) ->
@@ -448,7 +447,6 @@ defmodule GraphReasoner do
       # objectIri =
       #   objectVarOrTerm
       #   |> GraphReasoner.QueryMatching.VarOrTerm.iri!
-      #   |> Updates.QueryAnalyzer.Iri.from_symbol
 
       %QueryInfo{ terms_map: terms_map } = query_info
       term_id = ExternalInfo.get( varSymbol, GraphReasoner, :term_id )
