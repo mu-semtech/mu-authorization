@@ -1,48 +1,71 @@
 alias GraphReasoner.QueryInfo, as: QueryInfo
 alias GraphReasoner.Support.TermsMap, as: TermsMap
+alias GraphReasoner.QueryMatching, as: QueryMatching
+alias InterpreterTerms.WordMatch, as: Word
+alias InterpreterTerms.SymbolMatch, as: Sym
 
 defmodule GraphReasoner do
   require Manipulators.Basics
 
-  @non_graph_symbols [:Prologue,
-                      :SelectClause,
-                      :DatasetClause, # When everything is moved to
-                                      # specific grahps, the
-                                      # DatasetClause will have no
-                                      # impact, hence it may be
-                                      # considered a non_graph_symbol
-                      :SolutionModifier,
-                      :ValuesClause,
-                      :GraphGraphPattern # We don't do subselects for
-                                         # now, hence
-                                         # GraphGraphPattern is safe.
-                     ]
+  @non_graph_symbols [
+    :Prologue,
+    :SelectClause,
+    # When everything is moved to
+    :DatasetClause,
+    # specific grahps, the
+    # DatasetClause will have no
+    # impact, hence it may be
+    # considered a non_graph_symbol
+    :SolutionModifier,
+    :ValuesClause,
+    # We don't do subselects for
+    :GraphGraphPattern
+    # now, hence
+    # GraphGraphPattern is safe.
+  ]
 
-  @accepted_symbols [:Sparql,
-                     :QueryUnit,
-                     :Query,
-                     # Query
-                     {:Prologue,:deep},
-                     :SelectQuery,
-                     {:ValuesClause,:deep}, # Can only supply data, not request it
-                     # SelectQuery
-                     {:SelectClause,:deep}, # Will change when we start introducing new variables
-                     {:DatasetClause,:deep}, # Will not impact when we discovered everything
-                     :WhereClause,
-                     {:SolutionModifier,:deep},
-                     # WhereClause
-                     :GroupGraphPattern,
-                     :GroupGraphPatternSub, # We drop subselect
-                     :TriplesBlock, # We drop GraphPatternNotTriples for now
-                     :TriplesSameSubjectPath, # We may need to constrain the simplicity of TriplesBlock and TriplesSameSubjectPath
-                     {:VarOrTerm,:deep}, # We will inspect what we understand of this as we develop, but drop TriplesNodePath
-                     :PropertyListPathNotEmpty, # We will only accept a single statement for now
-                     # PropertyListPathNotEmpty,
-                     {:VerbSimple,:deep}, # these are variables
-                     {:VerbPath,:deep}, # we will not accept complex paths, but this is simply a deep structure on which we mostly need to place cardinality constraints
-                     :ObjectList,:Object,:GraphNode, # We drop TriplesNode, VarOrTerm is already deeply accepted
-                     :ObjectListPath,:ObjectPath,:GraphNodePath, # VarOrTerm is already deeply accepted
-                    ]
+  @accepted_symbols [
+    :Sparql,
+    :QueryUnit,
+    :Query,
+    # Query
+    {:Prologue, :deep},
+    :SelectQuery,
+    # Can only supply data, not request it
+    {:ValuesClause, :deep},
+    # SelectQuery
+    # Will change when we start introducing new variables
+    {:SelectClause, :deep},
+    # Will not impact when we discovered everything
+    {:DatasetClause, :deep},
+    :WhereClause,
+    {:SolutionModifier, :deep},
+    # WhereClause
+    :GroupGraphPattern,
+    # We drop subselect
+    :GroupGraphPatternSub,
+    # We drop GraphPatternNotTriples for now
+    :TriplesBlock,
+    # We may need to constrain the simplicity of TriplesBlock and TriplesSameSubjectPath
+    :TriplesSameSubjectPath,
+    # We will inspect what we understand of this as we develop, but drop TriplesNodePath
+    {:VarOrTerm, :deep},
+    # We will only accept a single statement for now
+    :PropertyListPathNotEmpty,
+    # PropertyListPathNotEmpty,
+    # these are variables
+    {:VerbSimple, :deep},
+    # we will not accept complex paths, but this is simply a deep structure on which we mostly need to place cardinality constraints
+    {:VerbPath, :deep},
+    # We drop TriplesNode, VarOrTerm is already deeply accepted
+    :ObjectList,
+    :Object,
+    :GraphNode,
+    # VarOrTerm is already deeply accepted
+    :ObjectListPath,
+    :ObjectPath,
+    :GraphNodePath
+  ]
 
   @symbols_fully_dispatched_to_children [
     :Sparql,
@@ -53,7 +76,8 @@ defmodule GraphReasoner do
     :GroupGraphPattern,
     :GroupGraphPatternSub,
     :TriplesBlock,
-    :GraphPatternNotTriples ]
+    :GraphPatternNotTriples
+  ]
 
   @moduledoc """
   Combines the parsed SELECT query with access rights and figures out
@@ -64,7 +88,6 @@ defmodule GraphReasoner do
   could be fully dismantled, helping us identify which ACL
   configuration helped answer the query and which didn't.
   """
-
 
   @doc """
   Processes the supplied parsed query, yielding a new query and
@@ -81,8 +104,8 @@ defmodule GraphReasoner do
   query.  The most important change is wrapping statements in elements
   to indicate the GRAPH which they will come from.
   """
-  def process_query( match ) do
-    if is_acceptable_query( match ) do
+  def process_query(match) do
+    if is_acceptable_query(match) do
       # We don't have query processing yet so we can only supply
       # partial matches.
       processed_query =
@@ -90,32 +113,38 @@ defmodule GraphReasoner do
         |> mark_non_graph_clauses
         |> derive_graph_statements
 
-      completeness = if fully_processed?( processed_query ) do :full else :partial end
+      completeness =
+        if fully_processed?(processed_query) do
+          :full
+        else
+          :partial
+        end
 
-      { completeness, processed_query }
+      {completeness, processed_query}
     else
-      { :fail }
+      {:fail}
     end
   end
 
-  defp derive_graph_statements( match ) do
+  defp derive_graph_statements(match) do
     # TODO: supply matching authorization groups Current code is
     #   incorrect and assumes no UserGroup receives a parameter.
     matching_authorization_groups =
-      Enum.map( Acl.UserGroups.for_use( :read ), fn (g) ->
-        { g.name, [] }
-      end )
+      Enum.map(Acl.UserGroups.for_use(:read), fn g ->
+        {g.name, []}
+      end)
 
-    prologue_map = Manipulators.Info.prologue_map( match )
+    prologue_map = Manipulators.Info.prologue_map(match)
 
     match
     |> augment_with_terms_map
     |> join_same_terms
-    |> derive_terms_information( prologue_map )
+    |> derive_terms_information(prologue_map)
     # |> IO.inspect( label: "Derived terms information" )
-    # |> IO.inspect( label: "Derived triples information" )
-    |> derive_triples_information( Acl.UserGroups.for_use( :read ), prologue_map ) # TODO: supply authorization groups
-    |> wrap_graph_queries( matching_authorization_groups )
+    # TODO: supply authorization groups
+    |> derive_triples_information(Acl.UserGroups.for_use(:read), prologue_map)
+    # |> IO.inspect(label: "Derived triples information")
+    |> wrap_graph_queries(matching_authorization_groups)
     |> extract_match_from_augmented_query
   end
 
@@ -124,29 +153,32 @@ defmodule GraphReasoner do
   query may be processed by the GraphReasoner.  If this does not yield
   truethy, the query contain content which is not understood yet.
   """
-  def is_acceptable_query( match ) do
+  def is_acceptable_query(match) do
     # We need to walk over the full tree to discover this is an
     # acceptable query.
     #
     # Our reasoning goes as follows ::
 
+    # :: Walk the tree of results
     discovery_result =
-      # :: Walk the tree of results
-      Manipulators.Basics.map_matches( match, fn (item) ->
-        unless match?( %InterpreterTerms.SymbolMatch{ symbol: _symbol }, item ) do
+      Manipulators.Basics.map_matches(match, fn item ->
+        unless match?(%Sym{symbol: _symbol}, item) do
           # :: ignore the item if it is not a SymbolMatch
-          { :continue }
+          {:continue}
         else
-          %InterpreterTerms.SymbolMatch{ symbol: symbol } = item
+          %Sym{symbol: symbol} = item
+
           cond do
-            Enum.find( @accepted_symbols, &match?( {^symbol,:deep}, &1 ) ) ->
+            Enum.find(@accepted_symbols, &match?({^symbol, :deep}, &1)) ->
               # :: deeply accepted symbols can just be accepted
               # IO.inspect( symbol, label: "This symbol is allowed without walking children" )
               {:skip}
-            Enum.find( @accepted_symbols, &match?( ^symbol, &1) ) ->
+
+            Enum.find(@accepted_symbols, &match?(^symbol, &1)) ->
               # :: accepted symbols are allowed, but their children have to be checked
               # IO.inspect( symbol, label: "This symbol is allowed if children are allowed" )
               {:continue}
+
             true ->
               # :: no match was found for this symbol, the query cannot be accepted
               # IO.inspect( symbol, label: "This symbol is not allowed" )
@@ -158,10 +190,10 @@ defmodule GraphReasoner do
     # map_matches doesn't just exit with the exit result, it informs
     # us that an exit happened.  We need to convert it to the expected
     # result.
-    not match?( {:exit, false}, discovery_result )
+    not match?({:exit, false}, discovery_result)
   end
 
-  defp augment_with_terms_map( match ) do
+  defp augment_with_terms_map(match) do
     # This method consumes a match and generates a terms_map from the
     # statements.  The terms_map is a knowledge-base connecting terms
     # to the information derived from them (eg:
@@ -184,44 +216,48 @@ defmodule GraphReasoner do
     # discover that we can group variables together, we can do so by
     # manipulating these two hashes, rather than by finding and
     # manipulating the complex query object.
-    state = %{ term_ids: %{}, term_info: %{}, term_ids_index: 0, term_info_index: 0 }
+    state = %{term_ids: %{}, term_info: %{}, term_ids_index: 0, term_info_index: 0}
 
-    { state, query } = Manipulators.Basics.map_matches_with_state( state, match, fn ( state, item ) ->
-      %{ term_ids: term_ids,
-         term_info: term_info,
-         term_ids_index: term_ids_index,
-         term_info_index: term_info_index
-       } = state
-      case item do
-        %InterpreterTerms.SymbolMatch{ symbol: :Var, string: str_with_space } ->
-          # TODO: In the case of a :Var, we need to strip the spaces from the :Var element in order to get the new string.  This probably needs a fix elsewhere...
+    {state, query} =
+      Manipulators.Basics.map_matches_with_state(state, match, fn state, item ->
+        %{
+          term_ids: term_ids,
+          term_info: term_info,
+          term_ids_index: term_ids_index,
+          term_info_index: term_info_index
+        } = state
 
-          str = String.trim( str_with_space )
+        case item do
+          %Sym{symbol: :Var, string: str_with_space} ->
+            # TODO: In the case of a :Var, we need to strip the spaces from the :Var element in order to get the new string.  This probably needs a fix elsewhere...
 
-          new_term_ids_index = term_ids_index + 1
-          new_term_info_index = term_info_index + 1
+            str = String.trim(str_with_space)
 
-          new_term_ids = Map.put( term_ids, new_term_ids_index, new_term_info_index )
-          new_term_info = Map.put( term_info, new_term_info_index, %{symbol_string: str} )
-          new_item = ExternalInfo.put( item, GraphReasoner, :term_id, new_term_ids_index )
+            new_term_ids_index = term_ids_index + 1
+            new_term_info_index = term_info_index + 1
 
-          new_state =
-            state
-            |> Map.put( :term_ids, new_term_ids )
-            |> Map.put( :term_info, new_term_info )
-            |> Map.put( :term_ids_index, new_term_ids_index )
-            |> Map.put( :term_info_index, new_term_info_index )
+            new_term_ids = Map.put(term_ids, new_term_ids_index, new_term_info_index)
+            new_term_info = Map.put(term_info, new_term_info_index, %{symbol_string: str})
+            new_item = ExternalInfo.put(item, GraphReasoner, :term_id, new_term_ids_index)
 
-          { :replace_and_traverse, new_state, new_item }
-        _ ->
-          { :continue, state }
-      end
-    end )
+            new_state =
+              state
+              |> Map.put(:term_ids, new_term_ids)
+              |> Map.put(:term_info, new_term_info)
+              |> Map.put(:term_ids_index, new_term_ids_index)
+              |> Map.put(:term_info_index, new_term_info_index)
 
-    { %QueryInfo{ terms_map: state }, query }
+            {:replace_and_traverse, new_state, new_item}
+
+          _ ->
+            {:continue, state}
+        end
+      end)
+
+    {%QueryInfo{terms_map: state}, query}
   end
 
-  defp join_same_terms( { %QueryInfo{ terms_map: state } = query_info, match } ) do
+  defp join_same_terms({%QueryInfo{terms_map: state} = query_info, match}) do
     # When interpreting the query we may start understanding more
     # about its variables.  We parse the query, discover information
     # about how the variables are related, and join up related
@@ -250,51 +286,51 @@ defmodule GraphReasoner do
     term_info = Map.get(state, :term_info)
 
     # helper function to get the identifier for a given name string
-    term_id_for_variable_name = fn (name_string) ->
-      Map.keys( term_info )
-      |> Enum.sort
-      |> Enum.find( fn(idx) ->
+    term_id_for_variable_name = fn name_string ->
+      Map.keys(term_info)
+      |> Enum.sort()
+      |> Enum.find(fn idx ->
         term_info
-        |> Map.get( idx )
-        |> Map.get( :symbol_string )
-        |> Kernel.==( name_string )
-      end )
+        |> Map.get(idx)
+        |> Map.get(:symbol_string)
+        |> Kernel.==(name_string)
+      end)
     end
 
     new_term_ids =
-      Enum.reduce( Map.keys( term_ids ), term_ids, fn ( term_id, term_ids ) ->
+      Enum.reduce(Map.keys(term_ids), term_ids, fn term_id, term_ids ->
         new_index =
           term_info
-          |> Map.get( term_id )
-          |> Map.get( :symbol_string )
+          |> Map.get(term_id)
+          |> Map.get(:symbol_string)
           |> term_id_for_variable_name.()
 
-        Map.put( term_ids, term_id, new_index )
-      end )
+        Map.put(term_ids, term_id, new_index)
+      end)
 
     # Remove unused term_info keys
     leftover_terms =
       new_term_ids
-      |> Map.values
-      |> Enum.dedup
+      |> Map.values()
+      |> Enum.dedup()
 
     leftover_term_info =
       leftover_terms
-      |> Enum.reduce( %{}, fn (elem, acc) ->
-           Map.put( acc, elem, Map.get( term_info, elem ) )
-         end )
+      |> Enum.reduce(%{}, fn elem, acc ->
+        Map.put(acc, elem, Map.get(term_info, elem))
+      end)
 
     new_state =
       state
-      |> Map.put( :term_ids, new_term_ids )
-      |> Map.put( :term_info, leftover_term_info )
+      |> Map.put(:term_ids, new_term_ids)
+      |> Map.put(:term_info, leftover_term_info)
 
-    updated_query_info = QueryInfo.set_terms_map( query_info, new_state )
+    updated_query_info = QueryInfo.set_terms_map(query_info, new_state)
 
-    { updated_query_info , match }
+    {updated_query_info, match}
   end
 
-  defp derive_terms_information( { query_info, match }, prologue_map ) do
+  defp derive_terms_information({query_info, match}, prologue_map) do
     # Each of the terms in the query may express information about the
     # variables.  For instance, when we see ?s a foaf:Agent, we know
     # that ?s is of type foaf:Agent.  We can use this information in
@@ -308,37 +344,38 @@ defmodule GraphReasoner do
     # long form (for now).  Because of this, we can limit ourselves to
     # the most minimal interpretation of the query.
 
-    analyze_single_triples_block = fn (terms_map, symbol) ->
-      { subjectVarOrTerm, predicateElement, objectVarOrTerm } =
-        GraphReasoner.QueryMatching.TriplesBlock.first_triple!( symbol )
+    analyze_single_triples_block = fn terms_map, symbol ->
+      {subjectVarOrTerm, predicateElement, objectVarOrTerm} =
+        QueryMatching.TriplesBlock.first_triple!(symbol)
 
       cond do
-        GraphReasoner.QueryMatching.VarOrTerm.var?( subjectVarOrTerm ) ->
+        QueryMatching.VarOrTerm.var?(subjectVarOrTerm) ->
           # When it is a variable, we can update the state of that
           # variable.  For this, we first search for the other two
           # pieces of information (the predicate and the object) so we
           # can relate each.
 
-          varSymbol = GraphReasoner.QueryMatching.VarOrTerm.var!( subjectVarOrTerm )
+          varSymbol = QueryMatching.VarOrTerm.var!(subjectVarOrTerm)
 
-          pathIri = GraphReasoner.QueryMatching.PathPrimary.iri!( predicateElement, prologue_map )
-
+          pathIri = QueryMatching.PathPrimary.iri!(predicateElement, prologue_map)
 
           object =
             cond do
-              GraphReasoner.QueryMatching.VarOrTerm.iri?( objectVarOrTerm ) ->
+              QueryMatching.VarOrTerm.iri?(objectVarOrTerm) ->
                 # IO.inspect( objectVarOrTerm, label: "is a term" )
                 iri =
                   objectVarOrTerm
-                  |> GraphReasoner.QueryMatching.VarOrTerm.iri!( prologue_map )
+                  |> QueryMatching.VarOrTerm.iri!(prologue_map)
 
-                { :iri, iri }
-              GraphReasoner.QueryMatching.VarOrTerm.var?( objectVarOrTerm ) ->
+                {:iri, iri}
+
+              QueryMatching.VarOrTerm.var?(objectVarOrTerm) ->
                 # IO.inspect( objectVarOrTerm, label: "is a var" )
-                { :var, GraphReasoner.QueryMatching.VarOrTerm.var!( objectVarOrTerm ) }
-              GraphReasoner.QueryMatching.VarOrTerm.term?( objectVarOrTerm ) ->
+                {:var, QueryMatching.VarOrTerm.var!(objectVarOrTerm)}
+
+              QueryMatching.VarOrTerm.term?(objectVarOrTerm) ->
                 # IO.inspect( objectVarOrTerm, label: "is a term" )
-                { :term, GraphReasoner.QueryMatching.VarOrTerm.term!( objectVarOrTerm ) }
+                {:term, QueryMatching.VarOrTerm.term!(objectVarOrTerm)}
             end
 
           # TODO: don't crash when predicates or objects are not URIs.
@@ -356,56 +393,58 @@ defmodule GraphReasoner do
           # (eg: if the predicate foaf:name can only originate from a
           # foaf:Agent, we should use this information).
 
-          new_terms_map = TermsMap.push_term_info(
-            terms_map, varSymbol, :related_paths,
-            %{ predicate: pathIri, object: object })
+          new_terms_map =
+            TermsMap.push_term_info(terms_map, varSymbol, :related_paths, %{
+              predicate: pathIri,
+              object: object
+            })
 
           new_terms_map
 
-        # GraphReasoner.QueryMatching.VarOrTerm.iri?( subjectVarOrTerm ) ->
+        # QueryMatching.VarOrTerm.iri?( subjectVarOrTerm ) ->
         #   IO.puts "Subject is an IRI, no information is derived yet"
         true ->
-          IO.inspect subjectVarOrTerm, label: "Subject of TripleBlock not supported"
+          IO.inspect(subjectVarOrTerm, label: "Subject of TripleBlock not supported")
       end
     end
 
-    analyzeTriplesBlock = fn (terms_map, symbol) ->
+    analyzeTriplesBlock = fn terms_map, symbol ->
       # Analyzes a single TriplesBlock
 
       # We need to extract all the TriplesBlock elements, enrich their
       # predicates, and recombine them.
 
       symbol
-      |> GraphReasoner.QueryMatching.GroupGraphPattern.extract_triples_blocks
-      |> Enum.reduce( terms_map, fn (triples_block, terms_map) ->
-           _new_terms_map = analyze_single_triples_block.(terms_map, triples_block)
-         end )
+      |> QueryMatching.GroupGraphPattern.extract_triples_blocks()
+      |> Enum.reduce(terms_map, fn triples_block, terms_map ->
+        _new_terms_map = analyze_single_triples_block.(terms_map, triples_block)
+      end)
     end
 
-    %QueryInfo{ terms_map: terms_map } = query_info
+    %QueryInfo{terms_map: terms_map} = query_info
 
-    { new_terms_map, _ } =
-      Manipulators.Basics.do_state_map( {terms_map, match}, {map, element} ) do
+    {new_terms_map, _} =
+      Manipulators.Basics.do_state_map {terms_map, match}, {map, element} do
         :TriplesBlock ->
-          { :continue, analyzeTriplesBlock.( map, element ) }
+          {:continue, analyzeTriplesBlock.(map, element)}
       end
 
-    updated_query_info = QueryInfo.set_terms_map( query_info, new_terms_map )
-    { updated_query_info , match }
+    updated_query_info = QueryInfo.set_terms_map(query_info, new_terms_map)
+    {updated_query_info, match}
   end
 
   # Calculates the intersection of two lists
-  def intersection( arr_a, arr_b ) do
-    Enum.reduce( arr_a, [], fn( a_elt, result ) ->
-      if( Enum.find( arr_b, fn (b_elt) -> b_elt == a_elt end ) ) do
-        [ a_elt | result ]
+  def intersection(arr_a, arr_b) do
+    Enum.reduce(arr_a, [], fn a_elt, result ->
+      if(Enum.find(arr_b, fn b_elt -> b_elt == a_elt end)) do
+        [a_elt | result]
       else
         result
       end
-    end )
+    end)
   end
 
-  defp derive_triples_information( { query_info, match }, authorization_groups, prologue_map ) do
+  defp derive_triples_information({query_info, match}, authorization_groups, prologue_map) do
     # Each of the triples which needs to be fetched may be fetched
     # from various graphs.  Based on the information in the terms_map,
     # the access groups of the current user, and the specific triple
@@ -429,50 +468,54 @@ defmodule GraphReasoner do
     # IO.inspect( query_info, label: "Query Info in derive_triples_information" )
     # IO.inspect( authorization_groups, label: "Authorization Groups in derive_triples_information" )
 
-    derive_triples_block_info_for_single_triple = fn (query_info, element) ->
+    derive_triples_block_info_for_single_triple = fn query_info, element ->
       # We need to discover if the current TriplesBlock means anything
       # specific.
 
       # First we need to fetch the information for our processing.
       # The triple's contents and the subject variable are the most
       # important in our current case.
-      { subjectVarOrTerm, predicateElement, objectVarOrTerm } =
-        GraphReasoner.QueryMatching.TriplesBlock.first_triple!( element )
+      {subjectVarOrTerm, predicateElement, objectVarOrTerm} =
+        QueryMatching.TriplesBlock.first_triple!(element)
 
       # We should accept more than only variables in the subject
-      varSymbol = GraphReasoner.QueryMatching.VarOrTerm.var!( subjectVarOrTerm )
+      varSymbol = QueryMatching.VarOrTerm.var!(subjectVarOrTerm)
 
-      pathIri = GraphReasoner.QueryMatching.PathPrimary.iri!( predicateElement, prologue_map )
+      pathIri = QueryMatching.PathPrimary.iri!(predicateElement, prologue_map)
 
       # objectIri =
       #   objectVarOrTerm
-      #   |> GraphReasoner.QueryMatching.VarOrTerm.iri!
+      #   |> QueryMatching.VarOrTerm.iri!
 
-      %QueryInfo{ terms_map: terms_map } = query_info
-      term_id = ExternalInfo.get( varSymbol, GraphReasoner, :term_id )
+      %QueryInfo{terms_map: terms_map} = query_info
+      term_id = ExternalInfo.get(varSymbol, GraphReasoner, :term_id)
       renamed_term_id = terms_map.term_ids[term_id]
       subject_info = terms_map[:term_info][renamed_term_id][:related_paths]
+
       {subject_types, related_predicates} =
         subject_info
-        |> Enum.reduce( {[],[]}, fn (%{predicate: predicate, object: object} = pred_obj, {types,preds}) ->
+        |> Enum.reduce({[], []}, fn %{predicate: predicate, object: object} = pred_obj,
+                                    {types, preds} ->
           # TODO: Accept different information than only subject and predicate
-          if Updates.QueryAnalyzer.Iri.is_a?( predicate ) do
+          if Updates.QueryAnalyzer.Iri.is_a?(predicate) do
             # Add the object to the types
-            { :iri, object_iri } = object
-            {[object_iri|types],preds}
+            {:iri, object_iri} = object
+            {[object_iri | types], preds}
           else
             # Add the pred_obj to the related predicates
-            {types,[pred_obj|preds]}
+            {types, [pred_obj | preds]}
           end
-        end )
-        # |> IO.inspect( label: "Learned subject types and related predicates" )
+        end)
+
+      # |> IO.inspect( label: "Learned subject types and related predicates" )
 
       subject_type_strings =
         subject_types
-        |> Enum.map( fn (%Updates.QueryAnalyzer.Iri{iri: str} ) ->
-             Updates.QueryAnalyzer.Iri.unwrap_iri_string( str )
-           end )
-        # |> IO.inspect( label: "Subject type strings" )
+        |> Enum.map(fn %Updates.QueryAnalyzer.Iri{iri: str} ->
+          Updates.QueryAnalyzer.Iri.unwrap_iri_string(str)
+        end)
+
+      # |> IO.inspect( label: "Subject type strings" )
 
       # Next up, we need to discover which graphs match the
       # information we've gathered so far.  Based on the
@@ -496,44 +539,45 @@ defmodule GraphReasoner do
       # We do a first filtering based on the subject types
       resource_filtered_groups =
         authorization_groups
-        |> Enum.reduce( [], fn (group_spec, matching_groups) ->
-             # We return the relevant information for the next
-             # steps this means we are searching for the graph
-             # specs with the right resource types.  If such
-             # GraphSpec exists, we return a new object with only
-             # the allowed GraphSpec instances.  This makes the
-             # content much easier to process in followup steps.
-             # IO.inspect( group_spec, label: "Group spec to process" )
-             matching_graph_specs =
-               group_spec.graphs
-               |> Enum.reduce( [], fn (graph_spec, acc) ->
-                    if ! Map.has_key?( graph_spec.constraint, :resource_types )
-                       || intersection( graph_spec.constraint.resource_types,
-                                        subject_type_strings ) != []
-                     do
-                       [ graph_spec | acc ]
-                     else
-                       acc
-                    end
-                  end )
+        |> Enum.reduce([], fn group_spec, matching_groups ->
+          # We return the relevant information for the next
+          # steps this means we are searching for the graph
+          # specs with the right resource types.  If such
+          # GraphSpec exists, we return a new object with only
+          # the allowed GraphSpec instances.  This makes the
+          # content much easier to process in followup steps.
+          # IO.inspect( group_spec, label: "Group spec to process" )
+          matching_graph_specs =
+            group_spec.graphs
+            |> Enum.reduce([], fn graph_spec, acc ->
+              if !Map.has_key?(graph_spec.constraint, :resource_types) ||
+                   intersection(
+                     graph_spec.constraint.resource_types,
+                     subject_type_strings
+                   ) != [] do
+                [graph_spec | acc]
+              else
+                acc
+              end
+            end)
 
-             # If there are graphs matching, create a new
-             # group_spec with only these graphs.  Push the result
-             # onto the filtered groups.  If note, leave the
-             # matching_groups accumulator alone.
-             case matching_graph_specs do
-               nil -> matching_groups
-               _ -> [ %{ group_spec | graphs: matching_graph_specs } | matching_groups ]
-             end
-           end )
+          # If there are graphs matching, create a new
+          # group_spec with only these graphs.  Push the result
+          # onto the filtered groups.  If note, leave the
+          # matching_groups accumulator alone.
+          case matching_graph_specs do
+            nil -> matching_groups
+            _ -> [%{group_spec | graphs: matching_graph_specs} | matching_groups]
+          end
+        end)
         # TODO: we should cope with descriptions which don't have a resource constraint too
         # |> IO.inspect(label: "before constraint filter")
-        |> Enum.filter( fn (constraint) ->
+        |> Enum.filter(fn constraint ->
           constraint.graphs != [] &&
-          Enum.all?( constraint.graphs, fn (graph_spec) ->
-            Map.has_key?( graph_spec.constraint, :resource_types )
-          end )
-        end )
+            Enum.all?(constraint.graphs, fn graph_spec ->
+              Map.has_key?(graph_spec.constraint, :resource_types)
+            end)
+        end)
 
       # Based on the subject types, we can execute a filter for
       # the predicate of this triple.
@@ -546,31 +590,32 @@ defmodule GraphReasoner do
       # duplication will likely make the code easier to read.
       predicate_filtered_groups =
         resource_filtered_groups
-        |> Enum.reduce( [], fn (group_spec, matching_groups) ->
-             # We need to verify whether or not the predicate
-             # match works for any of the graph specs.  We return
-             # the graph specs for which this is the case.
-             matching_graph_specs =
-               group_spec.graphs
-               |> Enum.reduce( [], fn (graph_spec, acc) ->
-                    if Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.member?(
-                          graph_spec.constraint.predicates,
-                          pathIri )
-                    do
-                      [ graph_spec | acc ]
-                    else
-                      acc
-                    end
-                  end )
-             # If there are graphs matching, create a new
-             # group_spec with only these graphs.  Push the result
-             # onto the filtered groups.  If note, leave the
-             # matching_groups accumulator alone.
-             case matching_graph_specs do
-               nil -> matching_groups
-               _ -> [ %{ group_spec | graphs: matching_graph_specs } | matching_groups ]
-             end
-           end )
+        |> Enum.reduce([], fn group_spec, matching_groups ->
+          # We need to verify whether or not the predicate
+          # match works for any of the graph specs.  We return
+          # the graph specs for which this is the case.
+          matching_graph_specs =
+            group_spec.graphs
+            |> Enum.reduce([], fn graph_spec, acc ->
+              if Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.member?(
+                   graph_spec.constraint.predicates,
+                   pathIri
+                 ) do
+                [graph_spec | acc]
+              else
+                acc
+              end
+            end)
+
+          # If there are graphs matching, create a new
+          # group_spec with only these graphs.  Push the result
+          # onto the filtered groups.  If note, leave the
+          # matching_groups accumulator alone.
+          case matching_graph_specs do
+            nil -> matching_groups
+            _ -> [%{group_spec | graphs: matching_graph_specs} | matching_groups]
+          end
+        end)
 
       # The result of these steps would boil down to
       # predicate_filtered_groups =
@@ -583,21 +628,23 @@ defmodule GraphReasoner do
 
       new_predicate_element =
         predicateElement
-        |> ExternalInfo.put( GraphReasoner, :matching_acl_groups, predicate_filtered_groups )
+        |> ExternalInfo.put(GraphReasoner, :matching_acl_groups, predicate_filtered_groups)
 
       # IO.inspect( predicateElement, label: "Predicate element to enrich" )
       # IO.inspect( predicate_filtered_groups, label: "Groups matching above predicate" )
 
       # We update the triples_block so the new predicate is in our
       # query.
-      new_triples_block = GraphReasoner.QueryMatching.TriplesBlock.update_predicate( element, new_predicate_element )
+      new_triples_block =
+        QueryMatching.TriplesBlock.update_predicate(element, new_predicate_element)
 
       # Let's check the linked content of our new triplesblock
-      { _subjectVarOrTerm, newly_fetched_predicate, _objectVarOrTerm } =
-        GraphReasoner.QueryMatching.TriplesBlock.single_triple!( new_triples_block )
+      {_subjectVarOrTerm, newly_fetched_predicate, _objectVarOrTerm} =
+        QueryMatching.TriplesBlock.single_triple!(new_triples_block)
 
       newly_fetched_predicate
-      |> ExternalInfo.get( GraphReasoner, :matching_acl_groups )
+      |> ExternalInfo.get(GraphReasoner, :matching_acl_groups)
+
       # |> IO.inspect( label: "ACL groups on the new predicate" )
 
       # {:replace_by, query_info, new_triples_block}
@@ -607,32 +654,33 @@ defmodule GraphReasoner do
       # of the URI << does this require us to add a transform
       # and always fetch for its information??? :(
 
-
       # IO.puts "Should derive TriplesBlock information here, and attach it to the predicate."
       # IO.inspect( authorization_groups, label: "Authorization groups" )
       # { :continue, query_info }
     end
 
-    derive_triples_block_info = fn (query_info, element) ->
+    derive_triples_block_info = fn query_info, element ->
       new_element =
         element
-        |> GraphReasoner.QueryMatching.GroupGraphPattern.extract_triples_blocks
-        |> Enum.map( fn (triples_block) ->
-             derive_triples_block_info_for_single_triple.( query_info, triples_block )
-           end )
+        |> QueryMatching.GroupGraphPattern.extract_triples_blocks()
+        |> Enum.map(fn triples_block ->
+          derive_triples_block_info_for_single_triple.(query_info, triples_block)
+        end)
         # Recombine the triples_block elements
-        |> Enum.reverse
-        |> Enum.reduce( fn (parent_triples_block, child_triples_block) ->
-             GraphReasoner.QueryMatching.TriplesBlock.set_child(
-               parent_triples_block,
-               child_triples_block )
-           end )
-        # |> IO.inspect( label: "Combined triples_block" )
+        |> Enum.reverse()
+        |> Enum.reduce(fn parent_triples_block, child_triples_block ->
+          QueryMatching.TriplesBlock.set_child(
+            parent_triples_block,
+            child_triples_block
+          )
+        end)
 
-      { :replace_by, query_info, new_element }
+      # |> IO.inspect( label: "Combined triples_block" )
+
+      {:replace_by, query_info, new_element}
     end
 
-    Manipulators.Basics.do_state_map( {query_info, match}, {query_info, element} ) do
+    Manipulators.Basics.do_state_map {query_info, match}, {query_info, element} do
       :TriplesBlock ->
         # We want to replace the triplesblock with our new
         # triplesblock.  The new TriplesBlock contains information
@@ -640,34 +688,35 @@ defmodule GraphReasoner do
         #
         # The triplesblock is a fairly simple element.  Hence we
         # should be able to update its contents.
-        derive_triples_block_info.( query_info, element )
+        derive_triples_block_info.(query_info, element)
     end
   end
 
-  defp wrap_graph_queries( { query_info, match }, authorization_specifications ) do
+  defp wrap_graph_queries({query_info, match}, authorization_specifications) do
     # As we know from which graphs various patterns will come from, we
     # can now wrap statements in graphs.  For now, we only support
     # simple patterns where the content comes from the same graph, we
     # may introduce new variables to split subject paths in the
     # future.
 
-    wrap_triples_blocks_with_graphs = fn (query_info, element) ->
-      # element is a %InterpreterTerms.SymbolMatch{ symbol: :GroupGraphPattern }
+    wrap_triples_blocks_with_graphs = fn query_info, element ->
+      # element is a %Sym{ symbol: :GroupGraphPattern }
 
       element
       # 1. Ensure this only consists of TriplesBlock instances
-      |> GraphReasoner.QueryMatching.GroupGraphPattern.only_triples_blocks!
+      |> QueryMatching.GroupGraphPattern.only_triples_blocks!()
       # 2. Extract each of the TriplesBlock instances
-      |> GraphReasoner.QueryMatching.GroupGraphPattern.extract_triples_blocks
+      |> QueryMatching.GroupGraphPattern.extract_triples_blocks()
       # |> IO.inspect( label: "Extracted triples blocks" )
       # 3. Wrap the TriplesBlock in the correct graph
-      |> Enum.map( fn (triple) ->
-        predicate = GraphReasoner.QueryMatching.TriplesBlock.predicate( triple )
-        matching_acl_groups = ExternalInfo.get( predicate, GraphReasoner, :matching_acl_groups )
+      |> Enum.map(fn triple ->
+        predicate = QueryMatching.TriplesBlock.predicate(triple)
+        matching_acl_groups = ExternalInfo.get(predicate, GraphReasoner, :matching_acl_groups)
 
         predicate
         # |> IO.inspect( label: "Predicate" )
-        |> ExternalInfo.get( GraphReasoner, :matching_acl_groups )
+        |> ExternalInfo.get(GraphReasoner, :matching_acl_groups)
+
         # |> IO.inspect( label: "Matching ACL groups" )
 
         # Figure out the graphs to use.  This should be added to the respective protocol
@@ -681,94 +730,100 @@ defmodule GraphReasoner do
         # Acl.GraphSpec or corresponding protocols
         matching_graphs =
           matching_acl_groups
-          |> Enum.flat_map( fn (acl_group) ->
-            acl_group_name = Map.get( acl_group, :name )
+          |> Enum.flat_map(fn acl_group ->
+            acl_group_name = Map.get(acl_group, :name)
 
             # get the authorization specifications
-            Enum.filter( authorization_specifications, fn (authorization_specification) ->
-              elem( authorization_specification, 0 ) == acl_group_name
-            end )
+            Enum.filter(authorization_specifications, fn authorization_specification ->
+              elem(authorization_specification, 0) == acl_group_name
+            end)
             # convert them into graphs
-            |> Enum.flat_map( fn (matching_specification) ->
-              Enum.map( Map.get( acl_group, :graphs ), fn (graph_spec) ->
+            |> Enum.flat_map(fn matching_specification ->
+              Enum.map(Map.get(acl_group, :graphs), fn graph_spec ->
                 base_graph = Map.get(graph_spec, :graph)
-                parameters = elem( matching_specification, 1 )
-                base_graph <> Enum.join( parameters, "/" )
-              end )
-            end )
+                parameters = elem(matching_specification, 1)
+                base_graph <> Enum.join(parameters, "/")
+              end)
+            end)
             # remove duplicates
-            |> Enum.dedup
-          end )
-          # |> IO.inspect( label: "Matching graphs" )
+            |> Enum.dedup()
+          end)
 
-          # IO.inspect( matching_graphs, label: "matching graphs" )
-          case matching_graphs do
-            [] ->
-              triple # TODO: check whether yielding the original block
-                      # is sufficient in this case.  I believe we need
-                      # to add support for merging subsequent
-                      # TriplesBlock items if multiple TripleBlock
-                      # items are returned after each other.
-            [matching_graph] ->
-                # Convert the TriplesBlock into a
-                # GraphPatternNotTriples>GraphGraphPattern>GroupGraphPattern>GroupGraphPatternSub>TriplesBlock
-                # This last one can be inlined as a
-                # GroupGraphPattern>GroupGraphPatternSub may have many
-                # GraphPatternNotTriples subexpressions.
-                GraphReasoner.QueryMatching.TriplesBlock.wrap_in_graph( triple, matching_graph )
-            _ ->
-                # Multiple graphs may match, we need to create a UNION
-                # query.
-                matching_graphs
-                # |> IO.inspect(label: "matching graphs")
-                |> Enum.map( &GraphReasoner.QueryMatching.TriplesBlock.wrap_in_graph( triple, &1 ) )
-                # |> IO.inspect(label: "wrapped in graph")
-                |> Enum.map( &GraphReasoner.QueryMatching.GraphPatternNotTriples.wrap_in_group_graph_pattern/1 )
-                # |> IO.inspect(label: "wrapped in group graph pattern")
-                |> GraphReasoner.QueryMatching.GroupGraphPattern.make_union
-                # |> IO.inspect(label: "made union")
-                |> GraphReasoner.QueryMatching.GroupGraphPattern.wrap_in_graph_pattern_not_triples
-                # |> IO.inspect(label: "Wrapped in graph pattern without triples" )
-          end
+        # |> IO.inspect( label: "Matching graphs" )
+
+        # IO.inspect( matching_graphs, label: "matching graphs" )
+        case matching_graphs do
+          [] ->
+            # TODO: check whether yielding the original block
+            triple
+
+          # is sufficient in this case.  I believe we need
+          # to add support for merging subsequent
+          # TriplesBlock items if multiple TripleBlock
+          # items are returned after each other.
+          [matching_graph] ->
+            # Convert the TriplesBlock into a
+            # GraphPatternNotTriples>GraphGraphPattern>GroupGraphPattern>GroupGraphPatternSub>TriplesBlock
+            # This last one can be inlined as a
+            # GroupGraphPattern>GroupGraphPatternSub may have many
+            # GraphPatternNotTriples subexpressions.
+            QueryMatching.TriplesBlock.wrap_in_graph(triple, matching_graph)
+
+          _ ->
+            # Multiple graphs may match, we need to create a UNION
+            # query.
+            matching_graphs
+            # |> IO.inspect(label: "matching graphs")
+            |> Enum.map(&QueryMatching.TriplesBlock.wrap_in_graph(triple, &1))
+            # |> IO.inspect(label: "wrapped in graph")
+            |> Enum.map(&QueryMatching.GraphPatternNotTriples.wrap_in_group_graph_pattern/1)
+            # |> IO.inspect(label: "wrapped in group graph pattern")
+            |> QueryMatching.GroupGraphPattern.make_union()
+            # |> IO.inspect(label: "made union")
+            |> QueryMatching.GroupGraphPattern.wrap_in_graph_pattern_not_triples()
+
+            # |> IO.inspect(label: "Wrapped in graph pattern without triples" )
+        end
 
         # TODO: support no matching graphs (this requires joining
         # subsequent TriplesBlock entities, as GroupGraphPatternSub
         # needs to have GraphPatternNotTriples in between the
         # TriplesBlock entities)
 
-
         # TODO: If multiple access graphs would match, this would require a UNION pattern
-                
-      end )
+      end)
       # |> IO.inspect( label: "Wrapped triplesblocks" )
       # >> Will yield a new array of GraphPatternNotTriples elements
       #    which we can wire together ourselves.  4. Combine the
       #    transformed TriplesBlock list (which is now a
       #    GraphPatternNotTriples list) into the received
       #    GroupGraphPattern.
-      |> (fn (graph_pattern_not_triples_elements) ->
-            %{ element |
-               submatches: [
-                 %InterpreterTerms.WordMatch{ word: "{" },
-                 %InterpreterTerms.SymbolMatch{
-                   symbol: :GroupGraphPatternSub,
-                   submatches: graph_pattern_not_triples_elements
-                 },
-                 %InterpreterTerms.WordMatch{ word: "}" }
-               ] }
+      |> (fn graph_pattern_not_triples_elements ->
+            %{
+              element
+              | submatches: [
+                  %Word{word: "{"},
+                  %Sym{
+                    symbol: :GroupGraphPatternSub,
+                    submatches: graph_pattern_not_triples_elements
+                  },
+                  %Word{word: "}"}
+                ]
+            }
           end).()
       # |> IO.inspect( label: "New GroupGraphPatternSub" )
       # >> The list of TriplesBlock items can be combined into a
       #    :GroupGraphPatternSub in which you can just dump them all.
       # 4. Execute!
       # >> Will yield a { :replace_by, query_info, new_element }
-      |> (fn (updated_group_graph_pattern) ->
-            { :replace_by, query_info, updated_group_graph_pattern }
-          end ).()
+      |> (fn updated_group_graph_pattern ->
+            {:replace_by, query_info, updated_group_graph_pattern}
+          end).()
+
       # |> IO.inspect( label: "Replacement request" )
     end
 
-    Manipulators.Basics.do_state_map( { query_info, match }, { query_info, element } ) do
+    Manipulators.Basics.do_state_map {query_info, match}, {query_info, element} do
       :GroupGraphPattern ->
         # We assume a GroupGraphPatternSub with multiple
         # TriplesBlock.  This can then be replaced by
@@ -783,7 +838,7 @@ defmodule GraphReasoner do
     end
   end
 
-  defp extract_match_from_augmented_query( { _query_info, match } ) do
+  defp extract_match_from_augmented_query({_query_info, match}) do
     # Consumption of the wrapped graph will likely need access to the
     # transformed query.  This function provides easy access to that
     # match.
@@ -791,53 +846,56 @@ defmodule GraphReasoner do
     match
   end
 
-  defp fully_processed?( match ) do
-    case Manipulators.Basics.map_matches( match, fn (item) ->
-          if may_need_graph_clause?( item ) do
-            { :exit, false }
-          else
-            { :continue }
-          end
-        end )
-      do
-      { :exit, value } -> value
+  defp fully_processed?(match) do
+    case Manipulators.Basics.map_matches(match, fn item ->
+           if may_need_graph_clause?(item) do
+             {:exit, false}
+           else
+             {:continue}
+           end
+         end) do
+      {:exit, value} -> value
       _ -> true
     end
   end
 
-  defp mark_non_graph_clauses( match ) do
-    Manipulators.Basics.map_matches( match, fn (item) ->
+  defp mark_non_graph_clauses(match) do
+    Manipulators.Basics.map_matches(match, fn item ->
       case item do
-        %InterpreterTerms.SymbolMatch{ symbol: symbol } when symbol in @non_graph_symbols ->
-          new_item = ExternalInfo.put item, GraphReasoner, :non_graph_clause, true
-          { :replace_and_traverse, new_item }
-        %InterpreterTerms.SymbolMatch{ symbol: symbol } ->
-          { :continue }
+        %Sym{symbol: symbol} when symbol in @non_graph_symbols ->
+          new_item = ExternalInfo.put(item, GraphReasoner, :non_graph_clause, true)
+          {:replace_and_traverse, new_item}
+
+        %Sym{symbol: symbol} ->
+          {:continue}
+
         _ ->
           # non-symbols can be marked as safe for now
-          { :replace_and_traverse, ExternalInfo.put( item, GraphReasoner, :non_graph_clause, true ) }
+          {:replace_and_traverse, ExternalInfo.put(item, GraphReasoner, :non_graph_clause, true)}
       end
-    end )
+    end)
   end
 
-  defp may_need_graph_clause?( match )do
+  defp may_need_graph_clause?(match) do
     # We only know this can't be a graph clause if we have explicitly
     # determined it to be so.
-    if ExternalInfo.has_var?( match, GraphReasoner, :non_graph_clause ) do
+    if ExternalInfo.has_var?(match, GraphReasoner, :non_graph_clause) do
       # If we marked the item, we know how it should behave
-      not ExternalInfo.get( match, GraphReasoner, :non_graph_clause )
+      not ExternalInfo.get(match, GraphReasoner, :non_graph_clause)
     else
       case match do
-        %InterpreterTerms.SymbolMatch{ symbol: symbol, submatches: children } when symbol in @symbols_fully_dispatched_to_children ->
+        %Sym{symbol: symbol, submatches: children}
+        when symbol in @symbols_fully_dispatched_to_children ->
           # If it's dependent on its children, all children must be safe
-          Enum.any? children, &may_need_graph_clause?/1
-        %InterpreterTerms.SymbolMatch{ symbol: symbol } ->
+          Enum.any?(children, &may_need_graph_clause?/1)
+
+        %Sym{symbol: symbol} ->
           # If it's a non-marked symbol
           true
+
         _ ->
           false
       end
     end
   end
-
 end
