@@ -111,7 +111,7 @@ defmodule Iri do
     end
 
     def to_sparql_result_value( %Iri{ iri: full_iri } ) do
-      %{ "type": "uri", "value": Iri.unwrap_iri_string( full_iri ) }
+      %{ type: "uri", value: Iri.unwrap_iri_string( full_iri ) }
     end
   end
 end
@@ -176,8 +176,8 @@ defmodule Bool do
 
   def from_string( value ) do
     bool = case String.downcase( value ) do
-             'true' -> true
-             'false' -> false
+             "true" -> true
+             "false" -> false
            end
 
     %Bool{ value: bool }
@@ -209,7 +209,7 @@ defmodule Bool do
                        true -> "true"
                        false -> "false"
                      end
-      %{ "type": "literal", "value": value_string, "datatype": "http://www.w3.org/2001/XMLSchema#boolean" }
+      %{ type: "literal", value: value_string, datatype: "http://www.w3.org/2001/XMLSchema#boolean" }
     end
   end
 end
@@ -283,16 +283,16 @@ defmodule Str do
     end
 
     def to_sparql_result_value( %Str{ str: str, lang: false, type: false } ) do
-      %{ "type": "literal", "value": str }
+      %{ type: "literal", value: str }
     end
     def to_sparql_result_value( %Str{ str: str, lang: lang, type: false } ) do
       # TODO discuss whether it's really ok to write xml:lang here,
       # instead of writing out the xml namespace.
-      %{ "type": "literal", "value": str, "xml:lang": lang }
+      %{ type: "literal", value: str, "xml:lang": lang }
     end
     def to_sparql_result_value( %Str{ str: str, lang: false, type: %Iri{ iri: type_iri } } ) do
       type = Iri.unwrap_iri_string( type_iri )
-      %{ "type": "literal", "value": str, "datatype": type }
+      %{ type: "literal", value: str, datatype: type }
     end
   end
 end
@@ -329,7 +329,7 @@ defmodule Number do
       # string as a decimal.  We should verify whether or not there
       # are formatting rules about this and/or whether we can import
       # the specific type from the definition.
-      %{ "type": "literal", "value": str, "datatype": "http://www.w3.org/2001/XMLSchema#decimal" }
+      %{ type: "literal", value: str, datatype: "http://www.w3.org/2001/XMLSchema#decimal" }
     end
   end
 end
