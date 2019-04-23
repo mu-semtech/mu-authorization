@@ -324,29 +324,21 @@ defmodule GraphReasoner do
 
           object =
             cond do
-            GraphReasoner.QueryMatching.VarOrTerm.iri?( objectVarOrTerm ) ->
-              # IO.inspect( objectVarOrTerm, label: "is a term" )
-              iri =
-                objectVarOrTerm
-                |> GraphReasoner.QueryMatching.VarOrTerm.iri!
-                |> Updates.QueryAnalyzer.Iri.from_symbol
+              GraphReasoner.QueryMatching.VarOrTerm.iri?( objectVarOrTerm ) ->
+                # IO.inspect( objectVarOrTerm, label: "is a term" )
+                iri =
+                  objectVarOrTerm
+                  |> GraphReasoner.QueryMatching.VarOrTerm.iri!
+                  |> Updates.QueryAnalyzer.Iri.from_symbol
 
-              { :iri, iri }
-            GraphReasoner.QueryMatching.VarOrTerm.var?( objectVarOrTerm ) ->
-              # IO.inspect( objectVarOrTerm, label: "is a var" )
-              var =
-                objectVarOrTerm
-                |> GraphReasoner.QueryMatching.VarOrTerm.var!
-
-              { :var, var }
-            GraphReasoner.QueryMatching.VarOrTerm.term?( objectVarOrTerm ) ->
-              # IO.inspect( objectVarOrTerm, label: "is a term" )
-              term =
-                objectVarOrTerm
-                |> GraphReasoner.QueryMatching.VarOrTerm.term!
-
-              { :term, term }
-          end
+                { :iri, iri }
+              GraphReasoner.QueryMatching.VarOrTerm.var?( objectVarOrTerm ) ->
+                # IO.inspect( objectVarOrTerm, label: "is a var" )
+                { :var, GraphReasoner.QueryMatching.VarOrTerm.var!( objectVarOrTerm ) }
+              GraphReasoner.QueryMatching.VarOrTerm.term?( objectVarOrTerm ) ->
+                # IO.inspect( objectVarOrTerm, label: "is a term" )
+                { :term, GraphReasoner.QueryMatching.VarOrTerm.term!( objectVarOrTerm ) }
+            end
 
           # TODO: don't crash when predicates or objects are not URIs.
           # The previous section assumes both will be an Iri, but
