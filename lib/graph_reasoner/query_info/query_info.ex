@@ -50,5 +50,17 @@ defmodule QueryInfo do
     %{query_info | terms_map: new_terms_map}
   end
 
+  @doc """
+  Retrieves scoped subject info for a term as known by the QueryInfo.
+  """
+  @spec get_term_info(t, any, atom) :: any
+  def get_term_info(query_info, symbol, section) do
+    query_info.terms_map[:term_info][renamed_term_id(query_info, symbol)][section]
+  end
+
+  @spec renamed_term_id(t, atom) :: number
+  defp renamed_term_id(%QueryInfo{terms_map: terms_map}, symbol) do
+    term_id = ExternalInfo.get(symbol, GraphReasoner, :term_id)
+    terms_map.term_ids[term_id]
   end
 end

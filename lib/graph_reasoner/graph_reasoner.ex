@@ -468,7 +468,7 @@ defmodule GraphReasoner do
       # First we need to fetch the information for our processing.
       # The triple's contents and the subject variable are the most
       # important in our current case.
-      {subjectVarOrTerm, predicateElement, objectVarOrTerm} =
+      {subjectVarOrTerm, predicateElement, _objectVarOrTerm} =
         QueryMatching.TriplesBlock.first_triple!(element)
 
       # We should accept more than only variables in the subject
@@ -480,12 +480,9 @@ defmodule GraphReasoner do
       #   objectVarOrTerm
       #   |> QueryMatching.VarOrTerm.iri!
 
-      %QueryInfo{terms_map: terms_map} = query_info
-      term_id = ExternalInfo.get(varSymbol, GraphReasoner, :term_id)
-      renamed_term_id = terms_map.term_ids[term_id]
-      subject_info = terms_map[:term_info][renamed_term_id][:related_paths]
+      subject_info = QueryInfo.get_term_info(query_info, varSymbol, :related_paths)
 
-      {subject_types, related_predicates} =
+      {subject_types, _related_predicates} =
         subject_info
         |> Enum.reduce({[], []}, fn %{predicate: predicate, object: object} = pred_obj,
                                     {types, preds} ->
@@ -589,15 +586,11 @@ defmodule GraphReasoner do
           # the graph specs for which this is the case.
           matching_graph_specs =
             group_spec.graphs
-            |> Enum.reduce([], fn graph_spec, acc ->
-              if Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.member?(
-                   graph_spec.constraint.predicates,
-                   pathIri
-                 ) do
-                [graph_spec | acc]
-              else
-                acc
-              end
+            |> Enum.filter(fn graph_spec ->
+              Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.member?(
+                graph_spec.constraint.predicates,
+                pathIri
+              )
             end)
 
           # If there are graphs matching, create a new
