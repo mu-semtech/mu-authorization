@@ -58,7 +58,7 @@ defmodule QueryInfo do
     query_info.terms_map[:term_info][renamed_term_id(query_info, symbol)][section]
   end
 
-  @spec renamed_term_id(t, atom) :: number
+  @spec renamed_term_id(t, any) :: number
   defp renamed_term_id(%QueryInfo{terms_map: terms_map}, symbol) do
     term_id = ExternalInfo.get(symbol, GraphReasoner, :term_id)
     terms_map.term_ids[term_id]

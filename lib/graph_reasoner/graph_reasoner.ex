@@ -343,7 +343,7 @@ defmodule GraphReasoner do
     # long form (for now).  Because of this, we can limit ourselves to
     # the most minimal interpretation of the query.
 
-    analyze_single_triples_block = fn query_info, symbol ->
+    analyze_single_triples_block = fn symbol, query_info ->
       {subjectVarOrTerm, predicateElement, objectVarOrTerm} =
         QueryMatching.TriplesBlock.first_triple!(symbol)
 
@@ -404,7 +404,7 @@ defmodule GraphReasoner do
       end
     end
 
-    analyzeTriplesBlock = fn query_info, symbol ->
+    analyzeTriplesBlock = fn symbol, query_info ->
       # Analyzes a single TriplesBlock
 
       # We need to extract all the TriplesBlock elements, enrich their
@@ -412,15 +412,13 @@ defmodule GraphReasoner do
 
       symbol
       |> QueryMatching.GroupGraphPattern.extract_triples_blocks()
-      |> Enum.reduce(query_info, fn triples_block, query_info ->
-        _new_query_info = analyze_single_triples_block.(query_info, triples_block)
-      end)
+      |> Enum.reduce(query_info, analyze_single_triples_block)
     end
 
     {new_query_info, _} =
       Manipulators.Basics.do_state_map {query_info, match}, {map, element} do
         :TriplesBlock ->
-          {:continue, analyzeTriplesBlock.(map, element)}
+          {:continue, analyzeTriplesBlock.(element, map)}
       end
 
     {new_query_info, match}
@@ -428,15 +426,11 @@ defmodule GraphReasoner do
 
   # Calculates the intersection of two lists
   def intersection(arr_a, arr_b) do
-    Enum.reduce(arr_a, [], fn a_elt, result ->
-      if(Enum.find(arr_b, fn b_elt -> b_elt == a_elt end)) do
-        [a_elt | result]
-      else
-        result
-      end
-    end)
+    MapSet.intersection(MapSet.new(arr_a), MapSet.new(arr_b))
+    |> MapSet.to_list()
   end
 
+  @spec derive_triples_information( {QueryInfo.t, any()}, Acl.UserGroups.Config.t, any() ) :: any()
   defp derive_triples_information({query_info, match}, authorization_groups, prologue_map) do
     # Each of the triples which needs to be fetched may be fetched
     # from various graphs.  Based on the information in the terms_map,
@@ -460,6 +454,8 @@ defmodule GraphReasoner do
 
     # IO.inspect( query_info, label: "Query Info in derive_triples_information" )
     # IO.inspect( authorization_groups, label: "Authorization Groups in derive_triples_information" )
+
+    %QueryInfo{} = query_info
 
     derive_triples_block_info_for_single_triple = fn query_info, element ->
       # We need to discover if the current TriplesBlock means anything
@@ -852,7 +848,7 @@ defmodule GraphReasoner do
           new_item = ExternalInfo.put(item, GraphReasoner, :non_graph_clause, true)
           {:replace_and_traverse, new_item}
 
-        %Sym{symbol: symbol} ->
+        %Sym{symbol: _symbol} ->
           {:continue}
 
         _ ->
@@ -875,7 +871,7 @@ defmodule GraphReasoner do
           # If it's dependent on its children, all children must be safe
           Enum.any?(children, &may_need_graph_clause?/1)
 
-        %Sym{symbol: symbol} ->
+        %Sym{symbol: _symbol} ->
           # If it's a non-marked symbol
           true
 
