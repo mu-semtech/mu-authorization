@@ -7,7 +7,7 @@ defmodule Acl.GroupSpec do
 
   @type t :: %GroupSpec{
           name: String.t(),
-          access: Acl.Accessibilty.Protocol.t(),
+          access: Acl.Accessibility.Protocol.t(),
           graphs: GraphSpec.t(),
           useage: [useage_method]
         }

@@ -19,7 +19,7 @@ defprotocol Acl.GroupSpec.Protocol do
   Processing of a set of quads is hanlded by this method.  It
   transforms the supplied set of quads to a new set of quads.
   """
-  @spec process( GPr.t, APr.user_group, [Quad] ) :: [Quad]
+  @spec process( GPr.t, GPr.user_group, [Quad] ) :: [Quad]
   def process( group_spec, user_group, quads )
 
   @doc """
@@ -31,6 +31,6 @@ defprotocol Acl.GroupSpec.Protocol do
   which could have added content to the response.  An empty array
   means no response could be supplied by this processing.
   """
-  @spec process_query( GPr.t, APr.user_group, GPr.query ) :: { GPr.query, [APr.user_group] }
+  @spec process_query( GPr.t, GPr.user_group, GPr.query ) :: { GPr.query, [GPr.user_group] }
   def process_query( group_spec, user_group, query )
 end
