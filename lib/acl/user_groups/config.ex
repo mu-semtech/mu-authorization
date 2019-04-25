@@ -9,6 +9,11 @@ alias Acl.GroupSpec, as: GroupSpec
 alias Acl.GroupSpec.GraphCleanup, as: GraphCleanup
 
 defmodule Acl.UserGroups.Config do
+  @type t :: [user_group]
+
+  @type user_group :: GroupSpec.t() | %GraphCleanup{}
+
+  @spec user_groups :: t
   def user_groups do
     # These elements are walked from top to bottom.  Each of them may
     # alter the quads to which the current query applies.  Quads are

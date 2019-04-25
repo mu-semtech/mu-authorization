@@ -1,10 +1,19 @@
 alias Acl.GroupSpec, as: GroupSpec
+alias Acl.GraphSpec, as: GraphSpec
 
 defmodule Acl.GroupSpec do
   require Logger
   require ALog
 
-  defstruct [ :name, :access, :graphs, :useage ]
+  @type t :: %GroupSpec{
+          name: String.t(),
+          access: Acl.Accessibilty.Protocol.t(),
+          graphs: GraphSpec.t(),
+          useage: [useage_method]
+        }
+  @type useage_method :: :read | :write | :read_for_write
+
+  defstruct [:name, :access, :graphs, :useage]
 
   @moduledoc """
   The GroupSpec indicates groups to which a user has access.  Where

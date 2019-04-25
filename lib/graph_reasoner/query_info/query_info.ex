@@ -3,7 +3,13 @@ alias GraphReasoner.QueryInfo, as: QueryInfo
 defmodule QueryInfo do
   defstruct terms_map: %{}
 
-  @type t :: %QueryInfo{terms_map: %{}}
+  @type t :: %QueryInfo{terms_map: terms_map}
+  @type terms_map :: %{
+          term_ids_index: integer(),
+          term_info_index: integer(),
+          term_ids: %{optional(number) => number},
+          term_info: %{optional(number) => %{optional(atom) => any}}
+        }
 
   @doc """
   Yields the terms map.
@@ -25,14 +31,11 @@ defmodule QueryInfo do
 
   If the info was already known, it is not overwritten.
   """
-  @type push_term_info( t ) :: t
-  def push_term_info( %QueryInfo{ terms_map: terms_map } = query_info, symbol, section, value ) do
-    term_id = ExternalInfo.get(symbol, GraphReasoner, :term_id)
-    renamed_term_id = terms_map.term_ids[term_id]
-
+  @spec push_term_info(t, any, atom(), any) :: t
+  def push_term_info(%QueryInfo{terms_map: terms_map} = query_info, symbol, section, value) do
     new_terms_map =
       update_in(
-        terms_map[:term_info][renamed_term_id][section],
+        terms_map[:term_info][renamed_term_id(query_info, symbol)][section],
         fn related_paths ->
           related_paths = related_paths || []
           # Push value if it does not exist
@@ -44,7 +47,8 @@ defmodule QueryInfo do
         end
       )
 
-    %{ query_info | terms_map: new_terms_map }
+    %{query_info | terms_map: new_terms_map}
+  end
 
   end
 end

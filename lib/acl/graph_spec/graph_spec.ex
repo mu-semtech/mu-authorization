@@ -1,11 +1,14 @@
 alias Updates.QueryAnalyzer.Iri, as: Iri
 alias Acl.GraphSpec, as: GraphSpec
+alias Acl.GraphSpec.Constraint.Resource, as: ResourceConstraint
 
 defmodule Acl.GraphSpec do
   require Logger
   require ALog
 
-  defstruct [ :graph, :constraint ]
+  @type t :: %GraphSpec{graph: String.t(), constraint: ResourceConstraint.t()}
+
+  defstruct [:graph, :constraint]
 
   @moduledoc """
   A GraphSpec indicates which triples should be stored in a specific

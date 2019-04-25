@@ -9,10 +9,20 @@ defmodule Resource do
   require Logger
   require ALog
 
-  defstruct [ :resource_types, # Types of the resource to match
-              {:source_graph, "http://mu.semte.ch/application"},
-              {:predicates, %AllPredicates{} },
-              {:inverse_predicates, %NoPredicates{}} ]
+  @type t :: %Resource{
+          resource_types: [String.t()],
+          source_graph: String.t(),
+          predicates: Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.t(),
+          inverse_predicates: Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.t()
+        }
+
+  # Types of the resource to match
+  defstruct [
+    :resource_types,
+    {:source_graph, "http://mu.semte.ch/application"},
+    {:predicates, %AllPredicates{}},
+    {:inverse_predicates, %NoPredicates{}}
+  ]
 
   defimpl Acl.GraphSpec.Constraint.Protocol do
     def matching_quads( %Resource{} = resource, quads, extra_quads\\[] ) do
