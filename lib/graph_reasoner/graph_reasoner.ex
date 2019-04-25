@@ -1,5 +1,4 @@
 alias GraphReasoner.QueryInfo, as: QueryInfo
-alias GraphReasoner.Support.TermsMap, as: TermsMap
 alias GraphReasoner.QueryMatching, as: QueryMatching
 alias InterpreterTerms.WordMatch, as: Word
 alias InterpreterTerms.SymbolMatch, as: Sym
@@ -344,7 +343,7 @@ defmodule GraphReasoner do
     # long form (for now).  Because of this, we can limit ourselves to
     # the most minimal interpretation of the query.
 
-    analyze_single_triples_block = fn terms_map, symbol ->
+    analyze_single_triples_block = fn query_info, symbol ->
       {subjectVarOrTerm, predicateElement, objectVarOrTerm} =
         QueryMatching.TriplesBlock.first_triple!(symbol)
 
@@ -393,13 +392,10 @@ defmodule GraphReasoner do
           # (eg: if the predicate foaf:name can only originate from a
           # foaf:Agent, we should use this information).
 
-          new_terms_map =
-            TermsMap.push_term_info(terms_map, varSymbol, :related_paths, %{
-              predicate: pathIri,
-              object: object
-            })
-
-          new_terms_map
+          QueryInfo.push_term_info(query_info, varSymbol, :related_paths, %{
+            predicate: pathIri,
+            object: object
+          })
 
         # QueryMatching.VarOrTerm.iri?( subjectVarOrTerm ) ->
         #   IO.puts "Subject is an IRI, no information is derived yet"
@@ -408,7 +404,7 @@ defmodule GraphReasoner do
       end
     end
 
-    analyzeTriplesBlock = fn terms_map, symbol ->
+    analyzeTriplesBlock = fn query_info, symbol ->
       # Analyzes a single TriplesBlock
 
       # We need to extract all the TriplesBlock elements, enrich their
@@ -416,21 +412,18 @@ defmodule GraphReasoner do
 
       symbol
       |> QueryMatching.GroupGraphPattern.extract_triples_blocks()
-      |> Enum.reduce(terms_map, fn triples_block, terms_map ->
-        _new_terms_map = analyze_single_triples_block.(terms_map, triples_block)
+      |> Enum.reduce(query_info, fn triples_block, query_info ->
+        _new_query_info = analyze_single_triples_block.(query_info, triples_block)
       end)
     end
 
-    %QueryInfo{terms_map: terms_map} = query_info
-
-    {new_terms_map, _} =
-      Manipulators.Basics.do_state_map {terms_map, match}, {map, element} do
+    {new_query_info, _} =
+      Manipulators.Basics.do_state_map {query_info, match}, {map, element} do
         :TriplesBlock ->
           {:continue, analyzeTriplesBlock.(map, element)}
       end
 
-    updated_query_info = QueryInfo.set_terms_map(query_info, new_terms_map)
-    {updated_query_info, match}
+    {new_query_info, match}
   end
 
   # Calculates the intersection of two lists
