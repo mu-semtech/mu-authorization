@@ -14,7 +14,7 @@ defmodule State do
        | chars: Enum.drop_while( chars, fn x -> x in [" ","\t","\n"] end ) }
   end
 
-  @spec split_off_whitespace( State ) :: { State.t, String.t }
+  @spec split_off_whitespace( State.t ) :: { State.t, String.t }
   def split_off_whitespace( %State{ chars: chars } = state ) do
     { new_chars, drop_string } = cut_whitespace( chars )
     { %{ state | chars: new_chars }, drop_string }

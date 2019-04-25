@@ -41,8 +41,11 @@ defmodule SparqlServer.Router do
 
     query = params["query"]
 
-    Support.handle_query query, :query, conn
-    |> send_sparql_response
+    conn =
+      Support.handle_query( query, :query, conn )
+      |> send_sparql_response
+
+    { conn, "" }
   end
 
   match _, do: send_resp(conn, 404, "404 error not found")

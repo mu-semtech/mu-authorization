@@ -52,7 +52,7 @@ defmodule InterpreterTerms.Regex do
   defstruct [regex: "", state: %State{}, known_matches: []]
 
   defimpl EbnfParser.GeneratorProtocol do
-    def make_generator( %RegexTerm{ regex: regex, state: state } = regex_term ) do
+    def make_generator( %RegexTerm{ regex: regex, state: state } = _regex_term ) do
       # regex
       # |> IO.inspect( label: "Received regex" )
 

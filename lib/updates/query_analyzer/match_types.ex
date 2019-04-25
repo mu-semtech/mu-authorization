@@ -14,6 +14,8 @@ defprotocol Updates.QueryAnalyzer.P do
 end
 
 defmodule Iri do
+  @type t :: %Iri{ iri: String.t(), real_name: String.t() }
+
   defstruct [:iri, :real_name]
 
   def from_iri_string(iri, _options \\ []) do
