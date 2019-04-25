@@ -61,7 +61,7 @@ defmodule MuAuthorization.MixProject do
       {:junit_formatter, "~> 2.1", only: :test},
       {:credo, "~> 0.8", only: [:dev, :test]},
       {:excoveralls, "~> 0.8", only: :test},
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.6", only: [:dev], runtime: false},
       {:httpoison, "~> 1.1"},
       {:poison, "~> 3.1"},
       {:poolboy, "~> 1.5.1"},
