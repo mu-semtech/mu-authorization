@@ -31,8 +31,8 @@ defmodule QueryInfo do
 
   If the info was already known, it is not overwritten.
   """
-  @spec push_term_info(t, any, atom(), any) :: t
-  def push_term_info(%QueryInfo{terms_map: terms_map} = query_info, symbol, section, value) do
+  @spec push_var_info(t, any, atom(), any) :: t
+  def push_var_info(%QueryInfo{terms_map: terms_map} = query_info, symbol, section, value) do
     new_terms_map =
       update_in(
         terms_map[:term_info][renamed_term_id(query_info, symbol)][section],
@@ -53,8 +53,8 @@ defmodule QueryInfo do
   @doc """
   Retrieves scoped subject info for a term as known by the QueryInfo.
   """
-  @spec get_term_info(t, any, atom) :: any
-  def get_term_info(query_info, symbol, section) do
+  @spec get_var_info(t, any, atom) :: any
+  def get_var_info(query_info, symbol, section) do
     query_info.terms_map[:term_info][renamed_term_id(query_info, symbol)][section]
   end
 

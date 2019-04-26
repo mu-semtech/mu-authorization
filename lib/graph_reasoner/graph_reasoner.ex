@@ -392,7 +392,7 @@ defmodule GraphReasoner do
           # (eg: if the predicate foaf:name can only originate from a
           # foaf:Agent, we should use this information).
 
-          QueryInfo.push_term_info(query_info, varSymbol, :related_paths, %{
+          QueryInfo.push_var_info(query_info, varSymbol, :related_paths, %{
             predicate: pathIri,
             object: object
           })
@@ -476,7 +476,7 @@ defmodule GraphReasoner do
       #   objectVarOrTerm
       #   |> QueryMatching.VarOrTerm.iri!
 
-      subject_info = QueryInfo.get_term_info(query_info, varSymbol, :related_paths)
+      subject_info = QueryInfo.get_var_info(query_info, varSymbol, :related_paths)
 
       {subject_types, _related_predicates} =
         subject_info
