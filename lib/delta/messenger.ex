@@ -29,14 +29,14 @@ defmodule Delta.Messenger do
   def send_message_to_client( message, client_url ) do
     # TODO we should try to send the message again with exponential
     # backoff if the sending of the message failed.
-    headers = [{"Content-Type", "application/json"}]
+    headers = [ {"Content-Type", "application/json"} ]
     options = [recv_timeout: 50000] # we expect clients to respond to our request
 
     Logging.EnvLog.log(
       :log_delta_client_communication,
       "Sending message to <#{client_url}>: #{message}")
 
-    case HTTPoison.post( client_url, message, headers, options ) do
+    case HTTPoison.post( client_url, "#{message}", headers, options ) do
       {:ok, _response } ->
         Logging.EnvLog.log(
           :log_delta_client_communication,

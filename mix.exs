@@ -18,13 +18,14 @@ defmodule MuAuthorization.MixProject do
       ],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
-        "coveralls": :test,
+        coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
         "coveralls.html": :test
       ],
       name: "mu-authorization",
-      description: "A proxy server that offers a authorization/delta wrapper for a SPARQL endpoint.",
+      description:
+        "A proxy server that offers a authorization/delta wrapper for a SPARQL endpoint.",
       source_url: @github_url,
       homepage_url: @github_url,
       files: ~w(mix.exs lib LICENSE.md README.md CHANGELOG.md),
@@ -32,7 +33,7 @@ defmodule MuAuthorization.MixProject do
         maintainers: ["Versteden Aad", "Langens Jonathan"],
         licenses: ["MIT"],
         links: %{
-          "GitHub" => @github_url,
+          "GitHub" => @github_url
         }
       ]
     ]
@@ -51,7 +52,6 @@ defmodule MuAuthorization.MixProject do
       env: []
     ]
   end
-
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
