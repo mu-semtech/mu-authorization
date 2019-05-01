@@ -4,11 +4,13 @@ defmodule Delta.Config do
   components should be informed.
   """
 
+  @type target :: String.t
+
   @doc """
   Links to each endpoint to which the delta's will be sent.
   Optionally containing ports.
   """
-  @spec targets() :: [String.t]
+  @spec targets() :: [target]
   def targets do
     [
       # "http://resource/.mu/delta",
