@@ -2,6 +2,7 @@ alias GraphReasoner.QueryInfo, as: QueryInfo
 alias GraphReasoner.QueryMatching, as: QueryMatching
 alias InterpreterTerms.WordMatch, as: Word
 alias InterpreterTerms.SymbolMatch, as: Sym
+alias GraphReasoner.TypeReasoner
 
 defmodule GraphReasoner do
   require Manipulators.Basics
@@ -141,6 +142,7 @@ defmodule GraphReasoner do
     |> derive_terms_information(prologue_map)
     # |> IO.inspect( label: "Derived terms information" )
     # TODO: supply authorization groups
+    |> derive_term_types( GraphReasoner.ModelInfo.Config.class_description )
     |> derive_triples_information(Acl.UserGroups.for_use(:read), prologue_map)
     # |> IO.inspect(label: "Derived triples information")
     |> wrap_graph_queries(matching_authorization_groups)
@@ -392,7 +394,7 @@ defmodule GraphReasoner do
           # (eg: if the predicate foaf:name can only originate from a
           # foaf:Agent, we should use this information).
 
-          QueryInfo.push_var_info(query_info, varSymbol, :related_paths, %{
+          QueryInfo.push_term_info(query_info, varSymbol, :related_paths, %{
             predicate: pathIri,
             object: object
           })
@@ -424,13 +426,19 @@ defmodule GraphReasoner do
     {new_query_info, match}
   end
 
+  @spec derive_term_types( { QueryInfo.t, any }, ModelInfo.t ) :: { QueryInfo.t, any }
+  defp derive_term_types( {query_info, match}, model_info ) do
+    { TypeReasoner.derive_types( query_info, model_info ), match }
+  end
+
   # Calculates the intersection of two lists
   def intersection(arr_a, arr_b) do
     MapSet.intersection(MapSet.new(arr_a), MapSet.new(arr_b))
     |> MapSet.to_list()
   end
 
-  @spec derive_triples_information( {QueryInfo.t, any()}, Acl.UserGroups.Config.t, any() ) :: any()
+  @spec derive_triples_information({QueryInfo.t(), any()}, Acl.UserGroups.Config.t(), any()) ::
+          any()
   defp derive_triples_information({query_info, match}, authorization_groups, prologue_map) do
     # Each of the triples which needs to be fetched may be fetched
     # from various graphs.  Based on the information in the terms_map,
@@ -476,7 +484,7 @@ defmodule GraphReasoner do
       #   objectVarOrTerm
       #   |> QueryMatching.VarOrTerm.iri!
 
-      subject_info = QueryInfo.get_var_info(query_info, varSymbol, :related_paths)
+      subject_info = QueryInfo.get_term_info(query_info, varSymbol, :related_paths)
 
       {subject_types, _related_predicates} =
         subject_info
@@ -589,14 +597,10 @@ defmodule GraphReasoner do
               )
             end)
 
-          # If there are graphs matching, create a new
-          # group_spec with only these graphs.  Push the result
-          # onto the filtered groups.  If note, leave the
+          # Create a new group_spec with only the matching graph specs.  Push the
+          # result onto the filtered groups.  If note, leave the
           # matching_groups accumulator alone.
-          case matching_graph_specs do
-            nil -> matching_groups
-            _ -> [%{group_spec | graphs: matching_graph_specs} | matching_groups]
-          end
+          [%{group_spec | graphs: matching_graph_specs} | matching_groups]
         end)
 
       # The result of these steps would boil down to
