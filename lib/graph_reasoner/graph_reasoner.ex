@@ -142,7 +142,7 @@ defmodule GraphReasoner do
     |> derive_terms_information(prologue_map)
     # |> IO.inspect( label: "Derived terms information" )
     # TODO: supply authorization groups
-    |> derive_term_types( GraphReasoner.ModelInfo.Config.class_description )
+    |> derive_term_types(GraphReasoner.ModelInfo.Config.class_description())
     |> derive_triples_information(Acl.UserGroups.for_use(:read), prologue_map)
     # |> IO.inspect(label: "Derived triples information")
     |> wrap_graph_queries(matching_authorization_groups)
@@ -217,45 +217,25 @@ defmodule GraphReasoner do
     # discover that we can group variables together, we can do so by
     # manipulating these two hashes, rather than by finding and
     # manipulating the complex query object.
-    state = %{term_ids: %{}, term_info: %{}, term_ids_index: 0, term_info_index: 0}
 
-    {state, query} =
-      Manipulators.Basics.map_matches_with_state(state, match, fn state, item ->
-        %{
-          term_ids: term_ids,
-          term_info: term_info,
-          term_ids_index: term_ids_index,
-          term_info_index: term_info_index
-        } = state
+    query_info = %QueryInfo{}
 
-        case item do
-          %Sym{symbol: :Var, string: str_with_space} ->
-            # TODO: In the case of a :Var, we need to strip the spaces from the :Var element in order to get the new string.  This probably needs a fix elsewhere...
+    Manipulators.Basics.map_matches_with_state(query_info, match, fn query_info, item ->
+      case item do
+        %Sym{symbol: :Var, string: str_with_space} ->
+          # TODO: In the case of a :Var, we need to strip the spaces from the :Var element in order to get the new string.  This probably needs a fix elsewhere...
 
-            str = String.trim(str_with_space)
+          str = String.trim(str_with_space)
 
-            new_term_ids_index = term_ids_index + 1
-            new_term_info_index = term_info_index + 1
+          {new_query_info, new_term} =
+            QueryInfo.init_term(query_info, item, %{symbol_string: str})
 
-            new_term_ids = Map.put(term_ids, new_term_ids_index, new_term_info_index)
-            new_term_info = Map.put(term_info, new_term_info_index, %{symbol_string: str})
-            new_item = ExternalInfo.put(item, GraphReasoner, :term_id, new_term_ids_index)
+          {:replace_and_traverse, new_query_info, new_term}
 
-            new_state =
-              state
-              |> Map.put(:term_ids, new_term_ids)
-              |> Map.put(:term_info, new_term_info)
-              |> Map.put(:term_ids_index, new_term_ids_index)
-              |> Map.put(:term_info_index, new_term_info_index)
-
-            {:replace_and_traverse, new_state, new_item}
-
-          _ ->
-            {:continue, state}
-        end
-      end)
-
-    {%QueryInfo{terms_map: state}, query}
+        _ ->
+          {:continue, query_info}
+      end
+    end)
   end
 
   defp join_same_terms({%QueryInfo{terms_map: state} = query_info, match}) do
@@ -426,9 +406,9 @@ defmodule GraphReasoner do
     {new_query_info, match}
   end
 
-  @spec derive_term_types( { QueryInfo.t, any }, ModelInfo.t ) :: { QueryInfo.t, any }
-  defp derive_term_types( {query_info, match}, model_info ) do
-    { TypeReasoner.derive_types( query_info, model_info ), match }
+  @spec derive_term_types({QueryInfo.t(), any}, ModelInfo.t()) :: {QueryInfo.t(), any}
+  defp derive_term_types({query_info, match}, model_info) do
+    {TypeReasoner.derive_types(query_info, model_info), match}
   end
 
   # Calculates the intersection of two lists

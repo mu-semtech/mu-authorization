@@ -17,7 +17,12 @@ alias GraphReasoner.QueryInfo, as: QueryInfo
 # later: 2 will also attach types to the object type of the triple
 
 defmodule QueryInfo do
-  defstruct terms_map: %{}
+  defstruct terms_map: %{
+              term_ids_index: 0,
+              term_info_index: 0,
+              term_ids: %{},
+              term_info: %{}
+            }
 
   @type t :: %QueryInfo{terms_map: terms_map}
   @type terms_map :: %{
@@ -67,6 +72,39 @@ defmodule QueryInfo do
   end
 
   @doc """
+  Initializes a term for use in the QueryInfo.  Yields the new
+  QueryInfo instance as well as the term.
+
+  This embodies calculating a new index, and attaching it to the item.
+  Basic information for this term can optionally be supplied.
+  """
+  @spec init_term(t, any, %{optional(atom) => any}) :: {t, any}
+  def init_term(%QueryInfo{terms_map: terms_map} = query_info, term, info \\ %{}) do
+    %{
+      term_ids: term_ids,
+      term_info: term_info,
+      term_ids_index: term_ids_index,
+      term_info_index: term_info_index
+    } = terms_map
+
+    new_term_ids_index = term_ids_index + 1
+    new_term_info_index = term_info_index + 1
+
+    new_term_ids = Map.put(term_ids, new_term_ids_index, new_term_info_index)
+    new_term_info = Map.put(term_info, new_term_info_index, info)
+    new_term = ExternalInfo.put(term, GraphReasoner, :term_id, new_term_ids_index)
+
+    new_terms_map =
+      terms_map
+      |> Map.put(:term_ids, new_term_ids)
+      |> Map.put(:term_info, new_term_info)
+      |> Map.put(:term_ids_index, new_term_ids_index)
+      |> Map.put(:term_info_index, new_term_info_index)
+
+    {%{query_info | terms_map: new_terms_map}, new_term}
+  end
+
+  @doc """
   Retrieves scoped subject info for a term as known by the QueryInfo.
   """
   @spec get_term_info(t, any, atom) :: any
@@ -90,11 +128,14 @@ defmodule QueryInfo do
   @spec set_term_info_by_id(t, number, atom, any) :: t
   def set_term_info_by_id(query_info, term_id, section, value) do
     terms_map = query_info.terms_map
+
     new_terms_map =
       update_in(
         terms_map[:term_info][term_id][section],
-        fn (_old) -> value end )
-    %{ query_info | terms_map: new_terms_map }
+        fn _old -> value end
+      )
+
+    %{query_info | terms_map: new_terms_map}
   end
 
   @spec renamed_term_id(t, any) :: number
