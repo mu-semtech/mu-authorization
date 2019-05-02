@@ -42,7 +42,12 @@ defmodule TypeReasoner do
   @spec derive_types_to_fixpoint_iteration([number], QueryInfo.t(), ModelInfo.t()) ::
           {[number], QueryInfo.t()}
   defp derive_types_to_fixpoint_iteration(term_info_ids, query_info, _model_info) do
-    IO.inspect(query_info, label: "query_info for fixpoint")
+    # IO.inspect(query_info, label: "query_info for fixpoint")
+
+    # NOTE: this code mixes up the "and" type which you get by
+    # explicitly defining types and the "or" type which we can derive
+    # from the predicate.  This does not have strong downsides in the
+    # short run as we'll almost always have one source type.
 
     Enum.reduce(
       term_info_ids,
@@ -57,14 +62,10 @@ defmodule TypeReasoner do
 
         # go over each of the related paths and derive info from them
 
-        # TODO cope with types being derived from predicates.  note that
-        # combining expliict types with derived types is a bit strange.
-        # The derived types should be considered sets of types which
-        # limit the amount of possible types, whereas the explicit types
-        # enforce items to be of a certain type.  Hence the derived
-        # types could be limited by explicit types, but explicit types
-        # should not be expanded by derived types.
+        # TODO support definitions where anything may be a variable
+        # TODO support typing in which we know (a set of) types for the object
 
+        # specified by ?foo a :Bar.
         explicit_type_definitions =
           related_paths
           |> Enum.filter(fn path ->
@@ -74,19 +75,56 @@ defmodule TypeReasoner do
             Updates.QueryAnalyzer.Iri.is_a?(predicate)
           end)
           |> Enum.map(fn %{object: {:iri, type}} -> type end)
+          |> Enum.map( &(Map.get(&1, :iri)) )
+          |> Enum.map( &Updates.QueryAnalyzer.Iri.unwrap_iri_string/1 )
+
+        # specified because predicates don't appear in all classes
+        implicit_type_definitions =
+          related_paths
+          |> Enum.filter(fn path ->
+            Map.has_key?(path, :predicate) && Map.has_key?(path, :object)
+          end)
+          |> Enum.map( &(Map.get(&1, :predicate)) )
+          |> Enum.filter( fn predicate ->
+            not Updates.QueryAnalyzer.Iri.is_a?(predicate)
+          end)
+          |> Enum.map( &(Map.get(&1, :iri)) )
+          |> Enum.map( &Updates.QueryAnalyzer.Iri.unwrap_iri_string/1 )
+          |> Enum.map(&ModelInfo.predicate_range/1)
+          |> type_range_intersection
 
         # IO.inspect(explicit_type_definitions, label: "explicit types")
+        # IO.inspect(implicit_type_definitions, label: "implicit types")
 
-        if start_types == explicit_type_definitions do
+        resulting_type_definitions =
+          cond do
+            explicit_type_definitions != [] -> explicit_type_definitions
+            implicit_type_definitions != [] -> implicit_type_definitions
+            true -> nil
+          end
+
+        if start_types == resulting_type_definitions do
           {changed_ids, query_info}
         else
           new_query_info =
-            QueryInfo.set_term_info_by_id(query_info, term_id, :types, explicit_type_definitions)
+            QueryInfo.set_term_info_by_id(query_info, term_id, :types, resulting_type_definitions)
 
           {[term_id | changed_ids], new_query_info}
         end
       end
     )
+  end
+
+  @spec type_range_intersection([[String.t()]]) :: [String.t()]
+  defp type_range_intersection([]) do
+    []
+  end
+
+  defp type_range_intersection(type_ranges) do
+    type_ranges
+    |> Enum.map(&MapSet.new/1)
+    |> Enum.reduce(&MapSet.intersection/2)
+    |> MapSet.to_list()
   end
 
   @spec dependent_term_info_ids([number], QueryInfo.t()) ::

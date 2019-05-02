@@ -487,9 +487,6 @@ defmodule GraphReasoner do
       subject_type_strings =
         query_info
         |> QueryInfo.get_term_info(varSymbol, :types)
-        |> Enum.map(fn %Updates.QueryAnalyzer.Iri{iri: str} ->
-          Updates.QueryAnalyzer.Iri.unwrap_iri_string(str)
-        end)
 
       # |> IO.inspect( label: "Subject type strings" )
 
