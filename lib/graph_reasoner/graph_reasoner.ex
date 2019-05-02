@@ -484,27 +484,9 @@ defmodule GraphReasoner do
       #   objectVarOrTerm
       #   |> QueryMatching.VarOrTerm.iri!
 
-      subject_info = QueryInfo.get_term_info(query_info, varSymbol, :related_paths)
-
-      {subject_types, _related_predicates} =
-        subject_info
-        |> Enum.reduce({[], []}, fn %{predicate: predicate, object: object} = pred_obj,
-                                    {types, preds} ->
-          # TODO: Accept different information than only subject and predicate
-          if Updates.QueryAnalyzer.Iri.is_a?(predicate) do
-            # Add the object to the types
-            {:iri, object_iri} = object
-            {[object_iri | types], preds}
-          else
-            # Add the pred_obj to the related predicates
-            {types, [pred_obj | preds]}
-          end
-        end)
-
-      # |> IO.inspect( label: "Learned subject types and related predicates" )
-
       subject_type_strings =
-        subject_types
+        query_info
+        |> QueryInfo.get_term_info(varSymbol, :types)
         |> Enum.map(fn %Updates.QueryAnalyzer.Iri{iri: str} ->
           Updates.QueryAnalyzer.Iri.unwrap_iri_string(str)
         end)
