@@ -3,7 +3,7 @@ defmodule SparqlServer.Router.AccessGroupSupport do
   require ALog
 
   @type decoded_json_access_groups :: [decoded_json_access_group] | :sudo
-  @type decoded_json_access_group :: {String.t(), [String.t()]}
+  @type decoded_json_access_group :: Acl.Accessibility.Protocol.t
 
   @moduledoc """
   Provides supporting functions for working with the encoding and
@@ -14,12 +14,19 @@ defmodule SparqlServer.Router.AccessGroupSupport do
   Encodes hte JSON access groups in such a way that they can be placed
   on the connection.
   """
+  @spec encode_json_access_groups(decoded_json_access_groups) :: String.t()
   def encode_json_access_groups(access_groups) do
+    access_groups
+    |> poisonize_access_groups_info
+    |> Poison.encode!()
+  end
+
+  @spec poisonize_access_groups_info(decoded_json_access_groups) :: Poison.Parser.t()
+  def poisonize_access_groups_info(access_groups) do
     access_groups
     |> Enum.map(fn {name, variables} ->
       %{"name" => name, "variables" => variables}
     end)
-    |> Poison.encode!()
   end
 
   @doc """

@@ -25,7 +25,7 @@ defmodule Delta.Messenger do
   be ran in a separate thread to inform a specific client.  It is
   called from inform_clients.
   """
-  @spec send_message_to_client( Delta.Message.t, String.t ) :: :ok | :fail
+  @spec send_message_to_client( Delta.Message.t, Delta.Config.target ) :: :ok | :fail
   def send_message_to_client( message, client_url ) do
     # TODO we should try to send the message again with exponential
     # backoff if the sending of the message failed.

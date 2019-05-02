@@ -6,6 +6,8 @@ defmodule Quad do
 
   def make( graph, subject, predicate, object ) do
     %Quad{ graph: graph, subject: subject, predicate: predicate, object: object }
+  # TODO: further specify the definition of subject, predicate, object
+  @type t :: %Quad{graph: String.t(), subject: any, predicate: any, object: any}
   end
 
   @doc """

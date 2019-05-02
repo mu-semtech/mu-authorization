@@ -5,7 +5,7 @@ defmodule Delta do
   require ALog
 
   @type insert_type :: :update | :delete
-  @type delta :: [{insert_type,[%Quad{}]}]
+  @type delta :: [{insert_type, [Quad.t()]}]
 
   @moduledoc """
   This service consumes altered triples and sends them to interested
@@ -18,12 +18,12 @@ defmodule Delta do
   tuples of form {insert_type, quads} in which insert_type is one of
   :insert or :delete.
   """
-  @spec publish_updates( delta ) :: delta
-  def publish_updates( delta  ) do
+  @spec publish_updates(delta, [any], String.t()) :: delta
+  def publish_updates(delta, authorization_groups, origin) do
     delta
-    |> Delta.Message.construct
-    |> Logging.EnvLog.inspect( :log_delta_messages, label: "Constructed body for clients" )
-    |> Delta.Messenger.inform_clients
+    |> Delta.Message.construct(authorization_groups, origin)
+    |> Logging.EnvLog.inspect(:log_delta_messages, label: "Constructed body for clients")
+    |> Delta.Messenger.inform_clients()
 
     delta
   end

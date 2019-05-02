@@ -230,7 +230,13 @@ defmodule SparqlServer.Router.HandlerSupport do
       end)
 
     # TODO: we should publish the updates *after* writing to the store and allow external services to rewrite be
-    Delta.publish_updates(updated_quads, authorization_groups)
+    origin =
+      conn
+      |> Map.get(:remote_ip)
+      |> Tuple.to_list()
+      |> Enum.join(".")
+
+    Delta.publish_updates(updated_quads, authorization_groups, origin)
 
     # TODO should we set the access groups on update queries too?
     # see AccessGroupSupport.put_access_groups/2 ( conn, authorization_groups )
