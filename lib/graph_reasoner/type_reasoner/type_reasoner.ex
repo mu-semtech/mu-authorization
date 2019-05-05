@@ -91,7 +91,7 @@ defmodule TypeReasoner do
           end)
           |> Enum.map(&Map.get(&1, :iri))
           |> Enum.map(&Updates.QueryAnalyzer.Iri.unwrap_iri_string/1)
-          |> Enum.map(&ModelInfo.predicate_range/1)
+          |> Enum.map(&ModelInfo.predicate_domain/1)
           |> type_range_intersection
 
         # IO.inspect(explicit_type_definitions, label: "explicit types")

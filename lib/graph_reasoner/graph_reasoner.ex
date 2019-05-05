@@ -523,7 +523,7 @@ defmodule GraphReasoner do
         QueryMatching.TriplesBlock.first_triple!(element)
 
       # We should accept more than only variables in the subject
-      varSymbol = QueryMatching.VarOrTerm.var!(subjectVarOrTerm)
+      subjectSymbol = TermSelectors.term_to_attach_info_to(subjectVarOrTerm)
 
       pathIri = QueryMatching.PathPrimary.iri!(predicateElement, prologue_map)
 
@@ -533,7 +533,7 @@ defmodule GraphReasoner do
 
       subject_type_strings =
         query_info
-        |> QueryInfo.get_term_info(varSymbol, :types)
+        |> QueryInfo.get_term_info(subjectSymbol, :types)
 
       # |> IO.inspect( label: "Subject type strings" )
 
