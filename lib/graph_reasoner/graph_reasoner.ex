@@ -3,6 +3,7 @@ alias GraphReasoner.QueryMatching, as: QueryMatching
 alias InterpreterTerms.WordMatch, as: Word
 alias InterpreterTerms.SymbolMatch, as: Sym
 alias GraphReasoner.TypeReasoner
+alias GraphReasoner.Support.TermSelectors
 
 defmodule GraphReasoner do
   require Manipulators.Basics
@@ -137,10 +138,11 @@ defmodule GraphReasoner do
     prologue_map = Manipulators.Info.prologue_map(match)
 
     match
-    |> augment_with_terms_map
+    |> augment_with_terms_map(prologue_map)
+    # |> IO.inspect(label: "With terms map")
     |> join_same_terms
     |> derive_terms_information(prologue_map)
-    # |> IO.inspect( label: "Derived terms information" )
+    # |> IO.inspect(label: "Derived terms information")
     # TODO: supply authorization groups
     |> derive_term_types(GraphReasoner.ModelInfo.Config.class_description())
     |> derive_triples_information(Acl.UserGroups.for_use(:read), prologue_map)
@@ -194,7 +196,7 @@ defmodule GraphReasoner do
     not match?({:exit, false}, discovery_result)
   end
 
-  defp augment_with_terms_map(match) do
+  defp augment_with_terms_map(match, prologue) do
     # This method consumes a match and generates a terms_map from the
     # statements.  The terms_map is a knowledge-base connecting terms
     # to the information derived from them (eg:
@@ -220,6 +222,19 @@ defmodule GraphReasoner do
 
     query_info = %QueryInfo{}
 
+    initialize_iri_from_symbol = fn iri_symbol, query_info ->
+      iri =
+        iri_symbol
+        |> Updates.QueryAnalyzer.Iri.from_symbol(prologue)
+
+      iri_string =
+        iri
+        |> Map.get(:iri)
+        |> Updates.QueryAnalyzer.Iri.unwrap_iri_string()
+
+      QueryInfo.init_term(query_info, iri_symbol, %{iri: iri, iri_string: iri_string})
+    end
+
     Manipulators.Basics.map_matches_with_state(query_info, match, fn query_info, item ->
       case item do
         %Sym{symbol: :Var, string: str_with_space} ->
@@ -231,6 +246,27 @@ defmodule GraphReasoner do
             QueryInfo.init_term(query_info, item, %{symbol_string: str})
 
           {:replace_and_traverse, new_query_info, new_term}
+
+        %Sym{symbol: :iri} ->
+          {new_query_info, new_term} = initialize_iri_from_symbol.(item, query_info)
+
+          {:replace_and_traverse, new_query_info, new_term}
+
+        #  Step 1. for detect PathPrimary>a
+        %Sym{symbol: :PathPrimary, submatches: [%Word{word: "a"}]} ->
+          {:continue, {:in_path_primary, query_info}}
+
+        #  Step 2. for detect PathPrimary>a
+        %Word{word: "a"} ->
+          if match?({:in_path_primary, _}, query_info) do
+            {:in_path_primary, query_info} = query_info
+
+            {new_query_info, new_term} = initialize_iri_from_symbol.(item, query_info)
+
+            {:replace_and_traverse, new_query_info, new_term}
+          else
+            {:continue, query_info}
+          end
 
         _ ->
           {:continue, query_info}
@@ -267,24 +303,30 @@ defmodule GraphReasoner do
     term_info = Map.get(state, :term_info)
 
     # helper function to get the identifier for a given name string
-    term_id_for_variable_name = fn name_string ->
+    term_id_for_value_of_property = fn value, property ->
       Map.keys(term_info)
       |> Enum.sort()
       |> Enum.find(fn idx ->
         term_info
         |> Map.get(idx)
-        |> Map.get(:symbol_string)
-        |> Kernel.==(name_string)
+        |> Map.get(property)
+        |> Kernel.==(value)
       end)
     end
 
     new_term_ids =
-      Enum.reduce(Map.keys(term_ids), term_ids, fn term_id, term_ids ->
+      Enum.reduce(Enum.sort(Map.keys(term_ids)), term_ids, fn term_id, term_ids ->
+        comparison_property =
+          case Map.get(term_info, term_id) do
+            %{symbol_string: _} -> :symbol_string
+            %{iri_string: _} -> :iri_string
+          end
+
         new_index =
           term_info
           |> Map.get(term_id)
-          |> Map.get(:symbol_string)
-          |> term_id_for_variable_name.()
+          |> Map.get(comparison_property)
+          |> term_id_for_value_of_property.(comparison_property)
 
         Map.put(term_ids, term_id, new_index)
       end)
@@ -326,64 +368,89 @@ defmodule GraphReasoner do
     # the most minimal interpretation of the query.
 
     analyze_single_triples_block = fn symbol, query_info ->
-      {subjectVarOrTerm, predicateElement, objectVarOrTerm} =
-        QueryMatching.TriplesBlock.first_triple!(symbol)
+      {subject, predicate, object} =
+        first_triple = QueryMatching.TriplesBlock.first_triple!(symbol)
 
-      cond do
-        QueryMatching.VarOrTerm.var?(subjectVarOrTerm) ->
-          # When it is a variable, we can update the state of that
-          # variable.  For this, we first search for the other two
-          # pieces of information (the predicate and the object) so we
-          # can relate each.
+      convert_var_or_term_to_term_object = fn item ->
+        cond do
+          QueryMatching.VarOrTerm.iri?(item) ->
+            # IO.inspect( objectVarOrTerm, label: "is a term" )
+            iri =
+              item
+              |> QueryMatching.VarOrTerm.iri!(prologue_map)
 
-          varSymbol = QueryMatching.VarOrTerm.var!(subjectVarOrTerm)
+            {:iri, iri}
 
-          pathIri = QueryMatching.PathPrimary.iri!(predicateElement, prologue_map)
+          QueryMatching.VarOrTerm.var?(item) ->
+            {:var, QueryMatching.VarOrTerm.var!(item)}
 
-          object =
-            cond do
-              QueryMatching.VarOrTerm.iri?(objectVarOrTerm) ->
-                # IO.inspect( objectVarOrTerm, label: "is a term" )
-                iri =
-                  objectVarOrTerm
-                  |> QueryMatching.VarOrTerm.iri!(prologue_map)
+          QueryMatching.VarOrTerm.term?(item) ->
+            {:term, QueryMatching.VarOrTerm.term!(item)}
 
-                {:iri, iri}
+          match?(%Word{word: "a"}, item) ->
+            {:iri, Updates.QueryAnalyzer.Iri.make_a()}
 
-              QueryMatching.VarOrTerm.var?(objectVarOrTerm) ->
-                # IO.inspect( objectVarOrTerm, label: "is a var" )
-                {:var, QueryMatching.VarOrTerm.var!(objectVarOrTerm)}
+          match?(%Sym{symbol: :iri}, item) ->
+            {:iri, Updates.QueryAnalyzer.Iri.from_symbol(item, prologue_map)}
 
-              QueryMatching.VarOrTerm.term?(objectVarOrTerm) ->
-                # IO.inspect( objectVarOrTerm, label: "is a term" )
-                {:term, QueryMatching.VarOrTerm.term!(objectVarOrTerm)}
-            end
-
-          # TODO: don't crash when predicates or objects are not URIs.
-          # The previous section assumes both will be an Iri, but
-          # there are absolutely no guarantees that will be the case.
-          # In both of these cases, we want to refer to the identifier
-          # available in the external_info of the symbol so we can
-          # keep updating its contents.
-
-          # Now that we know the variable, the path's iri and the
-          # object's iri, we can add that information to the content
-          # we've discovered.
-
-          # TODO: Discover types based on where the content may reside
-          # (eg: if the predicate foaf:name can only originate from a
-          # foaf:Agent, we should use this information).
-
-          QueryInfo.push_term_info(query_info, varSymbol, :related_paths, %{
-            predicate: pathIri,
-            object: object
-          })
-
-        # QueryMatching.VarOrTerm.iri?( subjectVarOrTerm ) ->
-        #   IO.puts "Subject is an IRI, no information is derived yet"
-        true ->
-          IO.inspect(subjectVarOrTerm, label: "Subject of TripleBlock not supported")
+          true ->
+            IO.inspect(item, label: "Could not process item")
+        end
       end
+
+      convert_to_term_object = fn item ->
+        case item do
+          %Sym{symbol: :VarOrTerm} ->
+            convert_var_or_term_to_term_object.(item)
+
+          %Sym{symbol: :PathPrimary, submatches: [submatch]} ->
+            convert_var_or_term_to_term_object.(submatch)
+        end
+      end
+
+      {subject_as_info, predicate_as_info, object_as_info} =
+        first_triple
+        |> Tuple.to_list()
+        |> Enum.map(convert_to_term_object)
+        |> List.to_tuple()
+
+      # Push info to subject and predicate
+      new_query_info =
+        query_info
+        |> QueryInfo.push_term_info(
+          TermSelectors.term_to_attach_info_to(subject),
+          :related_paths,
+          %{
+            predicate: predicate_as_info,
+            object: object_as_info
+          }
+        )
+        |> QueryInfo.push_term_info(
+          TermSelectors.term_to_attach_info_to(predicate),
+          :related_paths,
+          %{
+            subject: subject_as_info,
+            object: object_as_info
+          }
+        )
+
+      # Push info to object unless it's a primitive
+      new_query_info =
+        if match?({:term, _}, object_as_info) do
+          new_query_info
+        else
+          new_query_info
+          |> QueryInfo.push_term_info(
+            TermSelectors.term_to_attach_info_to(object),
+            :related_paths,
+            %{
+              subject: subject_as_info,
+              predicate: object_as_info
+            }
+          )
+        end
+
+      new_query_info
     end
 
     analyzeTriplesBlock = fn symbol, query_info ->

@@ -54,9 +54,11 @@ defmodule QueryInfo do
   """
   @spec push_term_info(t, any, atom(), any) :: t
   def push_term_info(%QueryInfo{terms_map: terms_map} = query_info, symbol, section, value) do
+    renamed_term_id = renamed_term_id(query_info, symbol)
+
     new_terms_map =
       update_in(
-        terms_map[:term_info][renamed_term_id(query_info, symbol)][section],
+        terms_map[:term_info][renamed_term_id][section],
         fn related_paths ->
           related_paths = related_paths || []
           # Push value if it does not exist
