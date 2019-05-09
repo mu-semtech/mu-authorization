@@ -3,12 +3,15 @@ defmodule Parser do
   Parser for the W3C EBNF syntax.
   """
   @type syntax :: %{ optional( atom ) => any }
+  @type parsed_query :: struct()
+  @type unparsed_query :: String.t
 
   @spec parse_sparql() :: syntax
   def parse_sparql() do
     EbnfParser.Sparql.syntax
   end
 
+  @spec parse_query( unparsed_query, atom ) :: parsed_query | { :fail }
   def parse_query( string, rule\\:Sparql ) do
     EbnfInterpreter.match_sparql_rule( rule, string )
   end

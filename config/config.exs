@@ -3,13 +3,22 @@
 use Mix.Config
 
 defmodule CH do
-  def system_boolean( name ) do
-    case String.downcase( System.get_env( name ) || "" ) do
+  def system_boolean(name) do
+    case String.downcase(System.get_env(name) || "") do
       "true" -> true
       "yes" -> true
       "1" -> true
       "on" -> true
       _ -> false
+    end
+  end
+
+  def database_compatibility(name) do
+    (System.get_env(name) || "")
+    |> String.downcase()
+    |> case do
+      "virtuoso" -> Compat.Implementations.Virtuoso
+      _ -> Compat.Implementations.Raw
     end
   end
 end
@@ -34,7 +43,8 @@ config :"mu-authorization",
   log_template_matcher_performance: CH.system_boolean("LOG_TEMPLATE_MATCHER_PERFORMANCE"),
   log_delta_client_communication: CH.system_boolean("LOG_DELTA_CLIENT_COMMUNICATION"),
   log_access_rights: CH.system_boolean("LOG_ACCESS_RIGHTS"),
-  inspect_access_rights_processing: CH.system_boolean("INSPECT_ACCESS_RIGHTS_PROCESSING")
+  inspect_access_rights_processing: CH.system_boolean("INSPECT_ACCESS_RIGHTS_PROCESSING"),
+  database_compatibility: CH.database_compatibility("DATABASE_COMPATIBILITY")
 
 # and access this configuration in your application as:
 #
@@ -53,9 +63,9 @@ config :logger,
   compile_time_purge_level: :debug,
   level: :warn
 
-if Mix.env == :test do
+if Mix.env() == :test do
   config :junit_formatter,
-  report_dir: "/tmp/repo-example-test-results/exunit"
+    report_dir: "/tmp/repo-example-test-results/exunit"
 end
 
 # It is also possible to import configuration files, relative to this
@@ -66,4 +76,4 @@ end
 #
 #     import_config "#{Mix.env}.exs"
 
-import_config "#{Mix.env}.exs"
+import_config "#{Mix.env()}.exs"

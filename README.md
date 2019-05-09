@@ -92,16 +92,27 @@ Logging can be configured using environment variables.  These properties can be 
 
 Flags which can be either on or off translate the environment variable string to an understood configuration.  Following are considered true: ["true", "yes", "1", "on"], all other strings are considered to be false.
 
-- `LOG_OUTGOING_SPARQL_QUERIES` Logs outgoing SPARQL queries by printing them on the console
+- `LOG_OUTGOING_SPARQL_QUERIES` : Logs outgoing SPARQL queries by printing them on the console
 - `INSPECT_OUTGOING_SPARQL_QUERIES`: Logs outgoing SPARQL queries by inspecting them (native string format)
 - `LOG_INCOMING_SPARQL_QUERIES`: Logs incoming SPARQL queries by printing them on the console
 - `INSPECT_INCOMING_SPARQL_QUERIES`: Logs incoming SPARQL queries by inspecting them (native string format)
 - `LOG_SERVER_CONFIGURATION`: Logs some information about the server configuration on boot
-- `LOG_ACCESS_RIGHTS` Logs the incoming access rights
-- `INSPECT_ACCESS_RIGHTS_PROCESSING` Logs the processing of the access rights (verbose debugging)
-- `LOG_DELTA_MESSAGES` Allows logging of delta messages as they're sent to other consumers
-- `LOG_DELTA_CLIENT_COMMUNICATION` Allows logging of the communication caused by the delta system
-- `LOG_TEMPLATE_MATCHER_PERFORMANCE` Emits information regarding use of precalculated templates when analysing queries
+- `LOG_ACCESS_RIGHTS` : Logs the incoming access rights
+- `INSPECT_ACCESS_RIGHTS_PROCESSING` : Logs the processing of the access rights (verbose debugging)
+- `LOG_DELTA_MESSAGES` : Allows logging of delta messages as they're sent to other consumers
+- `LOG_DELTA_CLIENT_COMMUNICATION` : Allows logging of the communication caused by the delta system
+- `LOG_TEMPLATE_MATCHER_PERFORMANCE` : Emits information regarding use of precalculated templates when analysing queries
+
+## Working around database issues
+
+Compatibility layers can rewrite SPRARQL queries to be in line with the expectations of a triplestore.  Use the `DATABASE_COMPATIBILITY` environment variable.
+
+Sometimes triplestores can be a bit cranky.  mu-authorization tries to create sensible and valid SPARQL queries that express what it intends to achieve.  Although it's still a work in progress, it's the goal to generate clean SPARQL queries.  A triplestore could barf on a query but work with a rewritten version.  The compatibility layer solves that.
+
+Supported values for `DATABASE_COMPATIBILITY` are:
+
+- `Raw` : (default) Don't alter queries.
+- `Virtuoso` : Support for Virtuoso.  Currently rewrites DELETE DATA to DELETE WHERE.
 
 # Configuration files
 

@@ -90,7 +90,6 @@ defmodule SparqlServer.Router.HandlerSupport do
       end
 
     new_template_local_store = ensure_syntax_in_store(template_local_store)
-    %{sparql_syntax: sparql_syntax} = new_template_local_store
 
     {parsed_form, new_template_local_store} =
       query
@@ -116,11 +115,7 @@ defmodule SparqlServer.Router.HandlerSupport do
       new_parsed_forms
       |> ALog.di("New parsed forms")
       |> Enum.reduce(true, fn elt, _ ->
-        elt
-        |> Regen.result()
-        |> ALog.di("Posing query to backend")
-        # |> IO.inspect( label: "Query to backend" )
-        |> SparqlClient.query()
+        SparqlClient.execute_parsed(elt)
       end)
       |> Poison.encode!()
 

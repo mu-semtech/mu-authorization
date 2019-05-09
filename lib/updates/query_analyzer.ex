@@ -873,10 +873,8 @@ defmodule Updates.QueryAnalyzer do
     quads
     # |> consolidate_insert_quads
     # |> dispatch_insert_quads_to_desired_graphs
-    |> construct_insert_query_from_quads( options )
-    |> Regen.result
-    |> ALog.di( "Quads to insert" )
-    |> SparqlClient.query
+    |> construct_insert_query_from_quads(options)
+    |> SparqlClient.execute_parsed()
   end
 
 end
