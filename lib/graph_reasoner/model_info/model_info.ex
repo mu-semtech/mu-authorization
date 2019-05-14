@@ -11,12 +11,14 @@ defmodule GraphReasoner.ModelInfo do
   of truth for retrieving information.
   """
 
+  @type t :: [Class.t()]
   @type uri :: String.t()
 
   @doc """
   Yields an array of all classes that are known in by the
   class_description configuration.
   """
+  @spec all_classes() :: [uri]
   def all_classes do
     Config.class_description()
     |> Enum.flat_map(fn %Class{uri: uri, properties: properties} ->

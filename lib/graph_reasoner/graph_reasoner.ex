@@ -4,6 +4,7 @@ alias InterpreterTerms.WordMatch, as: Word
 alias InterpreterTerms.SymbolMatch, as: Sym
 alias GraphReasoner.TypeReasoner
 alias GraphReasoner.Support.TermSelectors
+alias GraphReasoner.ModelInfo
 
 defmodule GraphReasoner do
   require Manipulators.Basics

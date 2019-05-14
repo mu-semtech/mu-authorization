@@ -1,5 +1,6 @@
 alias GraphReasoner.ModelInfo.Class, as: Class
 alias GraphReasoner.ModelInfo.Property, as: Property
+alias GraphReasoner.ModelInfo
 
 defmodule GraphReasoner.ModelInfo.Config do
   @moduledoc """
@@ -11,7 +12,7 @@ defmodule GraphReasoner.ModelInfo.Config do
   Yields known classes, their properties, and the targets of those
   properties.
   """
-  @spec class_description() :: [Class.t()]
+  @spec class_description() :: ModelInfo.t()
   def class_description do
     [
       %Class{
