@@ -13,6 +13,6 @@ defmodule Manipulators.Info do
       :Prologue ->
         {:exit, Updates.QueryAnalyzer.import_prologue(elt, state), nil}
     end
-    |> elem( 1 )
+    |> elem(1)
   end
 end

@@ -33,17 +33,17 @@ defmodule Some do
         # last result
         {:ok, next_generator_state, state}
 
-      # dialyzer informs us this state cannot arrive.  Leaving it here
-      # for when bugs arrive
+        # dialyzer informs us this state cannot arrive.  Leaving it here
+        # for when bugs arrive
 
-      # _ ->
-      #   if locked_state?(some, state) do
-      #     {:fail}
-      #   else
-      #     # the self generator failed to yield a result, our current
-      #     # state is the last state
-      #     {:ok, %Regen.Processors.None{}, state}
-      #   end
+        # _ ->
+        #   if locked_state?(some, state) do
+        #     {:fail}
+        #   else
+        #     # the self generator failed to yield a result, our current
+        #     # state is the last state
+        #     {:ok, %Regen.Processors.None{}, state}
+        #   end
     end
   end
 

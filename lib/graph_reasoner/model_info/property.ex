@@ -7,9 +7,9 @@ defmodule Property do
   setting the uri of the property and the targeted range.
   """
 
-  @type t :: %Property{uri: ModelInfo.uri, targets: [property_target]}
+  @type t :: %Property{uri: ModelInfo.uri(), targets: [property_target]}
 
-  @type uri_like :: ModelInfo.uri | :uri
+  @type uri_like :: ModelInfo.uri() | :uri
   @type primitive :: :primitive
 
   @type property_target :: uri_like | primitive

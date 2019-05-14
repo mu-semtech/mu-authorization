@@ -97,157 +97,178 @@ defmodule Updates.QueryAnalyzer do
   - DeleteWhere ::= 'DELETE' 'WHERE' QuadPattern"
   """
 
-  def extract_quads( query ) do
-    quads( query, %{} )
+  def extract_quads(query) do
+    quads(query, %{})
   end
 
-  def quads( %Sym{ symbol: :Sparql, submatches: [match] }, options ) do
+  def quads(%Sym{symbol: :Sparql, submatches: [match]}, options) do
     # Sparql ::= QueryUnit | UpdateUnit
     case match do
-      %Sym{ symbol: :UpdateUnit } -> quads( match, options )
+      %Sym{symbol: :UpdateUnit} -> quads(match, options)
     end
   end
 
-  def quads( %Sym{ symbol: :UpdateUnit, submatches: [match] }, options ) do
+  def quads(%Sym{symbol: :UpdateUnit, submatches: [match]}, options) do
     # UpdateUnit ::= Update
     case match do
-      %Sym{ symbol: :Update } -> quads( match, options )
+      %Sym{symbol: :Update} -> quads(match, options)
     end
   end
 
-  def quads( %Sym{ symbol: :Update, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :Update, submatches: matches}, options) do
     # Update ::= Prologue ( Update1 ( ';' Update )? )?
     case matches do
-      [ _prologue_sym ] -> []
-      [ prologue_sym, update_one_sym ] ->
-        new_options = import_prologue( prologue_sym, options )
-        quads( update_one_sym, new_options )
-      [ prologue_sym, update_one_sym, %Word{}, update_sym ] ->
-        new_options = import_prologue( prologue_sym, options )
+      [_prologue_sym] ->
+        []
+
+      [prologue_sym, update_one_sym] ->
+        new_options = import_prologue(prologue_sym, options)
+        quads(update_one_sym, new_options)
+
+      [prologue_sym, update_one_sym, %Word{}, update_sym] ->
+        new_options = import_prologue(prologue_sym, options)
+
         Quad.append(
-          quads( update_one_sym, new_options ),
-          quads( update_sym, new_options ) )
+          quads(update_one_sym, new_options),
+          quads(update_sym, new_options)
+        )
     end
   end
 
-  def quads( %Sym{ symbol: :Update1, submatches: [match] }, options ) do
+  def quads(%Sym{symbol: :Update1, submatches: [match]}, options) do
     # Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | DeleteWhere | Modify
 
     case match do
-      %Sym{ symbol: :InsertData } -> quads( match, options )
-      %Sym{ symbol: :DeleteData } -> quads( match, options )
-      %Sym{ symbol: :DeleteWhere } -> quads( match, options )
-      %Sym{ symbol: :Modify } -> quads( match, options )
+      %Sym{symbol: :InsertData} -> quads(match, options)
+      %Sym{symbol: :DeleteData} -> quads(match, options)
+      %Sym{symbol: :DeleteWhere} -> quads(match, options)
+      %Sym{symbol: :Modify} -> quads(match, options)
     end
   end
 
-  def quads( %Sym{ symbol: :InsertData, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :InsertData, submatches: matches}, options) do
     # InsertData ::= 'INSERT' 'DATA' QuadData
 
     # scan matches to find the single QuadData element:
-    quad_data = Enum.find matches, fn
-      %Sym{ symbol: :QuadData } -> true
-      %Word{} -> false
-    end
+    quad_data =
+      Enum.find(matches, fn
+        %Sym{symbol: :QuadData} -> true
+        %Word{} -> false
+      end)
 
-    [ insert: quads( quad_data, options ) ]
+    [insert: quads(quad_data, options)]
   end
 
-  def quads( %Sym{ symbol: :DeleteData, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :DeleteData, submatches: matches}, options) do
     # DeleteData ::= 'DELETE' 'DATA' QuadData
 
     # scan matchesto find the single QuadData element:
-    quad_data = Enum.find matches, fn
-      %Sym{ symbol: :QuadData } -> true
-      %Word{} -> false
-    end
+    quad_data =
+      Enum.find(matches, fn
+        %Sym{symbol: :QuadData} -> true
+        %Word{} -> false
+      end)
 
-    [ delete: quads( quad_data, options ) ]
+    [delete: quads(quad_data, options)]
   end
 
-  def quads( %Sym{ symbol: :Modify, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :Modify, submatches: matches}, options) do
     # [ ] Modify ::= ( 'WITH' iri )? ( DeleteClause InsertClause? | InsertClause ) UsingClause* 'WHERE' ++GroupGraphPattern++
 
-    group_graph_pattern_sym = %Sym{} = Enum.find matches, fn
-      %Sym{ symbol: :GroupGraphPattern } -> true
-      _ -> false
-    end
+    group_graph_pattern_sym =
+      %Sym{} =
+      Enum.find(matches, fn
+        %Sym{symbol: :GroupGraphPattern} -> true
+        _ -> false
+      end)
 
     # We disallow the explicit use of USING in the construct queries.
     # Users should never specify them, they should be calculated.
-    _using_clause_syms = [] = Enum.filter matches, fn
-      %Sym{ symbol: :UsingClause } -> true
-      _ -> false
-    end
+    _using_clause_syms =
+      [] =
+      Enum.filter(matches, fn
+        %Sym{symbol: :UsingClause} -> true
+        _ -> false
+      end)
 
     # we may have either or both of delete_clause_sym and
     # insert_clause_sym.
-    delete_clause_sym = Enum.find matches, fn
-      %Sym{ symbol: :DeleteClause } -> true
-      _ -> false
-    end
+    delete_clause_sym =
+      Enum.find(matches, fn
+        %Sym{symbol: :DeleteClause} -> true
+        _ -> false
+      end)
 
-    insert_clause_sym = Enum.find matches, fn
-      %Sym{ symbol: :InsertClause } -> true
-      _ -> false
-    end
+    insert_clause_sym =
+      Enum.find(matches, fn
+        %Sym{symbol: :InsertClause} -> true
+        _ -> false
+      end)
 
     # The WITH clause provides a default for both the INSERT and the
     # SELECT portion of our Modify.
-    { _, options } =
+    {_, options} =
       case matches do
-        [%Word{ word: "WITH" }, iri_sym | rest] ->
-          { rest, update_options_for_with( iri_sym, options ) }
-        _ -> { matches, options }
+        [%Word{word: "WITH"}, iri_sym | rest] ->
+          {rest, update_options_for_with(iri_sym, options)}
+
+        _ ->
+          {matches, options}
       end
 
     # Our options are set, it's time to build the model for our insert
     # templates
-    delete_clause_quads = if delete_clause_sym do
-      quads( delete_clause_sym, options )
-    end
+    delete_clause_quads =
+      if delete_clause_sym do
+        quads(delete_clause_sym, options)
+      end
 
-    insert_clause_quads = if insert_clause_sym do
-      quads( insert_clause_sym, options )
-    end
+    insert_clause_quads =
+      if insert_clause_sym do
+        quads(insert_clause_sym, options)
+      end
 
     # Collect all information to construct the SELECT query, by
     # converting the using clauses, adding them to our options,
     # discovering the necessary SELECT variables, and constructing a
     # new SELECT query.
-    delete_quads_statement = if delete_clause_quads do
-      [ { :delete,
-          fill_in_triples_template( delete_clause_quads, group_graph_pattern_sym, options )
-        } ]
-    else
-      []
-    end
+    delete_quads_statement =
+      if delete_clause_quads do
+        [
+          {:delete,
+           fill_in_triples_template(delete_clause_quads, group_graph_pattern_sym, options)}
+        ]
+      else
+        []
+      end
 
-    insert_quads_statement = if insert_clause_quads do
-      [ { :insert,
-          fill_in_triples_template( insert_clause_quads, group_graph_pattern_sym, options )
-        } ]
-    else
-      []
-    end
+    insert_quads_statement =
+      if insert_clause_quads do
+        [
+          {:insert,
+           fill_in_triples_template(insert_clause_quads, group_graph_pattern_sym, options)}
+        ]
+      else
+        []
+      end
 
-    ALog.di( delete_quads_statement, "delete quads statement" )
-    ALog.di( insert_quads_statement, "insert quads statement" )
+    ALog.di(delete_quads_statement, "delete quads statement")
+    ALog.di(insert_quads_statement, "insert quads statement")
 
     (delete_quads_statement ++ insert_quads_statement)
-    |> ALog.di( "All updated quads" )
+    |> ALog.di("All updated quads")
   end
 
-  def quads( %Sym{ symbol: :DeleteClause, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :DeleteClause, submatches: matches}, options) do
     # DeleteClause ::= 'DELETE' QuadPattern",
 
-    [%Word{}, %Sym{ symbol: :QuadPattern } = subsym] = matches
-    quads( subsym, options )
+    [%Word{}, %Sym{symbol: :QuadPattern} = subsym] = matches
+    quads(subsym, options)
   end
 
-  def quads( %Sym{ symbol: :DeleteWhere, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :DeleteWhere, submatches: matches}, options) do
     # DeleteWhere ::= 'DELETE' 'WHERE' QuadPattern"
-    quad_pattern = Enum.find( matches, &match?(%Sym{ symbol: :QuadPattern }, &1) )
+    quad_pattern = Enum.find(matches, &match?(%Sym{symbol: :QuadPattern}, &1))
 
     # The quad_pattern is more constrained than the GroupGraphPattern.
     # However, many keys are different.  The simplest way for us to
@@ -263,82 +284,82 @@ defmodule Updates.QueryAnalyzer do
 
     group_graph_pattern =
       quad_pattern
-      |> ALog.di( "Quad pattern to regenerate" )
-      |> Regen.result( :QuadPattern )
-      |> ALog.di( "Regenerated quad pattern" )
-      |> String.trim
-      |> Parser.parse_query_full( :GroupGraphPattern )
-      |> ALog.di( "Parsed QuadPattern as GroupGraphPattern" )
+      |> ALog.di("Quad pattern to regenerate")
+      |> Regen.result(:QuadPattern)
+      |> ALog.di("Regenerated quad pattern")
+      |> String.trim()
+      |> Parser.parse_query_full(:GroupGraphPattern)
+      |> ALog.di("Parsed QuadPattern as GroupGraphPattern")
 
-    template = quads( quad_pattern, options )
+    template = quads(quad_pattern, options)
 
-
-    [ { :delete,
-        fill_in_triples_template( template, group_graph_pattern, options )
-      } ]
+    [{:delete, fill_in_triples_template(template, group_graph_pattern, options)}]
   end
 
-  def quads( %Sym{ symbol: :InsertClause, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :InsertClause, submatches: matches}, options) do
     # InsertClause ::= 'INSERT' QuadPattern
 
-    [%Word{}, %Sym{ symbol: :QuadPattern } = subsym] = matches
-    quads( subsym, options )
+    [%Word{}, %Sym{symbol: :QuadPattern} = subsym] = matches
+    quads(subsym, options)
   end
 
-  def quads( %Sym{ symbol: :QuadPattern, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :QuadPattern, submatches: matches}, options) do
     #  QuadPattern ::= '{' Quads '}'
 
     # Find the Quads symbol and dispatch to it
-    Enum.find( matches, fn
-      %Sym{ symbol: :Quads } -> true
+    Enum.find(matches, fn
+      %Sym{symbol: :Quads} -> true
       %Word{} -> false
-    end )
-    |> quads( options )
+    end)
+    |> quads(options)
   end
 
-  def quads( %Sym{ symbol: :QuadData, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :QuadData, submatches: matches}, options) do
     # QuadData ::= '{' Quads '}'
 
     # scan matches to find the single Quads element:
-    quads = Enum.find matches, fn
-      %Sym{ symbol: :Quads } -> true
-      %Word{} -> false
-    end
+    quads =
+      Enum.find(matches, fn
+        %Sym{symbol: :Quads} -> true
+        %Word{} -> false
+      end)
 
-    quads( quads, options )
+    quads(quads, options)
   end
 
-  def quads( %Sym{ symbol: :Quads, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :Quads, submatches: matches}, options) do
     # Quads ::= TriplesTemplate? (QuadsNotTriples '.'? TriplesTemplate ?)*
 
     # dispatch anything which is a TriplesTemplate or QuadsNotTriples
     matches
-    |> Enum.filter( fn
-      %Sym{ symbol: :TriplesTemplate } -> true
-      %Sym{ symbol: :QuadsNotTriples } -> true
+    |> Enum.filter(fn
+      %Sym{symbol: :TriplesTemplate} -> true
+      %Sym{symbol: :QuadsNotTriples} -> true
       %Word{} -> false
-    end )
-    |> Enum.map( fn (x) -> quads( x, options ) end )
-    |> Enum.reduce( &Quad.append/2 )
+    end)
+    |> Enum.map(fn x -> quads(x, options) end)
+    |> Enum.reduce(&Quad.append/2)
   end
 
-  def quads( %Sym{ symbol: :QuadsNotTriples, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :QuadsNotTriples, submatches: matches}, options) do
     # QuadsNotTriples ::= 'GRAPH' VarOrIri '{' TriplesTemplate? '}'
 
     # Get the VarOrIri URI (which must be a URI-like symbol) and the
     # TriplesTemplate.  Dispatch to the TriplesTemplate if that
     # exists.
-    graph_sym = Enum.find matches, fn
-      %Sym{ symbol: :VarOrIri } -> true
-      %Sym{ symbol: :TriplesTemplate } -> false
-      %Word{} -> false
-    end
+    graph_sym =
+      Enum.find(matches, fn
+        %Sym{symbol: :VarOrIri} -> true
+        %Sym{symbol: :TriplesTemplate} -> false
+        %Word{} -> false
+      end)
 
-    triples_template_sym = Enum.find matches, false, fn
-      %Sym{ symbol: :TriplesTemplate } -> true
-      %Sym{ symbol: :VarOrIri } -> false
-      %Word{} -> false
-    end
+    triples_template_sym =
+      Enum.find(matches, false, fn
+        %Sym{symbol: :TriplesTemplate} -> true
+        %Sym{symbol: :VarOrIri} -> false
+        %Word{} -> false
+      end)
 
     # triplesTemplateSym may be false.  In that case, we don't need to
     # push anything special.  Otherwise, we need to analyze the
@@ -347,336 +368,370 @@ defmodule Updates.QueryAnalyzer do
     if triples_template_sym do
       graph_uri =
         graph_sym
-        |> primitive_value( options )
-        # |> is_uri_like!  # <<-- we have started supporting
-        # variables, the EBNF is not sufficiently expressive
+        |> primitive_value(options)
 
-      quads( triples_template_sym, %{ options | default_graph: graph_uri } )
+      # |> is_uri_like!  # <<-- we have started supporting
+      # variables, the EBNF is not sufficiently expressive
+
+      quads(triples_template_sym, %{options | default_graph: graph_uri})
     end
   end
 
-  def quads( %Sym{ symbol: :TriplesTemplate, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :TriplesTemplate, submatches: matches}, options) do
     # TriplesTemplate ::= TriplesSameSubject ( '.' TriplesTemplate? )?
 
-    same_subject_sym = Enum.find matches, fn
-      %Sym{ symbol: :TriplesSameSubject } -> true
-      %Sym{ symbol: :TriplesTemplate } -> false
-      %Word{} -> false
-    end
+    same_subject_sym =
+      Enum.find(matches, fn
+        %Sym{symbol: :TriplesSameSubject} -> true
+        %Sym{symbol: :TriplesTemplate} -> false
+        %Word{} -> false
+      end)
 
-    triples_template_sym = Enum.find matches, false, fn
-      %Sym{ symbol: :TriplesTemplate } -> true
-      %Sym{ symbol: :TriplesSameSubject } -> false
-      %Word{} -> false
-    end
+    triples_template_sym =
+      Enum.find(matches, false, fn
+        %Sym{symbol: :TriplesTemplate} -> true
+        %Sym{symbol: :TriplesSameSubject} -> false
+        %Word{} -> false
+      end)
 
     # first execute TriplesSameSubject, then execute TriplesTemplate
     if triples_template_sym do
       Quad.append(
-        quads( same_subject_sym, options ),
-        quads( triples_template_sym, options ) )
+        quads(same_subject_sym, options),
+        quads(triples_template_sym, options)
+      )
     else
-      quads( same_subject_sym, options )
+      quads(same_subject_sym, options)
     end
-
   end
 
-  def quads( %Sym{ symbol: :TriplesSameSubject, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :TriplesSameSubject, submatches: matches}, options) do
     # TriplesSameSubject ::= VarOrTerm PropertyListNotEmpty | --TriplesNode-- --PropertyList--
 
     # We assume the right side of this will not be received.  We don't
     # handle blank nodes.
 
-    var_or_term_sym = Enum.find matches, fn
-      %Sym{ symbol: :VarOrTerm } -> true
-      %Sym{ symbol: :PropertyListNotEmpty } -> false
-    end
+    var_or_term_sym =
+      Enum.find(matches, fn
+        %Sym{symbol: :VarOrTerm} -> true
+        %Sym{symbol: :PropertyListNotEmpty} -> false
+      end)
 
-    property_list_not_empty_sym = Enum.find matches, fn
-      %Sym{ symbol: :PropertyListNotEmpty } -> true
-      %Sym{ symbol: :VarOrTerm } -> false
-    end
+    property_list_not_empty_sym =
+      Enum.find(matches, fn
+        %Sym{symbol: :PropertyListNotEmpty} -> true
+        %Sym{symbol: :VarOrTerm} -> false
+      end)
 
     # We should get the URI for VarOrTerm (of which we know it should
     # not yield a variable), push it into our options as the current
     # subject, and further calculate the quads.
     subject_uri =
       var_or_term_sym
-      |> primitive_value( options )
-      # |> is_uri_like! # <-- we now support Variables and the EBNF is
-      # not sufficiently expressive to block this.
+      |> primitive_value(options)
 
-    new_options = Map.put( options, :subject, subject_uri )
+    # |> is_uri_like! # <-- we now support Variables and the EBNF is
+    # not sufficiently expressive to block this.
 
-    quads( property_list_not_empty_sym, new_options )
+    new_options = Map.put(options, :subject, subject_uri)
+
+    quads(property_list_not_empty_sym, new_options)
   end
 
-  def quads( %Sym{ symbol: :PropertyListNotEmpty, submatches: matches  }, options ) do
+  def quads(%Sym{symbol: :PropertyListNotEmpty, submatches: matches}, options) do
     # PropertyListNotEmpty ::= Verb ObjectList ( ';' ( Verb ObjectList )? )*
 
     # Search for any combination of Verb ObjectList, and yield these as tuples
-    verb_object_sym_combinations = Enum.reduce matches, [], fn
-      (%Sym{ symbol: :Verb } = elt, list) ->
-        [{elt} | list]
-      (%Sym{ symbol: :ObjectList } = object_list, [{%Sym{ symbol: :Verb } = verb } | rest]) ->
-        [{verb,object_list} | rest]
-      (%Word{}, acc) -> acc
-    end
+    verb_object_sym_combinations =
+      Enum.reduce(matches, [], fn
+        %Sym{symbol: :Verb} = elt, list ->
+          [{elt} | list]
+
+        %Sym{symbol: :ObjectList} = object_list, [{%Sym{symbol: :Verb} = verb} | rest] ->
+          [{verb, object_list} | rest]
+
+        %Word{}, acc ->
+          acc
+      end)
 
     # Walk over each combination
     # -> calculate the new predicate
     # -> get quads for objectlist, assuming the new predicate
-    Enum.reduce verb_object_sym_combinations, [], fn
-      ({%Sym{ symbol: :Verb } = verb,
-        %Sym{ symbol: :ObjectList } = object_list},
-        acc)  ->
+    Enum.reduce(verb_object_sym_combinations, [], fn
+      {%Sym{symbol: :Verb} = verb, %Sym{symbol: :ObjectList} = object_list}, acc ->
         predicate =
           verb
-          |> primitive_value( options )
-        new_options = Map.put( options, :predicate, predicate )
-        new_quads = quads( object_list, new_options )
+          |> primitive_value(options)
 
-        Quad.append( acc, new_quads )
-    end
+        new_options = Map.put(options, :predicate, predicate)
+        new_quads = quads(object_list, new_options)
+
+        Quad.append(acc, new_quads)
+    end)
   end
 
-  def quads( %Sym{ symbol: :ObjectList, submatches: matches }, options ) do
+  def quads(%Sym{symbol: :ObjectList, submatches: matches}, options) do
     # ObjectList ::= Object ( ',' Object )*
 
     # Filter out every Object
-    Enum.filter( matches, fn
-      %Sym{ symbol: :Object } -> true
+    Enum.filter(matches, fn
+      %Sym{symbol: :Object} -> true
       %Word{} -> false
     end)
-    |> Enum.map( fn (sym) -> quads( sym, options ) end )
-    |> Enum.reduce( &Quad.append/2 )
+    |> Enum.map(fn sym -> quads(sym, options) end)
+    |> Enum.reduce(&Quad.append/2)
   end
 
-  def quads( %Sym{ symbol: :Object, submatches: [%Sym{ symbol: :GraphNode } = graph_node] }, options ) do
+  def quads(%Sym{symbol: :Object, submatches: [%Sym{symbol: :GraphNode} = graph_node]}, options) do
     # Object ::= GraphNode
 
     # Get the primitive value for the graphNode and emit a triple containing it
     object =
       graph_node
-      |> primitive_value( options )
+      |> primitive_value(options)
 
-    quad = options
-    |> Map.put( :object, object )
-    |> Quad.from_options
+    quad =
+      options
+      |> Map.put(:object, object)
+      |> Quad.from_options()
 
-    [ quad ]
+    [quad]
   end
 
-  def primitive_value( %Sym{ symbol: :Verb, submatches: [%Word{}] }, _ ) do
+  def primitive_value(%Sym{symbol: :Verb, submatches: [%Word{}]}, _) do
     # Verb ::= VarOrIri | 'a'
-    Iri.make_a
-  end
-  def primitive_value( %Sym{ symbol: :Verb, submatches: [submatch] }, options ) do
-    # Verb ::= VarOrIri | 'a'
-    primitive_value( submatch, options )
+    Iri.make_a()
   end
 
-  def primitive_value( %Sym{ symbol: :VarOrIri, submatches: [submatch] }, options ) do
+  def primitive_value(%Sym{symbol: :Verb, submatches: [submatch]}, options) do
+    # Verb ::= VarOrIri | 'a'
+    primitive_value(submatch, options)
+  end
+
+  def primitive_value(%Sym{symbol: :VarOrIri, submatches: [submatch]}, options) do
     # VarOrIri ::= Var | iri
 
     case submatch do
-      %Sym{ symbol: :iri } -> submatch
-      %Sym{ symbol: :Var } -> submatch
+      %Sym{symbol: :iri} -> submatch
+      %Sym{symbol: :Var} -> submatch
     end
-    |> primitive_value( options )
+    |> primitive_value(options)
   end
 
-  def primitive_value( %Sym{ symbol: :iri, submatches: [submatch]}, options ) do
+  def primitive_value(%Sym{symbol: :iri, submatches: [submatch]}, options) do
     # iri ::= IRIREF | PrefixedName
     case submatch do
-      %Sym{ symbol: :IRIREF } ->
-        primitive_value( submatch, options )
-      %Sym{ symbol: :PrefixedName } ->
-        primitive_value submatch, options
+      %Sym{symbol: :IRIREF} ->
+        primitive_value(submatch, options)
+
+      %Sym{symbol: :PrefixedName} ->
+        primitive_value(submatch, options)
     end
   end
 
-  def primitive_value( %Sym{ symbol: :IRIREF, string: string }, options ) do
-    Iri.from_iri_string( string, options )
+  def primitive_value(%Sym{symbol: :IRIREF, string: string}, options) do
+    Iri.from_iri_string(string, options)
   end
 
-  def primitive_value( %Sym{ symbol: :PrefixedName, submatches: [prefix_sym] }, options ) do
+  def primitive_value(%Sym{symbol: :PrefixedName, submatches: [prefix_sym]}, options) do
     # PrefixedName ::= PNAME_LN | PNAME_NS
 
     # Dispatch further down
-    primitive_value( prefix_sym, options )
+    primitive_value(prefix_sym, options)
   end
 
-  def primitive_value( %Sym{ symbol: :PNAME_LN, string: str }, options ) do
+  def primitive_value(%Sym{symbol: :PNAME_LN, string: str}, options) do
     # PNAME_LN
-    Iri.from_prefix_string( str, options )
+    Iri.from_prefix_string(str, options)
   end
-  def primitive_value( %Sym{ symbol: :PNAME_NS, string: str }, options ) do
+
+  def primitive_value(%Sym{symbol: :PNAME_NS, string: str}, options) do
     # PNAME_NS
     str
-    |> String.trim( " " )
-    |> Iri.from_prefix_string( options )
+    |> String.trim(" ")
+    |> Iri.from_prefix_string(options)
   end
 
-  def primitive_value( %Sym{ symbol: :Var, submatches: [submatch] }, options ) do
+  def primitive_value(%Sym{symbol: :Var, submatches: [submatch]}, options) do
     # Var ::= VAR1 | VAR2
 
-    primitive_value( submatch, options )
+    primitive_value(submatch, options)
   end
 
-  def primitive_value( %Sym{ symbol: var_sym, string: string, submatches: :none }, _options ) when var_sym in [:VAR1, :VAR2] do
+  def primitive_value(%Sym{symbol: var_sym, string: string, submatches: :none}, _options)
+      when var_sym in [:VAR1, :VAR2] do
     # VAR1
     # VAR2
 
     string
-    |> Var.from_string
+    |> Var.from_string()
   end
 
-  def primitive_value( %Sym{ symbol: :VarOrTerm, submatches: [submatch] }, options ) do
+  def primitive_value(%Sym{symbol: :VarOrTerm, submatches: [submatch]}, options) do
     # VarOrTerm ::= Var | GraphTerm
     case submatch do
-      %Sym{ symbol: :GraphTerm } -> submatch
-      %Sym{ symbol: :Var } -> submatch
+      %Sym{symbol: :GraphTerm} -> submatch
+      %Sym{symbol: :Var} -> submatch
     end
-    |> primitive_value( options )
+    |> primitive_value(options)
   end
 
-  def primitive_value( %Sym{ symbol: :GraphTerm, submatches: [submatch] }, options ) do
+  def primitive_value(%Sym{symbol: :GraphTerm, submatches: [submatch]}, options) do
     # GraphTerm ::= iri | RDFLiteral | NumericLiteral | BooleanLiteral | --BlankNode-- | --NIL--
 
     case submatch do
-      %{ symbol: :iri } -> primitive_value( submatch, options )
-      %{ symbol: :RDFLiteral } -> primitive_value( submatch, options )
-      %{ symbol: :NumericLiteral } -> primitive_value( submatch, options )
-      %{ symbol: :BooleanLiteral } -> primitive_value( submatch, options )
+      %{symbol: :iri} -> primitive_value(submatch, options)
+      %{symbol: :RDFLiteral} -> primitive_value(submatch, options)
+      %{symbol: :NumericLiteral} -> primitive_value(submatch, options)
+      %{symbol: :BooleanLiteral} -> primitive_value(submatch, options)
     end
   end
 
-  def primitive_value( %Sym{ symbol: :RDFLiteral, submatches: submatches }, options ) do
+  def primitive_value(%Sym{symbol: :RDFLiteral, submatches: submatches}, options) do
     # RDFLiteral ::= String ( LANGTAG | ( '^^' iri ) )?
 
     # We can use the primitives for String and iri, but we have to combine it ourselves
-    %Str{ str: simple_string } = string_primitive =
+    %Str{str: simple_string} =
+      string_primitive =
       submatches
-      |> List.first
-      |> primitive_value( options )
+      |> List.first()
+      |> primitive_value(options)
 
     case submatches do
-      [_,%Sym{ symbol: :LANGTAG, string: str }] ->
-        lang = String.slice( str, 1, String.length( str ) - 1 )
-        Str.from_langstring( simple_string, lang )
-      [_,%Word{},%Sym{ symbol: :iri } = type_sym] ->
-        type = primitive_value( type_sym, options )
-        Str.from_typestring( simple_string, type )
-      [_] -> string_primitive
+      [_, %Sym{symbol: :LANGTAG, string: str}] ->
+        lang = String.slice(str, 1, String.length(str) - 1)
+        Str.from_langstring(simple_string, lang)
+
+      [_, %Word{}, %Sym{symbol: :iri} = type_sym] ->
+        type = primitive_value(type_sym, options)
+        Str.from_typestring(simple_string, type)
+
+      [_] ->
+        string_primitive
     end
   end
 
-  def primitive_value( %Sym{ symbol: :GraphNode, submatches: [submatch] }, options ) do
+  def primitive_value(%Sym{symbol: :GraphNode, submatches: [submatch]}, options) do
     # GraphNode ::= VarOrTerm | --TriplesNode--
 
     # Dispatch to VarOrTerm, we don't support blank nodes
     case submatch do
-      %Sym{ symbol: :VarOrTerm } -> primitive_value( submatch, options )
+      %Sym{symbol: :VarOrTerm} -> primitive_value(submatch, options)
     end
   end
 
-  def primitive_value( %Sym{ symbol: :Verb, submatches: [submatch] }, options ) do
+  def primitive_value(%Sym{symbol: :Verb, submatches: [submatch]}, options) do
     # Verb ::= VarOrIri | 'a'
 
     # Dispatch to VarOrIri, or construct the 'a' IRI
 
     case submatch do
-      %Sym{ symbol: :VarOrIri } -> primitive_value( submatch, options )
-      %Word{} -> Iri.make_a
+      %Sym{symbol: :VarOrIri} -> primitive_value(submatch, options)
+      %Word{} -> Iri.make_a()
     end
   end
 
-  def primitive_value( %Sym{ symbol: :BooleanLiteral, submatches: [%Word{ word: word }]}, _options ) do
+  def primitive_value(%Sym{symbol: :BooleanLiteral, submatches: [%Word{word: word}]}, _options) do
     # BooleanLiteral ::= 'true' | 'false'
 
     # Dispatch directly to bool
-    Bool.from_string( word )
+    Bool.from_string(word)
   end
 
-  def primitive_value( %Sym{ symbol: :String, submatches: [ submatch ] }, options ) do
+  def primitive_value(%Sym{symbol: :String, submatches: [submatch]}, options) do
     # String ::= STRING_LITERAL1 | STRING_LITERAL2 | STRING_LITERAL_LONG1 | STRING_LITERAL_LONG2
 
-    primitive_value submatch, options
+    primitive_value(submatch, options)
   end
 
-  def primitive_value( %Sym{ symbol: string_literal_sym, string: str }, _options ) when string_literal_sym in [:STRING_LITERAL1, :STRING_LITERAL2, :STRING_LITERAL_LONG1, :STRING_LITERAL_LONG2] do
+  def primitive_value(%Sym{symbol: string_literal_sym, string: str}, _options)
+      when string_literal_sym in [
+             :STRING_LITERAL1,
+             :STRING_LITERAL2,
+             :STRING_LITERAL_LONG1,
+             :STRING_LITERAL_LONG2
+           ] do
     # TODO: by outputting this primitive value, we lack information on
     # how to render it in the future.  Each of these should be
     # rendered in a different way.  The enclosed content ",',""",'''
     # is quite relevant to ensure valid output.
-    Str.from_string( str )
+    Str.from_string(str)
   end
 
-  def primitive_value( %Sym{ symbol: :NumericLiteral, submatches: [subsymbol] }, options ) do
+  def primitive_value(%Sym{symbol: :NumericLiteral, submatches: [subsymbol]}, options) do
     # NumericLiteral ::= NumericLiteralUnsigned | NumericLiteralPositive | NumericLiteralNegative
 
     case subsymbol do
-      %Sym{ symbol: :NumericLiteralUnsigned } -> primitive_value( subsymbol, options )
-      %Sym{ symbol: :NumericLiteralPositive } -> primitive_value( subsymbol, options )
-      %Sym{ symbol: :NumericLiteralNegative } -> primitive_value( subsymbol, options )
+      %Sym{symbol: :NumericLiteralUnsigned} -> primitive_value(subsymbol, options)
+      %Sym{symbol: :NumericLiteralPositive} -> primitive_value(subsymbol, options)
+      %Sym{symbol: :NumericLiteralNegative} -> primitive_value(subsymbol, options)
     end
   end
 
-  def primitive_value( %Sym{ symbol: :NumericLiteralUnsigned, submatches: [sub] }, options ) do
+  def primitive_value(%Sym{symbol: :NumericLiteralUnsigned, submatches: [sub]}, options) do
     # NumericLiteralUnsigned ::= INTEGER | DECIMAL | DOUBLE
 
     # We will dispatch to the primitive type
 
-    primitive_value( sub, options )
+    primitive_value(sub, options)
   end
 
-  def primitive_value( %Sym{ symbol: :NumericLiteralPositive, submatches: [subsymbol] }, options ) do
+  def primitive_value(%Sym{symbol: :NumericLiteralPositive, submatches: [subsymbol]}, options) do
     # NumericLiteralPositive ::= INTEGER_POSITIVE | DECIMAL_POSITIVE | DOUBLE_POSITIVE
-    primitive_value( subsymbol, options )
+    primitive_value(subsymbol, options)
   end
 
-  def primitive_value( %Sym{ symbol: :NumericLiteralNegative, submatches: [subsymbol] }, options ) do
+  def primitive_value(%Sym{symbol: :NumericLiteralNegative, submatches: [subsymbol]}, options) do
     # NumericLiteralNegative ::= INTEGER_NEGATIVE | DECIMAL_NEGATIVE | DOUBLE_NEGATIVE
-    primitive_value( subsymbol, options )
+    primitive_value(subsymbol, options)
   end
 
-  def primitive_value( %Sym{ symbol: sym, string: str }, _options ) when sym in [:INTEGER, :DECIMAL, :DOUBLE, :INTEGER_POSITIVE, :DECIMAL_POSITIVE, :DOUBLE_POSITIVE, :INTEGER_NEGATIVE, :DECIMAL_NEGATIVE, :DOUBLE_NEGATIVE] do
+  def primitive_value(%Sym{symbol: sym, string: str}, _options)
+      when sym in [
+             :INTEGER,
+             :DECIMAL,
+             :DOUBLE,
+             :INTEGER_POSITIVE,
+             :DECIMAL_POSITIVE,
+             :DOUBLE_POSITIVE,
+             :INTEGER_NEGATIVE,
+             :DECIMAL_NEGATIVE,
+             :DOUBLE_NEGATIVE
+           ] do
     # We can dispatch to the Number type, as we don't parse further
-    Number.from_string( str )
+    Number.from_string(str)
   end
 
   ## Primitive values for queries
-  def primitive_value( %Sym{ symbol: :PathPrimary, submatches: [ %Word{ word: "a" } ] }, _options ) do
-    Iri.make_a
+  def primitive_value(%Sym{symbol: :PathPrimary, submatches: [%Word{word: "a"}]}, _options) do
+    Iri.make_a()
   end
 
-
-  def import_prologue( %Sym{ symbol: :Prologue, submatches: matches }, options ) do
+  def import_prologue(%Sym{symbol: :Prologue, submatches: matches}, options) do
     # Prologue ::= ( BaseDecl | PrefixDecl )*
     matches
-    |> Enum.map( fn
-      %Sym{ symbol: :BaseDecl } = match -> match
-      %Sym{ symbol: :PrefixDecl } = match -> match
-    end )
-    |> Enum.reduce( options, &import_prologue/2 )
+    |> Enum.map(fn
+      %Sym{symbol: :BaseDecl} = match -> match
+      %Sym{symbol: :PrefixDecl} = match -> match
+    end)
+    |> Enum.reduce(options, &import_prologue/2)
   end
 
-  def import_prologue( %Sym{ symbol: :BaseDecl, submatches: matches }, options ) do
+  def import_prologue(%Sym{symbol: :BaseDecl, submatches: matches}, options) do
     # BaseDecl ::= 'BASE' IRIREF
-    [ %Word{}, iriref_sym ] = matches
+    [%Word{}, iriref_sym] = matches
 
     base_iri =
       iriref_sym
-      |> primitive_value( options )
+      |> primitive_value(options)
       |> is_uri_like!
 
     # TODO is BaseDecl the default graph, or only for creating IRIs?
     options
-    |> Map.put( :default_graph, base_iri )
+    |> Map.put(:default_graph, base_iri)
   end
 
-  def import_prologue(%Sym{ symbol: :PrefixDecl, submatches: matches }, options ) do
+  def import_prologue(%Sym{symbol: :PrefixDecl, submatches: matches}, options) do
     # PrefixDecl ::= 'PREFIX' PNAME_NS IRIREF
 
     # we must fetch PNAME_NS, but drop the spaces in front and the
@@ -684,131 +739,134 @@ defmodule Updates.QueryAnalyzer do
 
     # PNAME_NS is primitive -> get the value from the returned IRI
 
-    [ %Word{},
-      %Sym{ symbol: :PNAME_NS, string: namespace_str },
-      %Sym{ symbol: :IRIREF } = iriref_sym
-    ] = matches
+    [%Word{}, %Sym{symbol: :PNAME_NS, string: namespace_str}, %Sym{symbol: :IRIREF} = iriref_sym] =
+      matches
 
     # TODO don't drop spaces in front once terminal symbols don't
     # contain whitespace any longer
     namespace_string =
       namespace_str
-      |> String.trim( " " )
+      |> String.trim(" ")
       |> remove_last_string_char
 
-    iriref_iri = primitive_value( iriref_sym, options )
+    iriref_iri = primitive_value(iriref_sym, options)
 
     prefixes =
-      Map.get( options, :prefixes, %{} )
-      |> Map.put( namespace_string, iriref_iri )
+      Map.get(options, :prefixes, %{})
+      |> Map.put(namespace_string, iriref_iri)
 
-    Map.put( options, :prefixes, prefixes )
+    Map.put(options, :prefixes, prefixes)
   end
 
   @doc """
   Yields a list of all variables which are containted in the query,
   with duplicates removed.
   """
-  def find_variables_in_quads( quads ) do
+  def find_variables_in_quads(quads) do
     quads
-    |> Enum.flat_map( &Quad.as_list/1 )
-    |> Enum.filter( &Var.is_var/1 )
-    |> Enum.uniq
+    |> Enum.flat_map(&Quad.as_list/1)
+    |> Enum.filter(&Var.is_var/1)
+    |> Enum.uniq()
   end
 
-  def update_options_for_with( %Sym{ symbol: :iri } = sym, options ) do
+  def update_options_for_with(%Sym{symbol: :iri} = sym, options) do
     # TODO double_check the use of :default_graph.  The may be used
     # incorrectly as the basis for empty predicates.
-    iri = primitive_value( sym, options )
+    iri = primitive_value(sym, options)
 
     options
-    |> Map.put( :default_graph, iri )
+    |> Map.put(:default_graph, iri)
   end
 
-  def construct_select_query( variables, group_graph_pattern_sym, options ) do
+  def construct_select_query(variables, group_graph_pattern_sym, options) do
     # In order to build the select query, we need to walk the right tree.
     # At this stage, we have our options (which we can use to set the default graph)
 
-    authorization_groups = Map.get( options, :authorization_groups ) # TODO add default to calculate authorization_groups for no user
+    # TODO add default to calculate authorization_groups for no user
+    authorization_groups = Map.get(options, :authorization_groups)
 
-    ALog.di( authorization_groups, "Authorization groups" )
-    ALog.di( options, "Received options" )
+    ALog.di(authorization_groups, "Authorization groups")
+    ALog.di(options, "Received options")
 
     # TODO: remove graph statements in group_graph_pattern_sym
     # TODO: move this method to a better module
 
     select_variables =
       variables
-      |> Enum.map( &Var.to_solution_sym/1 )
+      |> Enum.map(&Var.to_solution_sym/1)
 
-    Updates.QueryConstructors.make_select_query( select_variables, group_graph_pattern_sym )
-    |> Manipulators.Recipes.add_prefixes( prefix_list_from_options( options ) )
-    |> ALog.di( "Generated partial query" )
-    |> Acl.process_query( Acl.UserGroups.for_use( :read_for_write ), authorization_groups )
+    Updates.QueryConstructors.make_select_query(select_variables, group_graph_pattern_sym)
+    |> Manipulators.Recipes.add_prefixes(prefix_list_from_options(options))
+    |> ALog.di("Generated partial query")
+    |> Acl.process_query(Acl.UserGroups.for_use(:read_for_write), authorization_groups)
+
     # |> Manipulators.Recipes.set_from_graph # This should be replaced by the previous rule in the future
   end
 
   def construct_insert_query_from_quads(quads, options) do
     # TODO: this should be clearing when the query is executed
-    clear_cache_for_typed_quads( quads, options )
+    clear_cache_for_typed_quads(quads, options)
 
     quads
-    |> Enum.map( &Updates.QueryConstructors.make_quad_match_from_quad/1 )
-    |> Updates.QueryConstructors.make_insert_query
+    |> Enum.map(&Updates.QueryConstructors.make_quad_match_from_quad/1)
+    |> Updates.QueryConstructors.make_insert_query()
+
     # |> TODO add prefixes
   end
 
   def construct_delete_query_from_quads(quads, options) do
     # TODO: this should be clearing when the query is executed
-    clear_cache_for_typed_quads( quads, options )
+    clear_cache_for_typed_quads(quads, options)
 
     quads
-    |> Enum.map( &Updates.QueryConstructors.make_quad_match_from_quad/1 )
-    |> Updates.QueryConstructors.make_delete_query
+    |> Enum.map(&Updates.QueryConstructors.make_quad_match_from_quad/1)
+    |> Updates.QueryConstructors.make_delete_query()
+
     # |> TODO add prefixes
   end
 
-  defp clear_cache_for_typed_quads( quads, options ) do
-    authorization_groups = Map.get( options, :authorization_groups )
+  defp clear_cache_for_typed_quads(quads, options) do
+    authorization_groups = Map.get(options, :authorization_groups)
 
     quads
-    |> Enum.filter( fn (%Quad{predicate: pred}) -> Iri.is_a?( pred ) end )
-    |> Enum.map( fn (%Quad{subject: %Iri{ iri: subj }}) ->
-      Cache.Types.clear( subj, authorization_groups )
-    end )
+    |> Enum.filter(fn %Quad{predicate: pred} -> Iri.is_a?(pred) end)
+    |> Enum.map(fn %Quad{subject: %Iri{iri: subj}} ->
+      Cache.Types.clear(subj, authorization_groups)
+    end)
   end
 
-  def prefix_list_from_options( options ) do
+  def prefix_list_from_options(options) do
     options
-    |> Map.get(:prefixes, []) # TODO: remove this prefix when it is not required anymore
-    |> Enum.into( [] )
-    |> Enum.map( fn ({name, %Updates.QueryAnalyzer.Iri{ iri: iri }}) -> { name, iri } end )
+    # TODO: remove this prefix when it is not required anymore
+    |> Map.get(:prefixes, [])
+    |> Enum.into([])
+    |> Enum.map(fn {name, %Updates.QueryAnalyzer.Iri{iri: iri}} -> {name, iri} end)
   end
 
-  def fill_quad_template( quads, single_query_result ) do
+  def fill_quad_template(quads, single_query_result) do
     quads
-    |> Enum.map( fn (quad) -> instantiate_quad( quad, single_query_result ) end )
-    |> Enum.reject( &Quad.has_var?/1 )
+    |> Enum.map(fn quad -> instantiate_quad(quad, single_query_result) end)
+    |> Enum.reject(&Quad.has_var?/1)
   end
 
   @doc """
   Fills in the variables of a single quad, for the supplied variable binding.
   """
-  def instantiate_quad( %Quad{} = quad, %{} = binding ) do
+  def instantiate_quad(%Quad{} = quad, %{} = binding) do
     quad
-    |> Quad.as_list
-    |> Enum.map( fn (elt) ->
-      if Var.is_var( elt ) && Map.has_key?( binding, Var.pure_name( elt ) ) do
-        Map.get( binding, Var.pure_name( elt ) )
+    |> Quad.as_list()
+    |> Enum.map(fn elt ->
+      if Var.is_var(elt) && Map.has_key?(binding, Var.pure_name(elt)) do
+        Map.get(binding, Var.pure_name(elt))
         |> primitive_value_from_binding
       else
         elt
       end
-    end )
-    |> Quad.from_list
+    end)
+    |> Quad.from_list()
   end
 
-  def primitive_value_from_binding( binding_value ) do
+  def primitive_value_from_binding(binding_value) do
     # TODO convert binding_value to local value
 
     # TODO: we should verify that the strings which are returned as a
@@ -817,28 +875,37 @@ defmodule Updates.QueryAnalyzer do
     # SPARQL1.1 protocol, with the query syntax.
 
     case binding_value do
-      %{ "type" => "uri", "value" => value } ->
-        Iri.from_iri_string( "<" <> value <> ">", %{} ) # We supply an empty options object, it will not be used
-      %{ "type" => "literal", "xml:lang" => lang, "value": value } ->
+      %{"type" => "uri", "value" => value} ->
+        # We supply an empty options object, it will not be used
+        Iri.from_iri_string("<" <> value <> ">", %{})
+
+      %{"type" => "literal", "xml:lang" => lang, value: value} ->
         value
-        |> String.replace( "\"", "\\\"" )
-        |> (fn (x) -> "\"\"\"" <> x <> "\"\"\"" end).()
-        |> Str.from_langstring( lang )
-      %{ "type" => type_name, "datatype" => datatype, "value" => value } when type_name in ["literal", "typed-literal"] -> # It seems Virtuoso emits typed-literal rather than literal
-        type_iri = Iri.from_iri_string( "<" <> datatype <> ">", %{} ) # We supply an empty options object, it will not be used
+        |> String.replace("\"", "\\\"")
+        |> (fn x -> "\"\"\"" <> x <> "\"\"\"" end).()
+        |> Str.from_langstring(lang)
+
+      # It seems Virtuoso emits typed-literal rather than literal
+      %{"type" => type_name, "datatype" => datatype, "value" => value}
+      when type_name in ["literal", "typed-literal"] ->
+        # We supply an empty options object, it will not be used
+        type_iri = Iri.from_iri_string("<" <> datatype <> ">", %{})
+
         value
-        |> String.replace( "\"", "\\\"" )
-        |> (fn (x) -> "\"\"\"" <> x <> "\"\"\"" end).()
-        |> Str.from_typestring( type_iri )
-        # TODO it seems only URIs are allowed here, but we should be
-        # certain stores don't break this assumption
-      %{ "type" => "literal", "value" => value } ->
+        |> String.replace("\"", "\\\"")
+        |> (fn x -> "\"\"\"" <> x <> "\"\"\"" end).()
+        |> Str.from_typestring(type_iri)
+
+      # TODO it seems only URIs are allowed here, but we should be
+      # certain stores don't break this assumption
+      %{"type" => "literal", "value" => value} ->
         value
-        |> String.replace( "\"", "\\\"" )
-        |> (fn (x) -> "\"\"\"" <> x <> "\"\"\"" end).()
-        |> Str.from_string
-      # %{ "type" => "bnode", "value": value } -> # <-- we don't do
-      # blank nodes, we will crash when blank nodes arrive
+        |> String.replace("\"", "\\\"")
+        |> (fn x -> "\"\"\"" <> x <> "\"\"\"" end).()
+        |> Str.from_string()
+
+        # %{ "type" => "bnode", "value": value } -> # <-- we don't do
+        # blank nodes, we will crash when blank nodes arrive
     end
   end
 
@@ -846,16 +913,14 @@ defmodule Updates.QueryAnalyzer do
     iri
   end
 
-  def remove_last_string_char( string ) do
-    String.slice( string, 0, String.length( string ) - 1 )
+  def remove_last_string_char(string) do
+    String.slice(string, 0, String.length(string) - 1)
   end
 
-  defp fill_in_triples_template( quads_with_vars, group_graph_pattern_sym, options ) do
+  defp fill_in_triples_template(quads_with_vars, group_graph_pattern_sym, options) do
     # TODO the query sent to the database should take the current
     # user's access rights into account.  The query should not be
     # blindly sent to the application graph.
-
-  def insert_quads( quads, options ) do
     case find_variables_in_quads(quads_with_vars) do
       [] ->
         quads_with_vars
@@ -879,11 +944,12 @@ defmodule Updates.QueryAnalyzer do
         |> ALog.di("Resulting filled in quads")
     end
   end
+
+  def insert_quads(quads, options) do
     quads
     # |> consolidate_insert_quads
     # |> dispatch_insert_quads_to_desired_graphs
     |> construct_insert_query_from_quads(options)
     |> SparqlClient.execute_parsed()
   end
-
 end

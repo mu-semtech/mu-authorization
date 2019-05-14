@@ -535,7 +535,9 @@ defmodule GraphReasoner do
         query_info
         |> QueryInfo.get_term_info(subjectSymbol, :types)
 
-      # |> IO.inspect( label: "Subject type strings" )
+      # |> IO.inspect(label: "Subject type strings")
+
+      # IO.inspect( subjectSymbol, label: "Subject symbol" )
 
       # Next up, we need to discover which graphs match the
       # information we've gathered so far.  Based on the

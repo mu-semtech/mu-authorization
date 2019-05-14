@@ -16,9 +16,8 @@ defmodule AlwaysAccessible do
     any checks.  Furthermore, as this is always accessible, there is
     no need to yield any specific parameters indicating a scope.
     """
-    def accessible?( %AlwaysAccessible{}, _graph_spec, _request ) do
+    def accessible?(%AlwaysAccessible{}, _graph_spec, _request) do
       {:ok, [[]]}
     end
   end
-
 end

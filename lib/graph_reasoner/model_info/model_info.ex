@@ -50,11 +50,9 @@ defmodule GraphReasoner.ModelInfo do
   @spec predicate_range(String.t()) :: [String.t()]
   def predicate_range(predicate) do
     Config.class_description()
-    |> Enum.flat_map( & &1.properties )
-    |> Enum.filter( &( &1.uri == predicate ) )
-    |> Enum.flat_map( & &1.targets )
-    |> Enum.dedup
+    |> Enum.flat_map(& &1.properties)
+    |> Enum.filter(&(&1.uri == predicate))
+    |> Enum.flat_map(& &1.targets)
+    |> Enum.dedup()
   end
-
-  
 end

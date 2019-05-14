@@ -11,72 +11,76 @@ alias InterpreterTerms.SymbolMatch, as: SymbolMatch
 # always pushed on top of the flat "produced_content" property.
 
 defmodule Symbol do
-  defstruct [ :symbol, :state, { :ebnf, :none }, {:self_element, :none}, { :sub_generator, :none } ]
+  defstruct [:symbol, :state, {:ebnf, :none}, {:self_element, :none}, {:sub_generator, :none}]
 
   defimpl Regen.Protocol do
-    def emit( %Symbol{} = symbol ) do
-      Symbol.walk( symbol )
+    def emit(%Symbol{} = symbol) do
+      Symbol.walk(symbol)
     end
   end
 
-  def walk( %Symbol{} = symbol ) do
-    symbol = ensure_self_element( symbol )
+  def walk(%Symbol{} = symbol) do
+    symbol = ensure_self_element(symbol)
+
     cond do
-      no_self_element_found( symbol ) ->
+      no_self_element_found(symbol) ->
         # if there is no self element, we can't have results
-        { :fail }
-      is_explicit_leaf_node( symbol ) ->
-        { :ok,
-          %Regen.Processors.None{},
-          state_for_leaf_node( symbol ) }
-      next_item_is_correct_symbol( symbol ) ->
+        {:fail}
+
+      is_explicit_leaf_node(symbol) ->
+        {:ok, %Regen.Processors.None{}, state_for_leaf_node(symbol)}
+
+      next_item_is_correct_symbol(symbol) ->
         symbol
         # TODO: introduce ensure_syntax_in_state again?
         # |> ensure_syntax_in_state
         |> ensure_ebnf
         |> ensure_sub_generator
         |> emit_result
+
       true ->
-        { :fail }
+        {:fail}
     end
   end
 
-  defp ensure_self_element( %Symbol{ self_element: :none,
-                                     state: %State{ elements: [first|rest] } = state
-                                   } = symbol ) do
-    %{ symbol |
-       self_element: first,
-       state: %{ state | elements: rest } }
+  defp ensure_self_element(
+         %Symbol{self_element: :none, state: %State{elements: [first | rest]} = state} = symbol
+       ) do
+    %{symbol | self_element: first, state: %{state | elements: rest}}
   end
-  defp ensure_self_element( %Symbol{} = symbol ) do
+
+  defp ensure_self_element(%Symbol{} = symbol) do
     symbol
   end
 
-  defp no_self_element_found( %Symbol{ self_element: self_element } ) do
+  defp no_self_element_found(%Symbol{self_element: self_element}) do
     # should have been set earlier
     self_element == :none
   end
 
-
-  defp state_for_leaf_node( %Symbol{ state: %State{ produced_content: items } = state,
-                                     self_element: %SymbolMatch{ string: string } } ) do
-    %{ state | produced_content: [ string | items ] }
+  defp state_for_leaf_node(%Symbol{
+         state: %State{produced_content: items} = state,
+         self_element: %SymbolMatch{string: string}
+       }) do
+    %{state | produced_content: [string | items]}
   end
 
-  defp is_explicit_leaf_node( %Symbol{ self_element: %SymbolMatch{ submatches: submatches } } ) do
+  defp is_explicit_leaf_node(%Symbol{self_element: %SymbolMatch{submatches: submatches}}) do
     submatches == :none
   end
-  defp is_explicit_leaf_node( _ ) do
+
+  defp is_explicit_leaf_node(_) do
     false
   end
 
-
-  defp next_item_is_correct_symbol( %Symbol{
-        symbol: symbol,
-        self_element: %SymbolMatch{ symbol: symbol } }) do
+  defp next_item_is_correct_symbol(%Symbol{
+         symbol: symbol,
+         self_element: %SymbolMatch{symbol: symbol}
+       }) do
     true
   end
-  defp next_item_is_correct_symbol( _ ) do
+
+  defp next_item_is_correct_symbol(_) do
     false
   end
 
@@ -88,56 +92,60 @@ defmodule Symbol do
   #   symbol
   # end
 
-  defp ensure_sub_generator( %Symbol{ sub_generator: :none,
-                                      ebnf: ebnf,
-                                      state: state,
-                                      self_element: %SymbolMatch{ submatches: sub_elements }
-                                    } = symbol ) do
+  defp ensure_sub_generator(
+         %Symbol{
+           sub_generator: :none,
+           ebnf: ebnf,
+           state: state,
+           self_element: %SymbolMatch{submatches: sub_elements}
+         } = symbol
+       ) do
     # in order to build a generator, we have to know the element on
     # which we're walking.  this element will have `submatches'.  this
     # array will serve as the basis for matching the ebnf beloning to
     # our symbol.
-    sub_generator_state = %{ state | elements: sub_elements }
-    generator = Regen.Constructor.make( ebnf, sub_generator_state )
-    %{ symbol | sub_generator: generator }
+    sub_generator_state = %{state | elements: sub_elements}
+    generator = Regen.Constructor.make(ebnf, sub_generator_state)
+    %{symbol | sub_generator: generator}
   end
 
-  defp ensure_sub_generator( %Symbol{} = symbol ) do
+  defp ensure_sub_generator(%Symbol{} = symbol) do
     symbol
   end
 
-
-  defp ensure_ebnf( %Symbol{ ebnf: :none,
-                             state: %State{ syntax: syntax },
-                             symbol: symbol
-                           } = symbol_struct ) do
-
-    { _, ebnf } = Map.get( syntax, symbol )
-    %{ symbol_struct | ebnf: ebnf }
+  defp ensure_ebnf(
+         %Symbol{ebnf: :none, state: %State{syntax: syntax}, symbol: symbol} = symbol_struct
+       ) do
+    {_, ebnf} = Map.get(syntax, symbol)
+    %{symbol_struct | ebnf: ebnf}
   end
-  defp ensure_ebnf( %Symbol{} = symbol ) do
+
+  defp ensure_ebnf(%Symbol{} = symbol) do
     symbol
   end
 
-  defp emit_result( %Symbol{ sub_generator: gen,
-                             state: %State{ elements: elements } } = symbol ) do
+  defp emit_result(%Symbol{sub_generator: gen, state: %State{elements: elements}} = symbol) do
     # emit a result from our generator.  emit result if all elements
     # are consumed.  iterate if not.
-    case Regen.Protocol.emit( gen ) do
-      { :ok, new_gen, %State{ elements: [] } = generated_state } ->
+    case Regen.Protocol.emit(gen) do
+      {:ok, new_gen, %State{elements: []} = generated_state} ->
         # our child has a state with all necessary elements consumed,
         # we can yield it as a result.
-        { :ok,
-          %{ symbol | sub_generator: new_gen },
-          %{ generated_state | elements: elements } } # yield our own elements in the state
-      { :ok, new_gen, _ } ->
+        {
+          :ok,
+          %{symbol | sub_generator: new_gen},
+          # yield our own elements in the state
+          %{generated_state | elements: elements}
+        }
+
+      {:ok, new_gen, _} ->
         # not all elements were consumed.  retry
-        %{ symbol | sub_generator: new_gen }
+        %{symbol | sub_generator: new_gen}
         |> emit_result
+
       _ ->
         # we could not find a result, emit failure
-        { :fail }
+        {:fail}
     end
   end
-
 end

@@ -2,53 +2,60 @@ defmodule Parser do
   @moduledoc """
   Parser for the W3C EBNF syntax.
   """
-  @type syntax :: %{ optional( atom ) => any }
+  @type syntax :: %{optional(atom) => any}
   @type parsed_query :: struct()
-  @type unparsed_query :: String.t
+  @type unparsed_query :: String.t()
 
   @spec parse_sparql() :: syntax
   def parse_sparql() do
-    EbnfParser.Sparql.syntax
+    EbnfParser.Sparql.syntax()
   end
 
-  @spec parse_query( unparsed_query, atom ) :: parsed_query | { :fail }
-  def parse_query( string, rule\\:Sparql ) do
-    EbnfInterpreter.match_sparql_rule( rule, string )
+  @spec parse_query(unparsed_query, atom) :: parsed_query | {:fail}
+  def parse_query(string, rule \\ :Sparql) do
+    EbnfInterpreter.match_sparql_rule(rule, string)
   end
 
-  def parse_query_all( string, rule_name\\:Sparql ) do
+  def parse_query_all(string, rule_name \\ :Sparql) do
     rule = {:symbol, rule_name}
-    state = %Generator.State{ chars: String.graphemes( string ), syntax: Parser.parse_sparql }
+    state = %Generator.State{chars: String.graphemes(string), syntax: Parser.parse_sparql()}
 
-    EbnfParser.GeneratorConstructor.dispatch_generation( rule, state )
-    |> EbnfInterpreter.generate_all_options
+    EbnfParser.GeneratorConstructor.dispatch_generation(rule, state)
+    |> EbnfInterpreter.generate_all_options()
   end
 
-  def parse_query_full( query, rule_name\\:Sparql, syntax\\Parser.parse_sparql ) do
-    case Interpreter.Diff.Store.parse( query, rule_name ) do
+  def parse_query_full(query, rule_name \\ :Sparql, syntax \\ Parser.parse_sparql()) do
+    case Interpreter.Diff.Store.parse(query, rule_name) do
       {:fail} ->
-        Interpreter.CachedInterpreter.parse_query_full( query, rule_name, syntax )
-        |> Interpreter.Diff.Store.maybe_push_solution( 0.2 )
-      result -> result
+        Interpreter.CachedInterpreter.parse_query_full(query, rule_name, syntax)
+        |> Interpreter.Diff.Store.maybe_push_solution(0.2)
+
+      result ->
+        result
     end
   end
 
-  def parse_query_full_local( query, rule_name, template_local_store ) do
-    %{ sparql_syntax: sparql_syntax } = template_local_store
+  def parse_query_full_local(query, rule_name, template_local_store) do
+    %{sparql_syntax: sparql_syntax} = template_local_store
 
-    case Interpreter.Diff.Store.parse_with_local_store( query, rule_name, template_local_store ) do
+    case Interpreter.Diff.Store.parse_with_local_store(query, rule_name, template_local_store) do
       {:fail} ->
-        Logging.EnvLog.log( :log_template_matcher_performance, "Template: no" )
+        Logging.EnvLog.log(:log_template_matcher_performance, "Template: no")
 
-        result =
-          Interpreter.CachedInterpreter.parse_query_full( query, rule_name, sparql_syntax )
+        result = Interpreter.CachedInterpreter.parse_query_full(query, rule_name, sparql_syntax)
 
         new_template_local_store =
-          Interpreter.Diff.Store.maybe_push_solution_sync( result, 0.2, rule_name, template_local_store )
+          Interpreter.Diff.Store.maybe_push_solution_sync(
+            result,
+            0.2,
+            rule_name,
+            template_local_store
+          )
 
-        { result, new_template_local_store }
+        {result, new_template_local_store}
+
       response ->
-        Logging.EnvLog.log( :log_template_matcher_performance, "Template: yes" )
+        Logging.EnvLog.log(:log_template_matcher_performance, "Template: yes")
         response
     end
   end
@@ -56,26 +63,30 @@ defmodule Parser do
   @doc """
   Parses the query and yields the first (possibly non-complete) match.
   """
-  def parse_query_first( query, rule_name\\:Sparql, syntax\\Parser.parse_sparql) do
+  def parse_query_first(query, rule_name \\ :Sparql, syntax \\ Parser.parse_sparql()) do
     rule = {:symbol, rule_name}
-    state = %Generator.State{ chars: String.graphemes( query ), syntax: syntax }
+    state = %Generator.State{chars: String.graphemes(query), syntax: syntax}
 
-    generator = EbnfParser.GeneratorConstructor.dispatch_generation( rule, state )
-    case EbnfParser.Generator.emit( generator ) do
-      { :ok, _, %Generator.Result{ matched_string: matched_string, match_construct: [construct] } } ->
-        { matched_string, construct }
-      { :fail } -> { :fail }
+    generator = EbnfParser.GeneratorConstructor.dispatch_generation(rule, state)
+
+    case EbnfParser.Generator.emit(generator) do
+      {:ok, _, %Generator.Result{matched_string: matched_string, match_construct: [construct]}} ->
+        {matched_string, construct}
+
+      {:fail} ->
+        {:fail}
     end
   end
 
-  defp test_full_solution_for_generator( generator ) do
-    case EbnfParser.Generator.emit( generator ) do
-      {:ok, new_state , answer } ->
-        if Generator.Result.full_match? answer do
+  defp test_full_solution_for_generator(generator) do
+    case EbnfParser.Generator.emit(generator) do
+      {:ok, new_state, answer} ->
+        if Generator.Result.full_match?(answer) do
           true
         else
-          test_full_solution_for_generator( new_state )
+          test_full_solution_for_generator(new_state)
         end
+
       {:fail} ->
         false
     end
@@ -86,11 +97,11 @@ defmodule Parser do
     want to test whether a solution would exist or not.  This is not
     cheaper to execute than finding a solution.
   """
-  def test_full_solution( query, rule_name\\:Sparql ) do
+  def test_full_solution(query, rule_name \\ :Sparql) do
     rule = {:symbol, rule_name}
-    state = %Generator.State{ chars: String.graphemes( query ), syntax: Parser.parse_sparql }
+    state = %Generator.State{chars: String.graphemes(query), syntax: Parser.parse_sparql()}
 
-    EbnfParser.GeneratorConstructor.dispatch_generation( rule, state )
+    EbnfParser.GeneratorConstructor.dispatch_generation(rule, state)
     |> test_full_solution_for_generator
   end
 
@@ -112,14 +123,13 @@ defmodule Parser do
   [one_or_more: [ paren_group: [ symbol: :FOO, maybe_many: [ symbol: :BAR ], paren_group: [ one_of: [ symbol: :FOO, symbol: :BAR ] ] ] ]]
 
   """
-  def full_parse( string ) do
-    EbnfParser.Parser.tokenize_and_parse( string )
+  def full_parse(string) do
+    EbnfParser.Parser.tokenize_and_parse(string)
   end
 
-  def parse_and_match( rule, str, prev\\[]) do
-    rule = Parser.full_parse( rule )
-    chars = String.codepoints( str )
-    EbnfInterpreter.eagerly_match_rule( chars, %{}, rule, prev )
+  def parse_and_match(rule, str, prev \\ []) do
+    rule = Parser.full_parse(rule)
+    chars = String.codepoints(str)
+    EbnfInterpreter.eagerly_match_rule(chars, %{}, rule, prev)
   end
-
 end

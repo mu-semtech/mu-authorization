@@ -38,68 +38,74 @@ defmodule AccessByQuery do
     This element is accessible when the supplied query yields a
     positive result.
     """
-    def accessible?( %AccessByQuery{} = access, graph_spec, request ) do
-      AccessByQuery.accessible?( access, graph_spec, request )
+    def accessible?(%AccessByQuery{} = access, graph_spec, request) do
+      AccessByQuery.accessible?(access, graph_spec, request)
     end
   end
 
-  def accessible?( %AccessByQuery{ vars: vars, query: query }, _graph_spec, request ) do
+  def accessible?(%AccessByQuery{vars: vars, query: query}, _graph_spec, request) do
     query
-    |> manipulate_sparql_query( request )
-    |> ALog.di( "Posing sparql query to check accessibility" )
-    |> SparqlClient.query
-    |> retrieve_access_vars( vars )
+    |> manipulate_sparql_query(request)
+    |> ALog.di("Posing sparql query to check accessibility")
+    |> SparqlClient.query()
+    |> retrieve_access_vars(vars)
     |> extract_results
   end
 
-  def manipulate_sparql_query( query, request ) do
+  def manipulate_sparql_query(query, request) do
     if get_session_uri(request) do
       query
-      |> Parser.parse_query_full
-      |> Manipulators.SparqlQuery.replace_iri( "<SESSION_ID>" , "<" <> get_session_uri(request) <> ">" )
+      |> Parser.parse_query_full()
+      |> Manipulators.SparqlQuery.replace_iri(
+        "<SESSION_ID>",
+        "<" <> get_session_uri(request) <> ">"
+      )
       # TODO: figure out where to select from through a separate UserGroups config
       # |> Manipulators.SparqlQuery.add_from_graph( "http://mu.semte.ch/authorizations" )
-      |> Regen.result
-      |> ALog.di( "validation query" )
+      |> Regen.result()
+      |> ALog.di("validation query")
     else
-      Logger.debug "No session"
+      Logger.debug("No session")
+
       query
-      |> Parser.parse_query_full
+      |> Parser.parse_query_full()
       # TODO: figure out where to select from through a separate UserGroups config
       # |> Manipulators.SparqlQuery.add_from_graph( "http://mu.semte.ch/authorizations" )
-      |> Regen.result
-      |> ALog.di( "validation query" )
+      |> Regen.result()
+      |> ALog.di("validation query")
     end
   end
 
-  def get_session_uri( request ) do
+  def get_session_uri(request) do
     request
-    |> Plug.Conn.get_req_header( "mu-session-id" )
-    |> List.first
-    |> ALog.di( "session id" )
+    |> Plug.Conn.get_req_header("mu-session-id")
+    |> List.first()
+    |> ALog.di("session id")
   end
 
-  def retrieve_access_vars( %{ "boolean" => value }, [] ) do
+  def retrieve_access_vars(%{"boolean" => value}, []) do
     if value do
-      [[]] # one solution with no variables
+      # one solution with no variables
+      [[]]
     else
-      [] # no solutions
+      # no solutions
+      []
     end
   end
-  def retrieve_access_vars( query_result, vars ) do
+
+  def retrieve_access_vars(query_result, vars) do
     query_result
-    |> SparqlClient.extract_results
-    |> Enum.map( fn (result) ->
-      Enum.map( vars, fn (var) -> Map.get( result, var ) |> Map.get("value") end )
-    end )
+    |> SparqlClient.extract_results()
+    |> Enum.map(fn result ->
+      Enum.map(vars, fn var -> Map.get(result, var) |> Map.get("value") end)
+    end)
   end
 
-  def extract_results( [] ) do
-    { :fail }
+  def extract_results([]) do
+    {:fail}
   end
-  def extract_results( nested_arr ) do
+
+  def extract_results(nested_arr) do
     {:ok, nested_arr}
   end
-
-
 end

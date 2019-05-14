@@ -30,10 +30,10 @@ defmodule SomeEmitter do
       {:ok, generator, result} ->
         {:ok, generator, result}
 
-      # dialyzer is sure this cannot occur.  Leaving it for future
-      # implementations
-      # _ ->
-      #   yield_none_result(some)
+        # dialyzer is sure this cannot occur.  Leaving it for future
+        # implementations
+        # _ ->
+        #   yield_none_result(some)
     end
   end
 

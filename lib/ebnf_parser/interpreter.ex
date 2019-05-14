@@ -788,8 +788,6 @@ defmodule EbnfInterpreter do
     end
   end
 
-
-    
   # The simplest emission is that what eagerly_match_rule returned
   def emit( { :eagerly_match, { rule, chars, syntax, options} } ) do
     case eagerly_match_rule( chars, syntax, rule, options ) do

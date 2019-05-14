@@ -2,7 +2,7 @@ alias InterpreterTerms.SymbolMatch, as: Sym
 alias Updates.QueryAnalyzer.Types.Quad, as: Quad
 
 defmodule Updates.QueryConstructors do
-  def make_select_query(variable_syms, group_graph_pattern_sym ) do
+  def make_select_query(variable_syms, group_graph_pattern_sym) do
     %Sym{
       symbol: :Sparql,
       submatches: [
@@ -22,8 +22,9 @@ defmodule Updates.QueryConstructors do
                     %Sym{
                       symbol: :SelectClause,
                       submatches: [
-                        %InterpreterTerms.WordMatch{word: "SELECT"} |
-                        variable_syms ]
+                        %InterpreterTerms.WordMatch{word: "SELECT"}
+                        | variable_syms
+                      ]
                     },
                     %Sym{
                       symbol: :WhereClause,
@@ -54,7 +55,7 @@ defmodule Updates.QueryConstructors do
   Creates a valid insert data query, assuming quads is an array of
   solutions container :QuadsNotTriples.
   """
-  def make_insert_query( quads ) do
+  def make_insert_query(quads) do
     %InterpreterTerms.SymbolMatch{
       symbol: :Sparql,
       submatches: [
@@ -64,9 +65,7 @@ defmodule Updates.QueryConstructors do
             %InterpreterTerms.SymbolMatch{
               symbol: :Update,
               submatches: [
-                %InterpreterTerms.SymbolMatch{
-                  symbol: :Prologue,
-                  submatches: [] },
+                %InterpreterTerms.SymbolMatch{symbol: :Prologue, submatches: []},
                 %InterpreterTerms.SymbolMatch{
                   symbol: :Update1,
                   submatches: [
@@ -79,13 +78,23 @@ defmodule Updates.QueryConstructors do
                           symbol: :QuadData,
                           submatches: [
                             %InterpreterTerms.WordMatch{word: "{"},
-                            %InterpreterTerms.SymbolMatch{
-                              symbol: :Quads,
-                              submatches: quads },
-                            %InterpreterTerms.WordMatch{word: "}"} ] } ] } ] } ] } ] } ] }
+                            %InterpreterTerms.SymbolMatch{symbol: :Quads, submatches: quads},
+                            %InterpreterTerms.WordMatch{word: "}"}
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
   end
 
-  def make_delete_query( quads ) do
+  def make_delete_query(quads) do
     %InterpreterTerms.SymbolMatch{
       symbol: :Sparql,
       submatches: [
@@ -95,9 +104,7 @@ defmodule Updates.QueryConstructors do
             %InterpreterTerms.SymbolMatch{
               symbol: :Update,
               submatches: [
-                %InterpreterTerms.SymbolMatch{
-                  symbol: :Prologue,
-                  submatches: [] },
+                %InterpreterTerms.SymbolMatch{symbol: :Prologue, submatches: []},
                 %InterpreterTerms.SymbolMatch{
                   symbol: :Update1,
                   submatches: [
@@ -110,13 +117,28 @@ defmodule Updates.QueryConstructors do
                           symbol: :QuadData,
                           submatches: [
                             %InterpreterTerms.WordMatch{word: "{"},
-                            %InterpreterTerms.SymbolMatch{
-                              symbol: :Quads,
-                              submatches: quads },
-                            %InterpreterTerms.WordMatch{word: "}"} ] } ] } ] } ] } ] } ] }
+                            %InterpreterTerms.SymbolMatch{symbol: :Quads, submatches: quads},
+                            %InterpreterTerms.WordMatch{word: "}"}
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
   end
 
-  def make_quad_match_from_quad( %Quad{ subject: subject, predicate: predicate, object: object, graph: graph } ) do
+  def make_quad_match_from_quad(%Quad{
+        subject: subject,
+        predicate: predicate,
+        object: object,
+        graph: graph
+      }) do
     %InterpreterTerms.SymbolMatch{
       symbol: :QuadsNotTriples,
       submatches: [
@@ -124,7 +146,7 @@ defmodule Updates.QueryConstructors do
         %InterpreterTerms.SymbolMatch{
           symbol: :VarOrIri,
           submatches: [
-            Updates.QueryAnalyzer.P.to_solution_sym( graph )
+            Updates.QueryAnalyzer.P.to_solution_sym(graph)
           ]
         },
         %InterpreterTerms.WordMatch{word: "{"},
@@ -139,8 +161,10 @@ defmodule Updates.QueryConstructors do
                   submatches: [
                     %InterpreterTerms.SymbolMatch{
                       symbol: :GraphTerm,
-                      submatches: [
-                        Updates.QueryAnalyzer.P.to_solution_sym( subject ) ] } ] },
+                      submatches: [Updates.QueryAnalyzer.P.to_solution_sym(subject)]
+                    }
+                  ]
+                },
                 %InterpreterTerms.SymbolMatch{
                   symbol: :PropertyListNotEmpty,
                   submatches: [
@@ -149,8 +173,10 @@ defmodule Updates.QueryConstructors do
                       submatches: [
                         %InterpreterTerms.SymbolMatch{
                           symbol: :VarOrIri,
-                          submatches: [
-                            Updates.QueryAnalyzer.P.to_solution_sym( predicate ) ] } ] },
+                          submatches: [Updates.QueryAnalyzer.P.to_solution_sym(predicate)]
+                        }
+                      ]
+                    },
                     %InterpreterTerms.SymbolMatch{
                       symbol: :ObjectList,
                       submatches: [
@@ -166,8 +192,24 @@ defmodule Updates.QueryConstructors do
                                     %InterpreterTerms.SymbolMatch{
                                       symbol: :GraphTerm,
                                       submatches: [
-                                        Updates.QueryAnalyzer.P.to_solution_sym( object )] } ] } ] } ] } ] } ] } ] } ] },
-        %InterpreterTerms.WordMatch{word: "}" }
+                                        Updates.QueryAnalyzer.P.to_solution_sym(object)
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        %InterpreterTerms.WordMatch{word: "}"}
       ]
     }
   end

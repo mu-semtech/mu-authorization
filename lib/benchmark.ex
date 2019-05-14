@@ -3,11 +3,10 @@ defmodule Benchmark do
 
   def measure(function) do
     function
-    |> :timer.tc
+    |> :timer.tc()
     |> elem(0)
     |> Kernel./(1_000_000)
   end
-
 
   @doc "analyze with profile macro"
   def do_analyze do
@@ -20,7 +19,7 @@ defmodule Benchmark do
   def run do
     {records, _block_result} = do_analyze()
     total_percent = Enum.reduce(records, 0.0, &(&1.percent + &2))
-    IO.inspect "total = #{total_percent}"
+    IO.inspect("total = #{total_percent}")
   end
 
   def run_fprof do
@@ -132,8 +131,11 @@ defmodule Benchmark do
     }
     }"
 
-    query |> Parser.parse_query_full |> Updates.QueryAnalyzer.quads( %{ default_graph: Updates.QueryAnalyzer.Iri.from_iri_string( "<http://mu.semte.ch/application>", %{} ) } )
-
+    query
+    |> Parser.parse_query_full()
+    |> Updates.QueryAnalyzer.quads(%{
+      default_graph:
+        Updates.QueryAnalyzer.Iri.from_iri_string("<http://mu.semte.ch/application>", %{})
+    })
   end
-
 end

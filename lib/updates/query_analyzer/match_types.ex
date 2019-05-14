@@ -14,7 +14,7 @@ defprotocol Updates.QueryAnalyzer.P do
 end
 
 defmodule Iri do
-  @type t :: %Iri{ iri: String.t(), real_name: String.t() }
+  @type t :: %Iri{iri: String.t(), real_name: String.t()}
 
   defstruct [:iri, :real_name]
 

@@ -11,7 +11,6 @@ defprotocol Acl.GraphSpec.Constraint.Protocol do
   be included or not.  For instance, we may want to know whether an
   object is of a certain type.
   """
-  @spec matching_quads( Pr.t, [Quad], [Quad] ) :: [Quad]
-  def matching_quads( constraint, quads, extra_quads\\[] )
-
+  @spec matching_quads(Pr.t(), [Quad], [Quad]) :: [Quad]
+  def matching_quads(constraint, quads, extra_quads \\ [])
 end

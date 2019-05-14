@@ -4,59 +4,65 @@ defmodule Manipulators.Basics do
   Receives one state and is allowed to emit an array of states to
   replace it.
   """
-  def map_matches( result, functor ) do
-    case functor.( result ) do
-      { :replace_by, content } ->
+  def map_matches(result, functor) do
+    case functor.(result) do
+      {:replace_by, content} ->
         content
-      { :replace_and_traverse, content } ->
-        map_submatches( content, functor )
-      { :insert_after, content } ->
-        { :insert_after, content }
-      { :continue } ->
-        map_submatches( result, functor )
-      { :skip } ->
+
+      {:replace_and_traverse, content} ->
+        map_submatches(content, functor)
+
+      {:insert_after, content} ->
+        {:insert_after, content}
+
+      {:continue} ->
+        map_submatches(result, functor)
+
+      {:skip} ->
         result
-      { :exit, value } ->
-        { :exit, value }
+
+      {:exit, value} ->
+        {:exit, value}
     end
   end
 
-  def map_submatches( %InterpreterTerms.SymbolMatch{ submatches: submatches } = symbolmatch, functor )
-  when is_list( submatches ) do
-    case (
-      submatches
-      |> Enum.reduce_while( [],
-         fn (sub, acc) ->
-           res = map_matches( sub, functor )
-           case res do
-             { :insert_after, elt } ->
-               new_acc = [[sub,elt] | acc]
-               { :cont, new_acc }
-             { :exit, value } ->
-               { :halt, { :exit, value } }
-             _ ->
-               { :cont, [[ res ] | acc] }
+  def map_submatches(%InterpreterTerms.SymbolMatch{submatches: submatches} = symbolmatch, functor)
+      when is_list(submatches) do
+    case submatches
+         |> Enum.reduce_while(
+           [],
+           fn sub, acc ->
+             res = map_matches(sub, functor)
+
+             case res do
+               {:insert_after, elt} ->
+                 new_acc = [[sub, elt] | acc]
+                 {:cont, new_acc}
+
+               {:exit, value} ->
+                 {:halt, {:exit, value}}
+
+               _ ->
+                 {:cont, [[res] | acc]}
+             end
            end
-         end ) )
-    do
-      { :exit, value } ->
-        { :exit, value }
+         ) do
+      {:exit, value} ->
+        {:exit, value}
+
       submatches ->
         new_submatches =
           submatches
-          |> Enum.reverse
-          |> Enum.flat_map( &(&1) )
+          |> Enum.reverse()
+          |> Enum.flat_map(& &1)
 
-        %{ symbolmatch
-           | submatches: new_submatches }
+        %{symbolmatch | submatches: new_submatches}
     end
   end
 
-  def map_submatches( symbol, _ ) do
+  def map_submatches(symbol, _) do
     symbol
   end
-
-
 
   @doc """
 
@@ -69,112 +75,131 @@ defmodule Manipulators.Basics do
 
   # TODO: remove shared code with map_matches
   """
-  def map_matches_with_state( start_state, result, functor ) do
-    case functor.( start_state, result ) do
+  def map_matches_with_state(start_state, result, functor) do
+    case functor.(start_state, result) do
       # State yielding options
-      { :replace_by, new_state, content } ->
-        { new_state, content }
-      { :skip, new_state } ->
-        { new_state, result }
+      {:replace_by, new_state, content} ->
+        {new_state, content}
+
+      {:skip, new_state} ->
+        {new_state, result}
+
       # Tree operations
-      { :insert_after, new_state, content } ->
-        { :insert_after, new_state, content }
-      { :exit, new_state, value } ->
-        { :exit, new_state, value }
+      {:insert_after, new_state, content} ->
+        {:insert_after, new_state, content}
+
+      {:exit, new_state, value} ->
+        {:exit, new_state, value}
+
       # Dispatch to submatches
-      { :continue, new_state } ->
-        map_submatches_with_state( new_state, result, functor )
-      { :replace_and_traverse, new_state, content } ->
-        map_submatches_with_state( new_state, content, functor )
+      {:continue, new_state} ->
+        map_submatches_with_state(new_state, result, functor)
+
+      {:replace_and_traverse, new_state, content} ->
+        map_submatches_with_state(new_state, content, functor)
     end
   end
 
   # TODO: remove shared code with map_submatches
-  def map_submatches_with_state( state, %InterpreterTerms.SymbolMatch{ submatches: submatches } = symbolmatch, functor )
-  when is_list( submatches ) do
-    case (
-      # Use reduce_while so we can exit early when requested
-      submatches
-      |> Enum.reduce_while( {state,[]},
-         fn (sub, {state,acc}) ->
-           res = map_matches_with_state( state, sub, functor )
-           case res do
-             { :insert_after, new_state, elt } ->
-               new_acc = { new_state, [[sub,elt] | acc] }
-               { :continue, new_acc }
-             { :exit, new_state, value } ->
-               { :halt, { :exit, new_state, value } }
-             { new_state, new_result } ->
-               { :cont, { new_state, [[ new_result ] | acc] } }
+  def map_submatches_with_state(
+        state,
+        %InterpreterTerms.SymbolMatch{submatches: submatches} = symbolmatch,
+        functor
+      )
+      when is_list(submatches) do
+    # Use reduce_while so we can exit early when requested
+    case submatches
+         |> Enum.reduce_while(
+           {state, []},
+           fn sub, {state, acc} ->
+             res = map_matches_with_state(state, sub, functor)
+
+             case res do
+               {:insert_after, new_state, elt} ->
+                 new_acc = {new_state, [[sub, elt] | acc]}
+                 {:continue, new_acc}
+
+               {:exit, new_state, value} ->
+                 {:halt, {:exit, new_state, value}}
+
+               {new_state, new_result} ->
+                 {:cont, {new_state, [[new_result] | acc]}}
+             end
            end
-         end ) )
-    do
+         ) do
       # If we had to short-circuit due to exit, exit
-      { :exit, state, value } ->
-        { :exit, state, value }
+      {:exit, state, value} ->
+        {:exit, state, value}
+
       # Otherwise use the submatches to yield the new result
-      { new_state, submatches } ->
+      {new_state, submatches} ->
         new_submatches =
           submatches
-          |> Enum.reverse
-          |> Enum.flat_map( &(&1) )
+          |> Enum.reverse()
+          |> Enum.flat_map(& &1)
 
-      { new_state,
-        %{ symbolmatch
-           | submatches: new_submatches } }
+        {new_state, %{symbolmatch | submatches: new_submatches}}
     end
   end
 
-  def map_submatches_with_state( state, symbol, _ ) do
-    { state, symbol }
+  def map_submatches_with_state(state, symbol, _) do
+    {state, symbol}
   end
 
-
-  defmacro do_state_map( { terms_map, match }, { map_var, element_var }, do: case_content ) do
+  defmacro do_state_map({terms_map, match}, {map_var, element_var}, do: case_content) do
     manipulated_case_content =
       case_content
       |> do_state_map_alter_symbols
-      |> do_state_map_ensure_default_option( {:continue, map_var} )
+      |> do_state_map_ensure_default_option({:continue, map_var})
 
     quote do
-      Manipulators.Basics.map_matches_with_state( unquote( terms_map ), unquote( match ),
-        fn (unquote(map_var), unquote(element_var)) ->
-          case unquote(element_var) do
-            unquote(manipulated_case_content)
-          end
-        end )
+      Manipulators.Basics.map_matches_with_state(unquote(terms_map), unquote(match), fn unquote(
+                                                                                          map_var
+                                                                                        ),
+                                                                                        unquote(
+                                                                                          element_var
+                                                                                        ) ->
+        case unquote(element_var) do
+          unquote(manipulated_case_content)
+        end
+      end)
     end
   end
 
-  defp do_state_map_alter_symbols( case_content ) do
+  defp do_state_map_alter_symbols(case_content) do
     # Ensures :MySymbol -> ... is converted to
     # %InterpreterTerms.SymbolMatch{ symbol: :MySymbol } -> ...
-    Enum.map( case_content,
-      fn (expr) ->
+    Enum.map(
+      case_content,
+      fn expr ->
         case expr do
-          ({:->, _, [[{_,_,_}]|_]} = expression) ->
+          {:->, _, [[{_, _, _}] | _]} = expression ->
             # An expression
             expression
-            ({:->, _ctx, [[symbol] | rest]}) ->
+
+          {:->, _ctx, [[symbol] | rest]} ->
             {:->, [],
-            [[
-              {:%, [],
+             [
                [
-                 {:__aliases__, [alias: false], [:InterpreterTerms, :SymbolMatch]},
-                 {:%{}, [], [symbol: symbol]}
-               ]}
-            ] | rest ]}
+                 {:%, [],
+                  [
+                    {:__aliases__, [alias: false], [:InterpreterTerms, :SymbolMatch]},
+                    {:%{}, [], [symbol: symbol]}
+                  ]}
+               ]
+               | rest
+             ]}
         end
-      end )
+      end
+    )
   end
 
-  defp do_state_map_ensure_default_option( case_content, default_option ) do
+  defp do_state_map_ensure_default_option(case_content, default_option) do
     # Appends a default option for _ -> ... unless such an option was
     # already provided.
-    if Enum.find( case_content, fn (content) ->
-          match?( {:->, [], [[{:_, [], Elixir}] | _rest]}, content )
-        end )
-      do
+    if Enum.find(case_content, fn content ->
+         match?({:->, [], [[{:_, [], Elixir}] | _rest]}, content)
+       end) do
       case_content
     else
       case_content ++ [{:->, [], [[{:_, [], Elixir}], default_option]}]
@@ -189,21 +214,25 @@ defmodule Manipulators.Basics do
   #   end
   # end
 
-
-  defmacro do_map( symbol, element_var, do: case_content ) do
+  defmacro do_map(symbol, element_var, do: case_content) do
     manipulated_case_content =
       case_content
       |> do_state_map_alter_symbols
-      |> do_state_map_ensure_default_option( quote do {:continue} end )
+      |> do_state_map_ensure_default_option(
+        quote do
+          {:continue}
+        end
+      )
 
     quote do
-      Manipulators.Basics.map_matches( unquote( symbol ),
-        fn (unquote(element_var)) ->
+      Manipulators.Basics.map_matches(
+        unquote(symbol),
+        fn unquote(element_var) ->
           case unquote(element_var) do
             unquote(manipulated_case_content)
           end
-        end )
+        end
+      )
     end
   end
-
 end
