@@ -854,22 +854,31 @@ defmodule Updates.QueryAnalyzer do
     # TODO the query sent to the database should take the current
     # user's access rights into account.  The query should not be
     # blindly sent to the application graph.
-    find_variables_in_quads( quads_with_vars )
-    |> ALog.di( "Detected variables" )
-    |> construct_select_query( group_graph_pattern_sym, options )
-    |> elem(0)
-    |> ALog.di( "Constructed SELECT query" )
-    |> Regen.result # the SELECT query to execute
-    |> ALog.di( "Construct query" )
-    |> SparqlClient.query
-    |> SparqlClient.extract_results # Array of solutions
-    |> ALog.di( "Results from SELECT query" )
-    |> Enum.flat_map( fn (res) -> fill_quad_template( quads_with_vars, res ) end )
-    |> Enum.uniq # remove duplicate solutions
-    |> ALog.di( "Resulting filled in quads" )
-  end
 
   def insert_quads( quads, options ) do
+    case find_variables_in_quads(quads_with_vars) do
+      [] ->
+        quads_with_vars
+
+      variables ->
+        variables
+        |> ALog.di("Detected variables")
+        |> construct_select_query(group_graph_pattern_sym, options)
+        |> elem(0)
+        |> ALog.di("Constructed SELECT query")
+        # the SELECT query to execute
+        |> Regen.result()
+        |> ALog.di("Construct query")
+        |> SparqlClient.query()
+        # Array of solutions
+        |> SparqlClient.extract_results()
+        |> ALog.di("Results from SELECT query")
+        |> Enum.flat_map(fn res -> fill_quad_template(quads_with_vars, res) end)
+        # remove duplicate solutions
+        |> Enum.uniq()
+        |> ALog.di("Resulting filled in quads")
+    end
+  end
     quads
     # |> consolidate_insert_quads
     # |> dispatch_insert_quads_to_desired_graphs
