@@ -104,7 +104,7 @@ defmodule SparqlServer.Router.HandlerSupport do
       |> wrap_query_in_toplevel
       |> ALog.di("Wrapped parsed query")
 
-    {conn, new_parsed_forms} =
+    {conn, new_parsed_forms, post_processing} =
       if is_select_query(parsed_form) do
         manipulate_select_query(parsed_form, conn)
       else
@@ -118,6 +118,8 @@ defmodule SparqlServer.Router.HandlerSupport do
         SparqlClient.execute_parsed(elt)
       end)
       |> Poison.encode!()
+
+    post_processing.()
 
     {conn, encoded_response, new_template_local_store}
   end
@@ -171,7 +173,7 @@ defmodule SparqlServer.Router.HandlerSupport do
         {conn, query}
       end
 
-    {conn, [query]}
+    {conn, [query], fn -> :ok end}
   end
 
   ### Manipulates the update query yielding back the valid set of
@@ -224,18 +226,19 @@ defmodule SparqlServer.Router.HandlerSupport do
         end
       end)
 
-    # TODO: we should publish the updates *after* writing to the store and allow external services to rewrite be
-    origin =
-      conn
-      |> Map.get(:remote_ip)
-      |> Tuple.to_list()
-      |> Enum.join(".")
+    delta_updater = fn ->
+      origin =
+        conn
+        |> Map.get(:remote_ip)
+        |> Tuple.to_list()
+        |> Enum.join(".")
 
-    Delta.publish_updates(updated_quads, authorization_groups, origin)
+      Delta.publish_updates(updated_quads, authorization_groups, origin)
+    end
 
     # TODO should we set the access groups on update queries too?
     # see AccessGroupSupport.put_access_groups/2 ( conn, authorization_groups )
-    {conn, executable_queries}
+    {conn, executable_queries, delta_updater}
   end
 
   defp enforce_write_rights(quads, authorization_groups) do
