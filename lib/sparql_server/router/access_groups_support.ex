@@ -47,19 +47,22 @@ defmodule SparqlServer.Router.AccessGroupSupport do
   @spec calculate_access_groups(Plug.Conn.t()) :: {Plug.Conn.t(), decoded_json_access_groups}
   def calculate_access_groups(conn) do
     access_groups = get_access_groups(conn)
+    json_encoded_access_groups = encode_json_access_groups(access_groups)
 
     conn =
       if access_groups != :sudo do
         Plug.Conn.put_resp_header(
           conn,
           "mu-auth-allowed-groups",
-          encode_json_access_groups(access_groups)
+          json_encoded_access_groups
         )
       else
         conn
       end
 
     ALog.ii(access_groups, "Access groups")
+
+    Logging.EnvLog.log( :log_access_rights, "Received access rights: #{json_encoded_access_groups}" )
 
     {conn, access_groups}
   end
