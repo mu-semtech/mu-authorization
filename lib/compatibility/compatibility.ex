@@ -1,9 +1,9 @@
 defmodule Compat.DatabaseAdapter do
-  @callback update_query(query :: Parser.parsed_query()) :: Parser.parsed_query()
+  @callback update_query(query :: InterpreterTerms.query()) :: InterpreterTerms.query()
 end
 
 defmodule Compat.QueryManipulator do
-  @callback manipulate(query :: Parser.parsed_query()) :: Parser.parsed_query()
+  @callback manipulate(query :: InterpreterTerms.query()) :: InterpreterTerms.query()
 end
 
 defmodule Compat do

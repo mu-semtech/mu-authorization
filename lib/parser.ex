@@ -3,7 +3,6 @@ defmodule Parser do
   Parser for the W3C EBNF syntax.
   """
   @type syntax :: %{optional(atom) => any}
-  @type parsed_query :: struct()
   @type unparsed_query :: String.t()
 
   @spec parse_sparql() :: syntax
@@ -11,7 +10,7 @@ defmodule Parser do
     EbnfParser.Sparql.syntax()
   end
 
-  @spec parse_query(unparsed_query, atom) :: parsed_query | {:fail}
+  @spec parse_query(unparsed_query, atom) :: InterpreterTerms.query() | {:fail}
   def parse_query(string, rule \\ :Sparql) do
     EbnfInterpreter.match_sparql_rule(rule, string)
   end
@@ -63,7 +62,8 @@ defmodule Parser do
   @doc """
   Parses the query and yields the first (possibly non-complete) match.
   """
-  def parse_query_first(query, rule_name \\ :Sparql, syntax \\ Parser.parse_sparql()) do
+  @spec parse_query_first(String.t(), atom) :: { unparsed_query, InterpreterTerms.query() } | {:fail}
+  def parse_query_first(query, rule_name \\ :Sparql, syntax \\ parse_sparql()) do
     rule = {:symbol, rule_name}
     state = %Generator.State{chars: String.graphemes(query), syntax: syntax}
 

@@ -1,4 +1,6 @@
 defmodule Manipulators.SparqlQuery do
+  @type prefix :: {String.t(), String.t()}
+
   def add_graph(element, graph \\ "http://mu.semte.ch/application") do
     Manipulators.Basics.map_matches(element, fn element ->
       case element do

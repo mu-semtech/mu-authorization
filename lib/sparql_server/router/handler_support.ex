@@ -11,42 +11,6 @@ defmodule SparqlServer.Router.HandlerSupport do
   together with the response which should be set on the client.
   """
   def handle_query(query, kind, conn) do
-    # top_level_key = case kind do
-    #                   :query -> :QueryUnit
-    #                   :update -> :UpdateUnit
-    #                   :any -> :Sparql
-    #                 end
-
-    # parsed_form =
-    #   query
-    #   |> ALog.di( "Raw received query" )
-    #   |> String.trim
-    #   |> String.replace( "\r", "" ) # TODO: check if this is valid and/or ensure parser skips \r between words.
-    #   |> Parser.parse_query_full( top_level_key )
-    #   |> ALog.di( "Parsed query" )
-    #   |> wrap_query_in_toplevel
-    #   |> ALog.di( "Wrapped parsed query" )
-
-    # { conn, new_parsed_forms } =
-    #   if is_select_query( parsed_form ) do
-    #     manipulate_select_query( parsed_form, conn )
-    #   else
-    #     manipulate_update_query( parsed_form, conn )
-    #   end
-
-    # encoded_response =
-    #   new_parsed_forms
-    #   |> ALog.di( "New parsed forms" )
-    #   |> Enum.reduce( true, fn( elt, _ ) ->
-    #     elt
-    #     |> Regen.result
-    #     |> ALog.di( "Posing query to backend" )
-    #     |> SparqlClient.query
-    #     end )
-    #   |> Poison.encode!
-
-    # { conn, encoded_response }
-
     Logging.EnvLog.log(:log_incoming_sparql_queries, "Incoming SPARQL query: #{query}")
 
     Logging.EnvLog.inspect(query, :inspect_incoming_sparql_queries, label: "Incoming SPARQL query")

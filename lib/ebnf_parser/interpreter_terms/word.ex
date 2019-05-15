@@ -8,6 +8,8 @@ import Generator.State, only: [is_terminal: 1]
 defmodule InterpreterTerms.WordMatch do
   defstruct [:word, {:whitespace, ""}, {:external, %{}}]
 
+  @type t :: %InterpreterTerms.WordMatch{}
+
   defimpl String.Chars do
     def to_string(%InterpreterTerms.WordMatch{word: word}) do
       String.Chars.to_string({:word, word})

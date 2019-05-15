@@ -8,7 +8,7 @@ end
 
 defprotocol EbnfParser.Generator do
   @type t :: struct()
-  @type response :: {:ok, EbnfParser.Generator.t(), %Generator.Result{}} | {:fail}
+  @type response :: {:ok, EbnfParser.Generator.t(), Generator.Result.t()} | {:fail}
 
   @doc "Emits a new result"
   @spec emit(EbnfParser.Generator.t()) :: EbnfParser.Generator.response()

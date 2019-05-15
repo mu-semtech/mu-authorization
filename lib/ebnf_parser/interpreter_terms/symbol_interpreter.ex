@@ -2,6 +2,8 @@ alias Generator.Result, as: Result
 alias InterpreterTerms.Symbol.Interpreter, as: SymbolEmitter
 
 defmodule InterpreterTerms.SymbolMatch do
+  @type t :: %InterpreterTerms.SymbolMatch{}
+
   defstruct [:string, :symbol, {:submatches, :none}, {:whitespace, ""}, {:external, %{}}]
 
   defimpl Inspect do
