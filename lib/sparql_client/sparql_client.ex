@@ -23,18 +23,25 @@ defmodule SparqlClient do
 
     # form parameters
     # headers
-    HTTPoison.post!(
-      endpoint,
-      [
-        "query=" <>
-          URI.encode_www_form(query) <>
-          "&format=" <> URI.encode_www_form("application/sparql-results+json")
-      ],
-      ["Content-Type": "application/x-www-form-urlencoded"],
-      options
-    ).body
-    |> ALog.ii("Raw query response")
-    |> Poison.decode!()
+    response =
+      HTTPoison.post!(
+        endpoint,
+        [
+          "query=" <>
+            URI.encode_www_form(query) <>
+            "&format=" <> URI.encode_www_form("application/sparql-results+json")
+        ],
+        ["Content-Type": "application/x-www-form-urlencoded"],
+        options
+      ).body
+
+    try do
+      Poison.decode!(response)
+    rescue
+      exception ->
+        IO.inspect(response, label: "Response received from database")
+        raise exception # TODO when upgrading elixir, change to reraise
+    end
   end
 
   def execute_parsed(query, endpoint \\ default_endpoint())
