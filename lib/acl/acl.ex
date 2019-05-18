@@ -66,20 +66,32 @@ defmodule Acl do
   def process_query(query, user_groups, authorization_groups) do
     clean_query = Manipulators.SparqlQuery.remove_graph_statements(query)
 
-    active_user_groups_info(user_groups, authorization_groups)
-    |> ALog.di("Active User Groups Info")
-    |> Enum.reduce({clean_query, []}, fn {user_group, ug_access_infos}, {query, access_infos} ->
-      {new_query, new_access_info} =
-        Enum.reduce(ug_access_infos, {query, access_infos}, fn access_info,
-                                                               {query, access_infos} ->
+    active_groups_info =
+      active_user_groups_info(user_groups, authorization_groups)
+      |> IO.inspect(label: "Active user groups")
+      |> ALog.di("Active User Groups Info")
+
+    case active_groups_info do
+      [] ->
+        # No active groups found, pose the query to nothing and yield no used groups
+        { Manipulators.SparqlQuery.add_from_graph(query, "http://mu.semte.ch/graphs/empty"), [] }
+
+      _ ->
+        active_groups_info
+        |> Enum.reduce({clean_query, []}, fn {user_group, ug_access_infos},
+                                             {query, access_infos} ->
           {new_query, new_access_info} =
-            Acl.GroupSpec.Protocol.process_query(user_group, access_info, query)
+            Enum.reduce(ug_access_infos, {query, access_infos}, fn access_info,
+                                                                   {query, access_infos} ->
+              {new_query, new_access_info} =
+                Acl.GroupSpec.Protocol.process_query(user_group, access_info, query)
+
+              {new_query, new_access_info ++ access_infos}
+            end)
 
           {new_query, new_access_info ++ access_infos}
         end)
-
-      {new_query, new_access_info ++ access_infos}
-    end)
+    end
   end
 
   def active_user_groups_info(user_groups, authorization_groups) do
