@@ -68,7 +68,6 @@ defmodule Acl do
 
     active_groups_info =
       active_user_groups_info(user_groups, authorization_groups)
-      |> IO.inspect(label: "Active user groups")
       |> ALog.di("Active User Groups Info")
 
     case active_groups_info do
