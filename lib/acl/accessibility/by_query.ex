@@ -47,7 +47,7 @@ defmodule AccessByQuery do
     query
     |> manipulate_sparql_query(request)
     |> ALog.di("Posing sparql query to check accessibility")
-    |> SparqlClient.query()
+    |> SparqlClient.query(request: request)
     |> retrieve_access_vars(vars)
     |> extract_results
   end

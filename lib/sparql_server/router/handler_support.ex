@@ -79,7 +79,7 @@ defmodule SparqlServer.Router.HandlerSupport do
       new_parsed_forms
       |> ALog.di("New parsed forms")
       |> Enum.reduce(true, fn elt, _ ->
-        SparqlClient.execute_parsed(elt)
+        SparqlClient.execute_parsed(elt, request: conn)
       end)
       |> Poison.encode!()
 
