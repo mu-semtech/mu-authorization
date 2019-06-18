@@ -4,7 +4,7 @@ alias Acl.GroupSpec.Protocol, as: GPr
 defprotocol Acl.GroupSpec.Protocol do
   @type t :: struct()
   @type query :: struct()
-  @type request :: struct()
+  @type request :: Plug.Conn.t()
   @type matched_user_group :: {String.t(), [String.t()]}
 
   @doc """
