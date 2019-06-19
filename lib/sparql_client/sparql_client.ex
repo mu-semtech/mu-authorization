@@ -6,7 +6,7 @@ defmodule SparqlClient do
   A client library that offers the possibility to query a SPARQL endpoint
   """
 
-  @default_query_options [timeout: 50000]
+  @default_query_options [timeout: :infinity]
 
   def default_endpoint do
     System.get_env("MU_SPARQL_ENDPOINT") || "http://localhost:8890/sparql"
