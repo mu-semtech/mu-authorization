@@ -191,13 +191,7 @@ defmodule SparqlServer.Router.HandlerSupport do
       end)
 
     delta_updater = fn ->
-      origin =
-        conn
-        |> Map.get(:remote_ip)
-        |> Tuple.to_list()
-        |> Enum.join(".")
-
-      Delta.publish_updates(updated_quads, authorization_groups, origin)
+      Delta.publish_updates(updated_quads, authorization_groups, conn)
     end
 
     # TODO should we set the access groups on update queries too?
