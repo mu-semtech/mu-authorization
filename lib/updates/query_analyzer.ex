@@ -282,14 +282,7 @@ defmodule Updates.QueryAnalyzer do
     # cases still.  This can be verified by comparing the EBNF for
     # QuadPattern with the EBNF for GroupGraphPattern
 
-    group_graph_pattern =
-      quad_pattern
-      |> ALog.di("Quad pattern to regenerate")
-      |> Regen.result(:QuadPattern)
-      |> ALog.di("Regenerated quad pattern")
-      |> String.trim()
-      |> Parser.parse_query_full(:GroupGraphPattern)
-      |> ALog.di("Parsed QuadPattern as GroupGraphPattern")
+    group_graph_pattern = Manipulator.Transform.quad_pattern_to_group_graph_pattern(quad_pattern)
 
     template = quads(quad_pattern, options)
 
