@@ -336,18 +336,32 @@ defmodule Str do
     end
 
     def to_sparql_result_value(%Str{str: str, lang: false, type: false}) do
-      %{type: "literal", value: str}
+      %{type: "literal", value: unescape_sparql_string(str)}
     end
 
     def to_sparql_result_value(%Str{str: str, lang: lang, type: false}) do
       # TODO discuss whether it's really ok to write xml:lang here,
       # instead of writing out the xml namespace.
-      %{type: "literal", value: str, "xml:lang": lang}
+      %{type: "literal", value: unescape_sparql_string(str), "xml:lang": lang}
     end
 
     def to_sparql_result_value(%Str{str: str, lang: false, type: %Iri{iri: type_iri}}) do
       type = Iri.unwrap_iri_string(type_iri)
-      %{type: "literal", value: str, datatype: type}
+      %{type: "literal", value: unescape_sparql_string(str), datatype: type}
+    end
+
+    defp unescape_sparql_string(str) do
+      if String.starts_with?(str, "\"\"\"") do
+        str
+        |> String.replace_prefix("\"\"\"", "")
+        |> String.replace_suffix("\"\"\"", "")
+        |> String.replace("\\\"", "\"")
+      else
+        str
+        |> String.replace_prefix("\"", "")
+        |> String.replace_suffix("\"", "")
+        |> String.replace("\\\"", "\"")
+      end
     end
   end
 end
