@@ -44,7 +44,10 @@ config :"mu-authorization",
   log_delta_client_communication: CH.system_boolean("LOG_DELTA_CLIENT_COMMUNICATION"),
   log_access_rights: CH.system_boolean("LOG_ACCESS_RIGHTS"),
   inspect_access_rights_processing: CH.system_boolean("INSPECT_ACCESS_RIGHTS_PROCESSING"),
-  database_compatibility: CH.database_compatibility("DATABASE_COMPATIBILITY")
+  database_compatibility: CH.database_compatibility("DATABASE_COMPATIBILITY"),
+  log_outgoing_sparql_query_responses: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERY_RESPONSES"),
+  inspect_outgoing_sparql_query_responses: CH.system_boolean("INSPECT_OUTGOING_SPARQL_QUERY_RESPONSES"),
+  log_outgoing_sparql_query_roundtrip: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP")
 
 # and access this configuration in your application as:
 #

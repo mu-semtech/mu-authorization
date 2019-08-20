@@ -49,6 +49,11 @@ defmodule SparqlClient do
         poison_options
       ).body
 
+    Logging.EnvLog.log(:log_outgoing_sparql_query_responses, "Response to sparql query: #{response}")
+    Logging.EnvLog.inspect(query, :inspect_outgoing_sparql_query_responses, label: "Response to sparql query:")
+
+    Logging.EnvLog.log(:log_outgoing_sparql_query_roundtrip, "Outgoing sparql query: #{query}\nincoming sparql response #{response}")
+
     try do
       Poison.decode!(response)
     rescue
