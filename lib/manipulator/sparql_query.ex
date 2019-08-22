@@ -87,6 +87,9 @@ defmodule Manipulators.SparqlQuery do
              ]
            }}
 
+        %InterpreterTerms.SymbolMatch{symbol: :SubSelect} ->
+          {:skip}
+
         _ ->
           {:continue}
       end
