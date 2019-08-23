@@ -4,6 +4,7 @@ defmodule Compat.Implementations.Virtuoso do
   @impl Compat.DatabaseAdapter
   def update_query(query) do
     query
-    |> Compat.Modifiers.UpdateDataToUpdateWhere.manipulate()
+    |> Compat.Modifiers.MergeGraphsForUpdateData.manipulate()
+    # |> Compat.Modifiers.UpdateDataToUpdateWhere.manipulate()
   end
 end
