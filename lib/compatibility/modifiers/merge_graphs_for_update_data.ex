@@ -21,7 +21,7 @@ defmodule Compat.Modifiers.MergeGraphsForUpdateData do
             {var_or_iri, triples_template}
           end)
           |> Enum.reduce(%{}, fn {var_or_iri, triples_template}, map ->
-            Map.update(map, var_or_iri, [], &[triples_template | &1])
+            Map.update(map, var_or_iri, [triples_template], &[triples_template | &1])
           end)
 
         # create triples templates
@@ -110,6 +110,7 @@ defmodule Compat.Modifiers.MergeGraphsForUpdateData do
                     %Sym{
                       symbol: :TriplesTemplate,
                       submatches: [
+                        # TODO should cope with trailing dot as word too
                         %Sym{symbol: :TriplesSameSubject}
                       ]
                     },
@@ -119,7 +120,7 @@ defmodule Compat.Modifiers.MergeGraphsForUpdateData do
                   {:skip, {:has_quad_data, [element | arr]}}
 
                 _ ->
-                  {:error, :unsupported_quads_not_triples_format, nil}
+                  {:exit, {:error, :unsupported_quads_not_triples_format, nil}, nil}
               end
 
             _ ->
@@ -131,7 +132,7 @@ defmodule Compat.Modifiers.MergeGraphsForUpdateData do
       end
 
     case extracted_query_info do
-      {{:error, _}, _} ->
+      {:exit, {:error, _, _}, _} ->
         {:error}
 
       {:no_insert_delete_data, _query} ->
