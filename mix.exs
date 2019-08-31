@@ -6,7 +6,7 @@ defmodule MuAuthorization.MixProject do
   def project do
     [
       app: :"mu-authorization",
-      version: "0.4.0",
+      version: "0.5.0",
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
       erlc_paths: ["parser-generator"],
