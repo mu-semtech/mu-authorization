@@ -71,10 +71,20 @@ defmodule SparqlServer.Router.AccessGroupSupport do
   @spec get_access_groups(Plug.Conn.t()) :: decoded_json_access_groups
   defp get_access_groups(conn) do
     access_groups = Plug.Conn.get_req_header(conn, "mu-auth-allowed-groups")
-    is_sudo = not Enum.empty?(Plug.Conn.get_req_header(conn, "mu-auth-sudo"))
+    has_sudo_header = not Enum.empty?(Plug.Conn.get_req_header(conn, "mu-auth-sudo"))
 
     cond do
-      is_sudo ->
+      has_sudo_header ->
+        :sudo
+
+      match?(["sudo"], access_groups) ->
+        # We send out "sudo" as Delta contents for changes received
+        # through a sudo delta.  This case lets us read in the
+        # contents we've sent out transparantly making services which
+        # received sudo delta's sudo services.
+
+        # TODO: determine desired effects for passing along sudo
+        # rights.
         :sudo
 
       Enum.empty?(access_groups) ->
