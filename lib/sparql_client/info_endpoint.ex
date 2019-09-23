@@ -5,7 +5,7 @@ defmodule SparqlClient.InfoEndpoint do
 
   alias SparqlClient.QueryInfo
 
-  defstruct running_queries: %{}
+  defstruct running_queries: %{}, processing_queries: %{}
   @type t :: %SparqlClient.InfoEndpoint{}
 
   def start_link(_) do
@@ -34,9 +34,30 @@ defmodule SparqlClient.InfoEndpoint do
     GenServer.call(__MODULE__, {:retry_query, qi})
   end
 
+  @spec start_processing_query(String.t()) :: QueryInfo.t()
+  def start_processing_query(query) do
+    qi = QueryInfo.new(query)
+    GenServer.cast(__MODULE__, {:start_processing_query, qi})
+    qi
+  end
+
+  @spec finish_processing_query(QueryInfo.t()) :: :ok
+  def finish_processing_query(qi) do
+    GenServer.cast(__MODULE__, {:finish_processing_query, qi})
+  end
+
   @spec get_running_queries() :: [QueryInfo.t()]
   def get_running_queries() do
     query_map = GenServer.call(__MODULE__, {:get_running_queries})
+
+    query_map
+    |> Map.keys()
+    |> Enum.sort_by(&QueryInfo.launched_at/1)
+  end
+
+  @spec get_processing_queries() :: [QueryInfo.t()]
+  def get_processing_queries() do
+    query_map = GenServer.call(__MODULE__, {:get_processing_queries})
 
     query_map
     |> Map.keys()
@@ -51,6 +72,16 @@ defmodule SparqlClient.InfoEndpoint do
   @impl true
   def handle_cast({:end_query, qi}, state) do
     {:noreply, remove_query_info(state, qi)}
+  end
+
+  @impl true
+  def handle_cast({:start_processing_query, qi}, state) do
+    {:noreply, add_processing_query(state, qi)}
+  end
+
+  @impl true
+  def handle_cast({:finish_processing_query, qi}, state) do
+    {:noreply, remove_processing_query(state, qi)}
   end
 
   @impl true
@@ -72,6 +103,13 @@ defmodule SparqlClient.InfoEndpoint do
     {:reply, state.running_queries, state}
   end
 
+  @impl true
+  def handle_call({:get_processing_queries}, _from, state) do
+    # Returns the running queries map, to be sorted by the consuming entity.
+
+    {:reply, state.processing_queries, state}
+  end
+
   @spec add_query_info(t(), QueryInfo.t()) :: t()
   defp add_query_info(state, qi) do
     update_running_queries(state, fn queries ->
@@ -86,6 +124,7 @@ defmodule SparqlClient.InfoEndpoint do
     end)
   end
 
+  @spec update_running_queries(t(), Map.t() :: Map.t()) :: t()
   defp update_running_queries(state, functor) do
     running_queries =
       state
@@ -93,5 +132,29 @@ defmodule SparqlClient.InfoEndpoint do
       |> functor.()
 
     Map.put(state, :running_queries, running_queries)
+  end
+
+  @spec add_processing_query(t(), QueryInfo.t()) :: t()
+  defp add_processing_query(state, qi) do
+    update_processing_queries(state, fn queries ->
+      Map.put(queries, qi, true)
+    end)
+  end
+
+  @spec remove_processing_query(t(), QueryInfo.t()) :: t()
+  defp remove_processing_query(state, qi) do
+    update_processing_queries(state, fn queries ->
+      Map.delete(queries, qi)
+    end)
+  end
+
+  @spec update_processing_queries(t(), Map.t() :: Map.t()) :: t()
+  defp update_processing_queries(state, functor) do
+    processing_queries =
+      state
+      |> Map.get(:processing_queries)
+      |> functor.()
+
+    Map.put(state, :processing_queries, processing_queries)
   end
 end

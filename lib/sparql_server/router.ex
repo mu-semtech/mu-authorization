@@ -29,8 +29,13 @@ defmodule SparqlServer.Router do
 
     {method, query} = get_query_from_post(conn, body) |> ALog.di("Received query")
 
-    Support.handle_query(query, method, conn)
-    |> send_sparql_response
+    qi = InfoEndpoint.start_processing_query( query )
+    try do
+      Support.handle_query(query, method, conn)
+      |> send_sparql_response
+    after
+      InfoEndpoint.finish_processing_query(qi)
+    end
   end
 
   get "/sparql" do
@@ -42,11 +47,17 @@ defmodule SparqlServer.Router do
 
     query = params["query"]
 
-    conn =
-      Support.handle_query(query, :query, conn)
-      |> send_sparql_response
+    qi = InfoEndpoint.start_processing_query(query)
 
-    {conn, ""}
+    try do
+      conn =
+        Support.handle_query(query, :query, conn)
+        |> send_sparql_response
+
+      {conn, ""}
+    after
+      InfoEndpoint.finish_processing_query(qi)
+    end
   end
 
   get "/running-queries" do
@@ -55,8 +66,18 @@ defmodule SparqlServer.Router do
 
     IO.inspect(running_queries, [{:label, "Currently running queries"} | inspect_options])
 
-    send_resp( conn, 200, inspect(running_queries, inspect_options) )
+    send_resp(conn, 200, inspect(running_queries, inspect_options))
   end
+
+  get "/processing-queries" do
+    processing_queries = InfoEndpoint.get_processing_queries()
+    inspect_options = [limit: 100_000, pretty: true, width: 180]
+
+    IO.inspect(processing_queries, [{:label, "Currently processing queries"} | inspect_options])
+
+    send_resp(conn, 200, inspect(processing_queries, inspect_options))
+  end
+
 
   match(_, do: send_resp(conn, 404, "404 error not found"))
 
