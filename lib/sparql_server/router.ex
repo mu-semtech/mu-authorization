@@ -8,6 +8,8 @@ defmodule SparqlServer.Router do
   require Logger
   require ALog
 
+  alias SparqlClient.InfoEndpoint
+
   plug(:match)
   plug(:dispatch)
 
@@ -45,6 +47,15 @@ defmodule SparqlServer.Router do
       |> send_sparql_response
 
     {conn, ""}
+  end
+
+  get "/running-queries" do
+    running_queries = InfoEndpoint.get_running_queries()
+    inspect_options = [limit: 100_000, pretty: true, width: 180]
+
+    IO.inspect(running_queries, [{:label, "Currently running queries"} | inspect_options])
+
+    send_resp( conn, 200, inspect(running_queries, inspect_options) )
   end
 
   match(_, do: send_resp(conn, 404, "404 error not found"))

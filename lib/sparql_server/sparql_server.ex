@@ -28,6 +28,7 @@ defmodule SparqlServer do
 
     children = [
       {Cache.Types, %{}},
+      {SparqlClient.InfoEndpoint, nil},
       {EbnfParser.Sparql, nil},
       {Interpreter.CachedInterpreter, nil},
       {Interpreter.Diff.Store.Storage, nil},

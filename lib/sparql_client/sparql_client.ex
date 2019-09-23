@@ -2,6 +2,8 @@ defmodule SparqlClient do
   require Logger
   require ALog
 
+  alias SparqlClient.InfoEndpoint
+
   @moduledoc """
   A client library that offers the possibility to query a SPARQL endpoint
   """
@@ -35,31 +37,40 @@ defmodule SparqlClient do
 
     Logging.EnvLog.inspect(query, :inspect_outgoing_sparql_queries, label: "Outgoing SPARQL query")
 
-    # form parameters
-    # headers
-    response =
-      HTTPoison.post!(
-        default_endpoint(),
-        [
-          "query=" <>
-            URI.encode_www_form(query) <>
-            "&format=" <> URI.encode_www_form("application/sparql-results+json")
-        ],
-        outgoing_headers,
-        poison_options
-      ).body
-
-    Logging.EnvLog.log(:log_outgoing_sparql_query_responses, "Response to sparql query: #{response}")
-    Logging.EnvLog.inspect(query, :inspect_outgoing_sparql_query_responses, label: "Response to sparql query:")
-
-    Logging.EnvLog.log(:log_outgoing_sparql_query_roundtrip, "Outgoing sparql query: #{query}\nincoming sparql response #{response}")
+    query_info = InfoEndpoint.start_query( query )
 
     try do
-      Poison.decode!(response)
+      # form parameters
+      # headers
+      response =
+        HTTPoison.post!(
+          default_endpoint(),
+          [
+            "query=" <>
+            URI.encode_www_form(query) <>
+            "&format=" <> URI.encode_www_form("application/sparql-results+json")
+          ],
+          outgoing_headers,
+          poison_options
+        ).body
+
+      Logging.EnvLog.log(:log_outgoing_sparql_query_responses, "Response to sparql query: #{response}")
+      Logging.EnvLog.inspect(query, :inspect_outgoing_sparql_query_responses, label: "Response to sparql query:")
+
+      Logging.EnvLog.log(:log_outgoing_sparql_query_roundtrip, "Outgoing sparql query: #{query}\nincoming sparql response #{response}")
+
+      try do
+        InfoEndpoint.end_query( query_info )
+        Poison.decode!(response)
+      rescue
+        exception ->
+          IO.inspect(response, label: "Response received from database")
+        # TODO when upgrading elixir, change to reraise
+        raise exception
+      end
     rescue
       exception ->
-        IO.inspect(response, label: "Response received from database")
-        # TODO when upgrading elixir, change to reraise
+        InfoEndpoint.end_query( query_info )
         raise exception
     end
   end

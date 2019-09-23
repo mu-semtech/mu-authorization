@@ -1,0 +1,97 @@
+defmodule SparqlClient.InfoEndpoint do
+  require Logger
+  require ALog
+  use GenServer
+
+  alias SparqlClient.QueryInfo
+
+  defstruct running_queries: %{}
+  @type t :: %SparqlClient.InfoEndpoint{}
+
+  def start_link(_) do
+    GenServer.start_link(__MODULE__, nil, name: __MODULE__)
+  end
+
+  @impl true
+  def init(_) do
+    {:ok, %__MODULE__{}}
+  end
+
+  @spec start_query(String.t()) :: QueryInfo.t()
+  def start_query(query) do
+    qi = QueryInfo.new(query)
+    GenServer.cast(__MODULE__, {:start_query, qi})
+    qi
+  end
+
+  @spec end_query(QueryInfo.t()) :: :ok
+  def end_query(qi) do
+    GenServer.cast(__MODULE__, {:end_query, qi})
+  end
+
+  @spec retry_query(QueryInfo.t()) :: QueryInfo.t()
+  def retry_query(qi) do
+    GenServer.call(__MODULE__, {:retry_query, qi})
+  end
+
+  @spec get_running_queries() :: [QueryInfo.t()]
+  def get_running_queries() do
+    query_map = GenServer.call(__MODULE__, {:get_running_queries})
+
+    query_map
+    |> Map.keys()
+    |> Enum.sort_by(&QueryInfo.launched_at/1)
+  end
+
+  @impl true
+  def handle_cast({:start_query, qi}, state) do
+    {:noreply, add_query_info(state, qi)}
+  end
+
+  @impl true
+  def handle_cast({:end_query, qi}, state) do
+    {:noreply, remove_query_info(state, qi)}
+  end
+
+  @impl true
+  def handle_call({:retry_query, qi}, _from, state) do
+    new_qi = QueryInfo.increase_retry_count(qi)
+
+    new_state =
+      state
+      |> remove_query_info(qi)
+      |> add_query_info(new_qi)
+
+    {:reply, new_qi, new_state}
+  end
+
+  @impl true
+  def handle_call({:get_running_queries}, _from, state) do
+    # Returns the running queries map, to be sorted by the consuming entity.
+
+    {:reply, state.running_queries, state}
+  end
+
+  @spec add_query_info(t(), QueryInfo.t()) :: t()
+  defp add_query_info(state, qi) do
+    update_running_queries(state, fn queries ->
+      Map.put(queries, qi, true)
+    end)
+  end
+
+  @spec remove_query_info(t(), QueryInfo.t()) :: t()
+  defp remove_query_info(state, qi) do
+    update_running_queries(state, fn queries ->
+      Map.delete(queries, qi)
+    end)
+  end
+
+  defp update_running_queries(state, functor) do
+    running_queries =
+      state
+      |> Map.get(:running_queries)
+      |> functor.()
+
+    Map.put(state, :running_queries, running_queries)
+  end
+end
