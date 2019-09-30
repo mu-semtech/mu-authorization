@@ -51,6 +51,56 @@ defmodule Updates.QueryConstructors do
     }
   end
 
+  def make_select_distinct_query(variable_syms, group_graph_pattern_sym) do
+    %Sym{
+      symbol: :Sparql,
+      submatches: [
+        %Sym{
+          symbol: :QueryUnit,
+          submatches: [
+            %Sym{
+              symbol: :Query,
+              submatches: [
+                %Sym{
+                  symbol: :Prologue,
+                  submatches: []
+                },
+                %Sym{
+                  symbol: :SelectQuery,
+                  submatches: [
+                    %Sym{
+                      symbol: :SelectClause,
+                      submatches: [
+                        %InterpreterTerms.WordMatch{word: "SELECT"},
+                        %InterpreterTerms.WordMatch{word: "DISTINCT"}
+                        | variable_syms
+                      ]
+                    },
+                    %Sym{
+                      symbol: :WhereClause,
+                      submatches: [
+                        %InterpreterTerms.WordMatch{word: "WHERE"},
+                        group_graph_pattern_sym
+                      ]
+                    },
+                    %Sym{
+                      symbol: :SolutionModifier,
+                      submatches: []
+                    }
+                  ]
+                },
+                %Sym{
+                  symbol: :ValuesClause,
+                  submatches: []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  end
+
   @doc """
   Creates a valid insert data query, assuming quads is an array of
   solutions container :QuadsNotTriples.
