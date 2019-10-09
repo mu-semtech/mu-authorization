@@ -26,7 +26,7 @@ defmodule SparqlServer.Router.HandlerSupport do
     timeout = 300_000
 
     :poolboy.transaction(
-      :worker,
+      :query_worker,
       fn pid ->
         GenServer.call(pid, {:handle_query, query, kind, conn}, timeout)
       end,
