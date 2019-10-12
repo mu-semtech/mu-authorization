@@ -7,11 +7,10 @@ defmodule MuAuthorization.MixProject do
     [
       app: :"mu-authorization",
       version: "0.5.0",
-      elixir: "~> 1.6",
+      elixir: "~> 1.9",
       start_permanent: Mix.env() == :prod,
       erlc_paths: ["parser-generator"],
       deps: deps(),
-      aliases: aliases(),
       docs: [
         main: "readme",
         extras: ["README.md", "CHANGELOG.md"]
@@ -37,11 +36,6 @@ defmodule MuAuthorization.MixProject do
         }
       ]
     ]
-  end
-
-  # Some command line aliases
-  def aliases do
-    [server: "run --no-halt"]
   end
 
   # Run "mix help compile.app" to learn about applications.
