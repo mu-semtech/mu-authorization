@@ -108,7 +108,7 @@ Flags which can be either on or off translate the environment variable string to
 
 A query processing timeout can be configured.  Configuration is documented below:
 
-- `QUERY_MAX_PROCESSING_TIME` : Maximum amount of time, in milliseconds, in which the query should have been processed.
+- `QUERY_MAX_PROCESSING_TIME` : Maximum amount of time in milliseconds in which the query should have been processed.  Beyond this time, a 503 response may be sent.  Take into account that, in practice, the actual consumed time might be substantially larger than the configured time.
 
 ## Working around database issues
 

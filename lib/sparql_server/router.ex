@@ -28,14 +28,7 @@ defmodule SparqlServer.Router do
     debug_log_request_id(conn)
 
     {method, query} = get_query_from_post(conn, body) |> ALog.di("Received query")
-
-    qi = InfoEndpoint.start_processing_query( query )
-    try do
-      Support.handle_query(query, method, conn)
-      |> send_sparql_response
-    after
-      InfoEndpoint.finish_processing_query(qi)
-    end
+    handle_query_processing_and_response(query, method, conn)
   end
 
   get "/sparql" do
@@ -47,17 +40,7 @@ defmodule SparqlServer.Router do
 
     query = params["query"]
 
-    qi = InfoEndpoint.start_processing_query(query)
-
-    try do
-      conn =
-        Support.handle_query(query, :query, conn)
-        |> send_sparql_response
-
-      {conn, ""}
-    after
-      InfoEndpoint.finish_processing_query(qi)
-    end
+    handle_query_processing_and_response(query, :query, conn)
   end
 
   get "/running-queries" do
@@ -83,6 +66,28 @@ defmodule SparqlServer.Router do
 
   ################
   ### Internal logic
+
+  defp handle_query_processing_and_response(query, method, conn) do
+    qi = InfoEndpoint.start_processing_query(query)
+
+    try do
+      Support.handle_query(query, method, conn)
+      |> send_sparql_response
+    catch
+      :exit, {:timeout, call_info} ->
+        IO.puts("Server overload, could not answer request within allocated time")
+        IO.inspect(call_info, label: "Failed call")
+
+        send_resp(conn, 503, "Processing request took too long")
+
+      :exit, info ->
+        IO.inspect(info, label: "Unknown exit message received when processing query")
+
+        send_resp(conn, 500, "Unknown error occurred when processing query")
+    after
+      InfoEndpoint.finish_processing_query(qi)
+    end
+  end
 
   defp get_query_from_post(conn, body) do
     if Plug.Conn.get_req_header(conn, "content-type") == ["application/sparql-update"] do
