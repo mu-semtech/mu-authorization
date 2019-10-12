@@ -104,6 +104,11 @@ Flags which can be either on or off translate the environment variable string to
  - `INSPECT_OUTGOING_SPARQL_QUERY_RESPONSES` : Inspects the responses coming back from the backing triplestore
  - `LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP` : Logs both the request and the response to/from the backing triplestore closely together in the logs.
 
+## Timeout configuration
+
+A query processing timeout can be configured.  Configuration is documented below:
+
+- `QUERY_MAX_PROCESSING_TIME` : Maximum amount of time, in milliseconds, in which the query should have been processed.
 
 ## Working around database issues
 

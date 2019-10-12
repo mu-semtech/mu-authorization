@@ -26,6 +26,10 @@ defmodule SparqlServer do
       label: "server setup, delta targets"
     )
 
+    Logging.EnvLog.inspect(Application.get_env(:"mu-authorization", :query_max_processing_time),
+      label: "server setup, max query processing time"
+    )
+
     children = [
       {Cache.Types, %{}},
       {SparqlClient.InfoEndpoint, nil},

@@ -21,6 +21,15 @@ defmodule CH do
       _ -> Compat.Implementations.Raw
     end
   end
+
+  def system_number(name, default) do
+    try do
+      (System.get_env(name) || "")
+      |> String.to_integer()
+    rescue
+      ArgumentError -> default
+    end
+  end
 end
 
 # This configuration is loaded before any dependency and is restricted
@@ -46,8 +55,10 @@ config :"mu-authorization",
   inspect_access_rights_processing: CH.system_boolean("INSPECT_ACCESS_RIGHTS_PROCESSING"),
   database_compatibility: CH.database_compatibility("DATABASE_COMPATIBILITY"),
   log_outgoing_sparql_query_responses: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERY_RESPONSES"),
-  inspect_outgoing_sparql_query_responses: CH.system_boolean("INSPECT_OUTGOING_SPARQL_QUERY_RESPONSES"),
-  log_outgoing_sparql_query_roundtrip: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP")
+  inspect_outgoing_sparql_query_responses:
+    CH.system_boolean("INSPECT_OUTGOING_SPARQL_QUERY_RESPONSES"),
+  log_outgoing_sparql_query_roundtrip: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP"),
+  query_max_processing_time: CH.system_number("QUERY_MAX_PROCESSING_TIME", 120_000)
 
 # and access this configuration in your application as:
 #

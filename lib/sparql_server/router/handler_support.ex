@@ -23,7 +23,8 @@ defmodule SparqlServer.Router.HandlerSupport do
   This should speed up the execution.
   """
   def handle_query_with_worker(query, kind, conn) do
-    timeout = 300_000
+    # TODO: treat timeout more exactly by subtracting time needed for fetching worker
+    timeout = Application.get_env(:"mu-authorization", :query_max_processing_time)
 
     :poolboy.transaction(
       :query_worker,
