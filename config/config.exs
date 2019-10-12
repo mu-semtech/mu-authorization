@@ -59,7 +59,8 @@ config :"mu-authorization",
     CH.system_boolean("INSPECT_OUTGOING_SPARQL_QUERY_RESPONSES"),
   log_outgoing_sparql_query_roundtrip: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP"),
   default_sparql_endpoint: (System.get_env("MU_SPARQL_ENDPOINT") || "http://localhost:8890/sparql"),
-  query_max_processing_time: CH.system_number("QUERY_MAX_PROCESSING_TIME", 120_000)
+  query_max_processing_time: CH.system_number("QUERY_MAX_PROCESSING_TIME", 120_000),
+  query_max_execution_time: CH.system_number("QUERY_MAX_EXECUTION_TIME", 60_000)
 
 # and access this configuration in your application as:
 #

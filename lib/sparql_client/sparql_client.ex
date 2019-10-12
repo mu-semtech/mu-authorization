@@ -8,12 +8,14 @@ defmodule SparqlClient do
   A client library that offers the possibility to query a SPARQL endpoint
   """
 
-  @default_query_options [timeout: :infinity]
+  @max_retries 10
 
   def query(query, options \\ [])
 
   def query(query, options) when is_binary(query) do
-    options = options ++ @default_query_options
+    query_max_execution_time = Application.get_env(:"mu-authorization", :query_max_execution_time)
+
+    options = options ++ [timeout: query_max_execution_time]
 
     outgoing_headers = ["Content-Type": "application/x-www-form-urlencoded"]
 
@@ -38,10 +40,10 @@ defmodule SparqlClient do
     do_execute_query({query, query_info, outgoing_headers, poison_options})
   end
 
-  defp do_execute_query(query_spec), do: do_execute_query(query_spec, 10)
+  defp do_execute_query(query_spec), do: do_execute_query(query_spec, @max_retries)
 
   defp do_execute_query({query, query_info, _, _}, 0) do
-    Logger.error("Failed to execute query multiple times #{query}")
+    Logger.error("Failed to execute query #{@max_retries} times #{query}")
     InfoEndpoint.end_query(query_info)
     raise "Backend query retry limit reached"
   end
@@ -95,8 +97,8 @@ defmodule SparqlClient do
       end
     rescue
       exception ->
-        Logger.warn("Failed to execute query #{query} on database")
-        IO.inspect(exception, label: "Execution thrown when executing query")
+        Logger.warn("Failed to execute query #{query} on database (try #{@max_retries - retries})")
+        IO.inspect(exception, label: "Exception thrown when executing query")
         query_info = InfoEndpoint.retry_query(query_info)
         do_execute_query({query, query_info, outgoing_headers, poison_options}, retries - 1)
     end

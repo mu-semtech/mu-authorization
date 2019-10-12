@@ -26,8 +26,22 @@ defmodule SparqlServer do
       label: "server setup, delta targets"
     )
 
-    Logging.EnvLog.inspect(Application.get_env(:"mu-authorization", :query_max_processing_time),
+    Logging.EnvLog.inspect(
+      Application.get_env(:"mu-authorization", :query_max_processing_time),
+      :log_server_configuration,
       label: "server setup, max query processing time"
+    )
+
+    Logging.EnvLog.inspect(
+      Application.get_env(:"mu-authorization", :query_max_execution_time),
+      :log_server_configuration,
+      label: "server setup, max query execution time"
+    )
+
+    Logging.EnvLog.inspect(
+      Application.get_env(:"mu-authorization", :default_sparql_endpoint),
+      :log_server_configuration,
+      label: "server setup, default sparql endpoint"
     )
 
     children = [
