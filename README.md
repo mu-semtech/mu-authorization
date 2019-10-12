@@ -112,7 +112,15 @@ A query processing timeout can be configured.  Configuration is documented below
 
 ## Working around database issues
 
-Compatibility layers can rewrite SPRARQL queries to be in line with the expectations of a triplestore.  Use the `DATABASE_COMPATIBILITY` environment variable.
+mu-authorization makes some assumptions regarding the SPARQL endpoint which can be altered.  The location of the triplestore as well as alterations to support specific triplestores can be configured.
+
+### Location of the SPARQL endpoint
+
+The default sparql endpoint can be configured with the `MU_SPARQL_ENDPOINT` environment variable.  This is configured to be `http://database:8890/sparql` when running inside a standard container but you can override it in the docker-compose file.  In case this variable is not set (as would be the case in a standard development setup), `http://localhost:8890/sparql` will be used as a default setting.
+
+### Database compatibility
+
+Compatibility layers can rewrite SPARQL queries to be in line with the expectations of a triplestore.  Use the `DATABASE_COMPATIBILITY` environment variable.
 
 Sometimes triplestores can be a bit cranky.  mu-authorization tries to create sensible and valid SPARQL queries that express what it intends to achieve.  Although it's still a work in progress, it's the goal to generate clean SPARQL queries.  A triplestore could barf on a query but work with a rewritten version.  The compatibility layer solves that.
 

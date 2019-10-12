@@ -10,10 +10,6 @@ defmodule SparqlClient do
 
   @default_query_options [timeout: :infinity]
 
-  def default_endpoint do
-    System.get_env("MU_SPARQL_ENDPOINT") || "http://localhost:8890/sparql"
-  end
-
   def query(query, options \\ [])
 
   def query(query, options) when is_binary(query) do
@@ -62,7 +58,7 @@ defmodule SparqlClient do
       # headers
       response =
         HTTPoison.post!(
-          default_endpoint(),
+          Application.get_env(:"mu-authorization", :default_sparql_endpoint),
           [
             "query=" <>
               URI.encode_www_form(query) <>
