@@ -60,7 +60,9 @@ config :"mu-authorization",
   log_outgoing_sparql_query_roundtrip: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP"),
   default_sparql_endpoint: (System.get_env("MU_SPARQL_ENDPOINT") || "http://localhost:8890/sparql"),
   query_max_processing_time: CH.system_number("QUERY_MAX_PROCESSING_TIME", 120_000),
-  query_max_execution_time: CH.system_number("QUERY_MAX_EXECUTION_TIME", 60_000)
+  query_max_execution_time: CH.system_number("QUERY_MAX_EXECUTION_TIME", 60_000),
+  database_recovery_mode_enabled: CH.system_boolean("DATABASE_OVERLOAD_RECOVERY"),
+  log_database_recovery_mode_tick: CH.system_boolean("LOG_DATABASE_OVERLOAD_TICK")
 
 # and access this configuration in your application as:
 #

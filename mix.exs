@@ -50,6 +50,7 @@ defmodule MuAuthorization.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:accessible, "~> 0.2.1"},
       {:ex_doc, "~> 0.18", only: :dev, runtime: false},
       {:exprof, "~> 0.2.0"},
       {:junit_formatter, "~> 2.1", only: :test},

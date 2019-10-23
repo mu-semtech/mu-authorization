@@ -111,6 +111,15 @@ A query processing timeout can be configured.  Configuration is documented below
 - `QUERY_MAX_PROCESSING_TIME` : Maximum amount of time in milliseconds in which the query should have been processed.  Beyond this time, a 503 response may be sent.  Take into account that, in practice, the actual consumed time might be substantially larger than the configured time.
 - `QUERY_MAX_EXECUTION_TIME`: Maximum amount of time in milliseconds in which a single query to the database should have been processed.  If the query takes longer the connection will be closed and the query failure mechanism will be executed potentially executing the same query again.  In case of Virtuoso, a similar setting exists in the virtuoso.ini.
 
+## Database overload recovery
+
+It is possible too many queries are sent to the database, making it go in overload.  An experimental system exists to limit this overload.
+
+- `DATABASE_OVERLOAD_RECOVERY` : Enables the overload recovery system.  Note that this has not been tested and may not yet help in case of failure
+- `LOG_DATABASE_OVERLOAD_TICK` : Logs a message whenever the database overload system executes a recalculation.  Helps to see if it's still alive.
+
+Also see `/recovery-status` for some info on the status of the recovery system.
+
 ## Working around database issues
 
 mu-authorization makes some assumptions regarding the SPARQL endpoint which can be altered.  The location of the triplestore as well as alterations to support specific triplestores can be configured.

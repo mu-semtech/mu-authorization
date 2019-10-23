@@ -3,6 +3,7 @@ defmodule SparqlClient do
   require ALog
 
   alias SparqlClient.InfoEndpoint
+  alias SparqlClient.WorkloadInfo
 
   @moduledoc """
   A client library that offers the possibility to query a SPARQL endpoint
@@ -10,8 +11,11 @@ defmodule SparqlClient do
 
   @max_retries 10
 
-  def query(query, options \\ [])
+  @type query_types :: :read | :write | :read_for_write
 
+  # def query(query, options \\ [ query_type: :read])
+
+  @spec query(String.t(), query_type: query_types) :: any
   def query(query, options) when is_binary(query) do
     query_max_execution_time = Application.get_env(:"mu-authorization", :query_max_execution_time)
 
@@ -37,27 +41,36 @@ defmodule SparqlClient do
 
     query_info = InfoEndpoint.start_query(query)
 
-    do_execute_query({query, query_info, outgoing_headers, poison_options})
+    do_execute_query({query, query_info, outgoing_headers, poison_options, options[:query_type]})
   end
 
+  @spec do_execute_query(
+          {String.t(), SparqlClient.QueryInfo.t(), Keyword.t(), Keyword.t(), query_types}
+        ) :: any
   defp do_execute_query(query_spec), do: do_execute_query(query_spec, @max_retries)
 
-  defp do_execute_query({query, query_info, _, _}, 0) do
+  defp do_execute_query({query, query_info, _, _, _}, 0) do
     Logger.error("Failed to execute query #{@max_retries} times #{query}")
     InfoEndpoint.end_query(query_info)
     raise "Backend query retry limit reached"
   end
 
-  defp do_execute_query({query, query_info, outgoing_headers, poison_options}, retries) do
+  defp do_execute_query(
+         {query, query_info, outgoing_headers, poison_options, query_type},
+         retries
+       ) do
     timeout = query_timeout_for_call(retries)
 
     if timeout > 0 do
       Process.sleep(timeout)
     end
 
+    WorkloadInfo.timeout( query_type )
+
     try do
-      # form parameters
-      # headers
+      # Enable the following line to pretend the database is down:
+      # - raise "No sending query, pretending database is down"
+
       response =
         HTTPoison.post!(
           Application.get_env(:"mu-authorization", :default_sparql_endpoint),
@@ -86,6 +99,7 @@ defmodule SparqlClient do
 
       try do
         decoded_result = Poison.decode!(response)
+        WorkloadInfo.report_success(query_type)
         InfoEndpoint.end_query(query_info)
         decoded_result
       rescue
@@ -97,10 +111,21 @@ defmodule SparqlClient do
       end
     rescue
       exception ->
-        Logger.warn("Failed to execute query #{query} on database (try #{@max_retries - retries})")
+        Logger.warn(
+          "Failed to execute query #{query} on database (try #{@max_retries - retries})"
+        )
+
         IO.inspect(exception, label: "Exception thrown when executing query")
         query_info = InfoEndpoint.retry_query(query_info)
-        do_execute_query({query, query_info, outgoing_headers, poison_options}, retries - 1)
+        # TODO: in the future, we may detect that a failure was
+        # actually a timeout, in which case this report needs to be
+        # updated.
+        WorkloadInfo.report_failure(query_type)
+
+        do_execute_query(
+          {query, query_info, outgoing_headers, poison_options, query_type},
+          retries - 1
+        )
     end
   end
 
@@ -115,8 +140,7 @@ defmodule SparqlClient do
   defp query_timeout_for_call(2), do: 8_000
   defp query_timeout_for_call(1), do: 20_000
 
-  def execute_parsed(query, options \\ [])
-
+  @spec execute_parsed(any, query_type: query_types) :: any
   def execute_parsed(query, options) do
     query
     |> Compat.update_query()

@@ -1,6 +1,6 @@
-alias SparqlServer.Router.HandlerSupport, as: Support
-
 defmodule SparqlServer.Router do
+  alias SparqlServer.Router.HandlerSupport, as: Support
+
   @moduledoc """
   The router for the SPARQL endpoint.
   """
@@ -61,6 +61,14 @@ defmodule SparqlServer.Router do
     send_resp(conn, 200, inspect(processing_queries, inspect_options))
   end
 
+  get "/recovery-status" do
+    state = SparqlClient.WorkloadInfo.get_state()
+    inspect_options = [limit: 100_000, pretty: true, width: 180]
+
+    IO.inspect(state, [{:label, "Current recovery status"} | inspect_options])
+
+    send_resp(conn, 200, inspect(state, inspect_options))
+  end
 
   match(_, do: send_resp(conn, 404, "404 error not found"))
 

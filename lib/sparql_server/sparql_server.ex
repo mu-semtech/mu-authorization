@@ -44,9 +44,22 @@ defmodule SparqlServer do
       label: "server setup, default sparql endpoint"
     )
 
+    Logging.EnvLog.inspect(
+      Application.get_env(:"mu-authorization", :database_recovery_mode_enabled),
+      :log_server_configuration,
+      label: "server setup, database recovery mode"
+    )
+
+    Logging.EnvLog.inspect(
+      Application.get_env(:"mu-authorization", :log_database_recovery_mode_tick),
+      :log_server_configuration,
+      label: "server setup, log database recovery mode tick"
+    )
+
     children = [
       {Cache.Types, %{}},
       {SparqlClient.InfoEndpoint, nil},
+      {SparqlClient.WorkloadInfo, nil},
       {EbnfParser.Sparql, nil},
       {Interpreter.CachedInterpreter, nil},
       {Interpreter.Diff.Store.Storage, nil},

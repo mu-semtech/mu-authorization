@@ -139,7 +139,8 @@ defmodule Cache.Types do
           |> Manipulators.SparqlQuery.replace_iri("<MY_RESOURCE>", iri_value)
           |> Regen.result()
           |> ALog.di("query to find type for " <> iri_value)
-          |> SparqlClient.query()
+          # TODO: receive query type from calling entity in the future
+          |> SparqlClient.query(query_type: :read)
           |> SparqlClient.extract_results()
           |> ALog.di("results for " <> iri_value)
           |> Enum.map(fn result ->

@@ -927,7 +927,7 @@ defmodule Updates.QueryAnalyzer do
         # the SELECT query to execute
         |> Regen.result()
         |> ALog.di("Construct query")
-        |> SparqlClient.query()
+        |> SparqlClient.query(query_type: :read_for_write)
         # Array of solutions
         |> SparqlClient.extract_results()
         |> ALog.di("Results from SELECT query")
@@ -943,6 +943,6 @@ defmodule Updates.QueryAnalyzer do
     # |> consolidate_insert_quads
     # |> dispatch_insert_quads_to_desired_graphs
     |> construct_insert_query_from_quads(options)
-    |> SparqlClient.execute_parsed()
+    |> SparqlClient.execute_parsed(query_type: :write)
   end
 end
