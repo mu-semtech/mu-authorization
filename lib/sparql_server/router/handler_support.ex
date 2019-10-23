@@ -29,11 +29,13 @@ defmodule SparqlServer.Router.HandlerSupport do
     :poolboy.transaction(
       :query_worker,
       fn pid ->
-        GenServer.call(pid, {:handle_query, query, kind, conn}, timeout)
-        # TODO: send message to consuming service that the request may
-        # be cancelled such that select queries to the database can be
-        # stopped.  the impact of this should be studied and most
-        # queries relating to updates should likely be exempt.
+        try do
+          GenServer.call(pid, {:handle_query, query, kind, conn}, timeout)
+        catch
+          :exit, {:timeout, call_info} ->
+            Support.JobCancellation.cancel!( pid )
+            exit( {:timeout, call_info} )
+        end
       end,
       timeout
     )

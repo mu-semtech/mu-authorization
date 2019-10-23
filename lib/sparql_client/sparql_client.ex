@@ -65,7 +65,12 @@ defmodule SparqlClient do
       Process.sleep(timeout)
     end
 
-    WorkloadInfo.timeout( query_type )
+    WorkloadInfo.timeout(query_type)
+
+    if Support.JobCancellation.cancelled?() do
+      WorkloadInfo.report_cancellation(query_type)
+      throw({:job_cancelled})
+    end
 
     try do
       # Enable the following line to pretend the database is down:
