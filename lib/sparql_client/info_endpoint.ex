@@ -6,7 +6,9 @@ defmodule SparqlClient.InfoEndpoint do
   alias SparqlClient.QueryInfo
 
   defstruct running_queries: %{}, processing_queries: %{}
-  @type t :: %SparqlClient.InfoEndpoint{}
+  @type t :: %SparqlClient.InfoEndpoint{running_queries: map, processing_queries: map}
+
+  @typep mapper(type) :: (type -> type)
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
@@ -124,7 +126,7 @@ defmodule SparqlClient.InfoEndpoint do
     end)
   end
 
-  @spec update_running_queries(t(), Map.t() :: Map.t()) :: t()
+  @spec update_running_queries(t(), mapper(map)) :: t()
   defp update_running_queries(state, functor) do
     running_queries =
       state
@@ -148,7 +150,7 @@ defmodule SparqlClient.InfoEndpoint do
     end)
   end
 
-  @spec update_processing_queries(t(), Map.t() :: Map.t()) :: t()
+  @spec update_processing_queries(t(), mapper(map)) :: t()
   defp update_processing_queries(state, functor) do
     processing_queries =
       state

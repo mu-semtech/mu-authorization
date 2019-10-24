@@ -1,8 +1,7 @@
-alias InterpreterTerms.SymbolMatch, as: Sym
-alias InterpreterTerms.WordMatch, as: Word
-alias Updates.QueryAnalyzer.Iri, as: Iri
-
 defmodule GraphReasoner.QueryMatching.GroupGraphPattern do
+  alias InterpreterTerms.SymbolMatch, as: Sym
+  alias InterpreterTerms.WordMatch, as: Word
+
   require Manipulators.Basics
 
   def only_triples_blocks?(symbol) do

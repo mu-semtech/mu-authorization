@@ -1,10 +1,11 @@
-alias Generator.Result, as: Result
 alias InterpreterTerms.Many.Interpreter, as: ManyEmitter
-alias InterpreterTerms.Some, as: Some
-# import EbnfParser.Generator, only: [emit: 1]
-# import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
 
 defmodule ManyEmitter do
+  alias Generator.Result, as: Result
+  alias InterpreterTerms.Some, as: Some
+  # import EbnfParser.Generator, only: [emit: 1]
+  # import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
+
   defstruct [
     :element,
     :state,

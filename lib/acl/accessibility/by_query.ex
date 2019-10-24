@@ -4,6 +4,8 @@ defmodule AccessByQuery do
   require Logger
   require ALog
 
+  @type t :: %AccessByQuery{}
+
   defstruct [:vars, :query]
 
   @moduledoc """

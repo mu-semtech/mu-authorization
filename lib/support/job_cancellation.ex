@@ -79,13 +79,12 @@ defmodule Support.JobCancellation do
     end
   end
 
-  @spec cancel!( pid ) :: :ok
+  @spec cancel!(pid) :: :ok
   @doc """
   Cancels the work that should be done by the given worker pid.
   """
-  def cancel!( pid ) do
-    send( pid, @special_cancel_message )
+  def cancel!(pid) do
+    send(pid, @special_cancel_message)
     :ok
   end
-
 end

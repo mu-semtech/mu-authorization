@@ -1,8 +1,8 @@
-alias Acl.GroupSpec.GraphCleanup, as: GraphCleanup
-alias Updates.QueryAnalyzer.Types.Quad, as: Quad
-alias Updates.QueryAnalyzer.Iri, as: Iri
-
 defmodule Acl.GroupSpec.GraphCleanup do
+  alias Acl.GroupSpec.GraphCleanup, as: GraphCleanup
+  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+  alias Updates.QueryAnalyzer.Iri, as: Iri
+
   @type t :: %GraphCleanup{
           name: String.t(),
           originating_graph: String.t(),

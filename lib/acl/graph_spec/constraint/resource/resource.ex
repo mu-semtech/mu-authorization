@@ -1,16 +1,18 @@
 alias Acl.GraphSpec.Constraint.Resource, as: Resource
-alias Updates.QueryAnalyzer.Iri, as: Iri
-alias Updates.QueryAnalyzer.Types.Quad, as: Quad
-alias Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol, as: PredMatch
-alias Acl.GraphSpec.Constraint.Resource.AllPredicates, as: AllPredicates
-alias Acl.GraphSpec.Constraint.Resource.NoPredicates, as: NoPredicates
 
 defmodule Resource do
+  alias Updates.QueryAnalyzer.Iri, as: Iri
+  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+  alias Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol, as: PredMatch
+  alias Acl.GraphSpec.Constraint.Resource.AllPredicates, as: AllPredicates
+  alias Acl.GraphSpec.Constraint.Resource.NoPredicates, as: NoPredicates
+
   require Logger
   require ALog
 
   @type t :: %Resource{
-          resource_types: [String.t()],
+          resource_types: [String.t() | :any],
+          inverse_resource_types: [String.t() | :none],
           source_graph: String.t(),
           predicates: Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.t(),
           inverse_predicates: Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.t()
@@ -18,7 +20,8 @@ defmodule Resource do
 
   # Types of the resource to match
   defstruct [
-    :resource_types,
+    {:resource_types, :any},
+    {:inverse_resource_types, :none},
     {:source_graph, "http://mu.semte.ch/application"},
     {:predicates, %AllPredicates{}},
     {:inverse_predicates, %NoPredicates{}}
@@ -137,7 +140,12 @@ defmodule Resource do
     end)
   end
 
-  defp find_matching_resources(%Resource{resource_types: types}, quads, extra_quads, options) do
+  defp find_matching_resources(
+         %Resource{resource_types: types, inverse_resource_types: inverse_types},
+         quads,
+         extra_quads,
+         options
+       ) do
     # TODO: alter the implementation of this method by one using
     # resources_with_types
 
@@ -145,11 +153,22 @@ defmodule Resource do
     ALog.di(quads, "Quads to inspect")
 
     # TODO: wrapping of iri should be handled correctly
-    wrapped_types = Enum.map(types, fn x -> "<" <> x <> ">" end)
+    wrapped_types = types != :any && Enum.map(types, &("<" <> &1 <> ">"))
+    wrapped_inverse_types = inverse_types != :none && Enum.map(inverse_types, &("<" <> &1 <> ">"))
 
     resources_with_types(quads, extra_quads, options)
     |> ALog.di("Resources with types")
-    |> Enum.filter(fn {_, %Iri{iri: type_iri}} -> Enum.member?(wrapped_types, type_iri) end)
+    |> Enum.filter(fn {_, %Iri{iri: type_iri}} ->
+      IO.inspect(type_iri, label: "Type iri to match")
+
+      # TODO: clean up this logic.  It is sound but it is also rather complex
+      matches? =
+        (types == :any || Enum.member?(wrapped_types, type_iri)) &&
+          (inverse_types == :none || not Enum.member?(wrapped_inverse_types, type_iri))
+
+      matches?
+      |> IO.inspect(label: "Type iri match value for filter")
+    end)
     |> Enum.map(fn {%Iri{iri: iri}, _} -> iri end)
     |> ALog.di("matching resources")
   end

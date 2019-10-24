@@ -1,7 +1,7 @@
-alias Acl.UserGroups.Config, as: Config
-alias Acl.GroupSpec, as: GroupSpec
-
 defmodule Acl.UserGroups do
+  alias Acl.UserGroups.Config, as: Config
+  alias Acl.GroupSpec, as: GroupSpec
+
   @doc """
   Filters the useage_groups for a particular useage.
   """

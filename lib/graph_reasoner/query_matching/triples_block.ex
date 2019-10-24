@@ -1,7 +1,7 @@
-alias InterpreterTerms.SymbolMatch, as: Sym
-alias InterpreterTerms.WordMatch, as: Word
-
 defmodule GraphReasoner.QueryMatching.TriplesBlock do
+  alias InterpreterTerms.SymbolMatch, as: Sym
+  alias InterpreterTerms.WordMatch, as: Word
+
   @moduledoc """
   Parses information from a TriplesBlock SymbolMatch.
 

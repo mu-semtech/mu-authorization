@@ -1,9 +1,10 @@
-alias Generator.State, as: State
 alias InterpreterTerms.Minus.Interpreter, as: MinusEmitter
-# import EbnfParser.Generator, only: [emit: 1]
-# import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
 
 defmodule MinusEmitter do
+  alias Generator.State, as: State
+  # import EbnfParser.Generator, only: [emit: 1]
+  # import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
+
   defstruct [
     :left_generator,
     :right_generator,

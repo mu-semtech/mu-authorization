@@ -1,6 +1,6 @@
-alias Updates.QueryAnalyzer.Iri, as: Iri
-
 defmodule Acl.GraphSpec.Constraint.Resource.AllPredicates do
+  alias Updates.QueryAnalyzer.Iri, as: Iri
+
   defstruct except: []
 
   @moduledoc """

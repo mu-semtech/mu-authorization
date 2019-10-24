@@ -1,7 +1,7 @@
-alias InterpreterTerms.SymbolMatch, as: Sym
-alias Updates.QueryAnalyzer.Iri, as: Iri
-
 defmodule GraphReasoner.QueryMatching.PathPrimary do
+  alias InterpreterTerms.SymbolMatch, as: Sym
+  alias Updates.QueryAnalyzer.Iri, as: Iri
+
   @moduledoc """
   Helpers to make sense of a PathPrimary.
   """

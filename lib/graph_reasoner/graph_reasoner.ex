@@ -1,12 +1,12 @@
-alias GraphReasoner.QueryInfo, as: QueryInfo
-alias GraphReasoner.QueryMatching, as: QueryMatching
-alias InterpreterTerms.WordMatch, as: Word
-alias InterpreterTerms.SymbolMatch, as: Sym
-alias GraphReasoner.TypeReasoner
-alias GraphReasoner.Support.TermSelectors
-alias GraphReasoner.ModelInfo
-
 defmodule GraphReasoner do
+  alias GraphReasoner.QueryInfo, as: QueryInfo
+  alias GraphReasoner.QueryMatching, as: QueryMatching
+  alias InterpreterTerms.WordMatch, as: Word
+  alias InterpreterTerms.SymbolMatch, as: Sym
+  alias GraphReasoner.TypeReasoner
+  alias GraphReasoner.Support.TermSelectors
+  alias GraphReasoner.ModelInfo
+
   require Manipulators.Basics
 
   @non_graph_symbols [

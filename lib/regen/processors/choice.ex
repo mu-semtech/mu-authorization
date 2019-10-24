@@ -1,6 +1,3 @@
-alias Regen.Processors.Choice, as: Choice
-alias Regen.Status, as: State
-
 # The construction of the emitter is clean.  We will use a similar
 # approach.
 #
@@ -9,7 +6,11 @@ alias Regen.Status, as: State
 # as there are results, we emit one of the results.  As long as there
 # are generators, we keep generating results.
 
+alias Regen.Processors.Choice, as: Choice
+
 defmodule Choice do
+  alias Regen.Status, as: State
+
   defstruct options: [], state: %State{}, option_generators: :none, generated_options: []
 
   defimpl Regen.Protocol do

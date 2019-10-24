@@ -1,13 +1,13 @@
-alias InterpreterTerms.SymbolMatch, as: Sym
-alias InterpreterTerms.WordMatch, as: Word
-alias Updates.QueryAnalyzer.Iri, as: Iri
-alias Updates.QueryAnalyzer.Variable, as: Var
-alias Updates.QueryAnalyzer.String, as: Str
-alias Updates.QueryAnalyzer.Boolean, as: Bool
-alias Updates.QueryAnalyzer.NumericLiteral, as: Number
-alias Updates.QueryAnalyzer.Types.Quad, as: Quad
-
 defmodule Updates.QueryAnalyzer do
+  alias InterpreterTerms.SymbolMatch, as: Sym
+  alias InterpreterTerms.WordMatch, as: Word
+  alias Updates.QueryAnalyzer.Iri, as: Iri
+  alias Updates.QueryAnalyzer.Variable, as: Var
+  alias Updates.QueryAnalyzer.String, as: Str
+  alias Updates.QueryAnalyzer.Boolean, as: Bool
+  alias Updates.QueryAnalyzer.NumericLiteral, as: Number
+  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+
   require Logger
   require ALog
 
@@ -788,7 +788,10 @@ defmodule Updates.QueryAnalyzer do
       variables
       |> Enum.map(&Var.to_solution_sym/1)
 
-    Updates.QueryConstructors.make_select_distinct_query(select_variables, group_graph_pattern_sym)
+    Updates.QueryConstructors.make_select_distinct_query(
+      select_variables,
+      group_graph_pattern_sym
+    )
     |> Manipulators.Recipes.add_prefixes(prefix_list_from_options(options))
     |> ALog.di("Generated partial query")
     |> Acl.process_query(Acl.UserGroups.for_use(:read_for_write), authorization_groups)

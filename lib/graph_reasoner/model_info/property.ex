@@ -1,7 +1,8 @@
 alias GraphReasoner.ModelInfo.Property, as: Property
-alias GraphReasoner.ModelInfo, as: ModelInfo
 
 defmodule Property do
+  alias GraphReasoner.ModelInfo, as: ModelInfo
+
   @moduledoc """
   Represents the specification for a specific property.  Allows
   setting the uri of the property and the targeted range.

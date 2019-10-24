@@ -1,6 +1,3 @@
-alias Regen.Processors.Array, as: Array
-alias Regen.Status, as: State
-
 # We probably need to do the work for the array again.  It's not great
 # to reuse the code that already exists as it may well not fit our
 # problem.  It is better to reconcile in a later step.
@@ -21,7 +18,11 @@ alias Regen.Status, as: State
 # for further elements.  There is no need for a complex character
 # match or anything of the likes.
 
+alias Regen.Processors.Array, as: Array
+
 defmodule Array do
+  alias Regen.Status, as: State
+
   defstruct elements: [],
             state: %State{},
             child_generator: :none,

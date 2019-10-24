@@ -1,8 +1,7 @@
-alias InterpreterTerms.SymbolMatch, as: Sym
-alias InterpreterTerms.WordMatch, as: Word
-alias Updates.QueryAnalyzer.Iri, as: Iri
-
 defmodule GraphReasoner.QueryMatching.GraphPatternNotTriples do
+  alias InterpreterTerms.SymbolMatch, as: Sym
+  alias InterpreterTerms.WordMatch, as: Word
+
   def wrap_in_group_graph_pattern(%Sym{symbol: :GraphPatternNotTriples} = element) do
     %Sym{
       symbol: :GroupGraphPattern,

@@ -1,9 +1,9 @@
-alias(InterpreterTerms.WordMatch, as: Word)
-alias InterpreterTerms.SymbolMatch, as: Sym
-
-require Manipulators.Basics
-
 defmodule Compat.Modifiers.UpdateDataToUpdateWhere do
+  alias InterpreterTerms.WordMatch, as: Word
+  alias InterpreterTerms.SymbolMatch, as: Sym
+
+  require Manipulators.Basics
+
   @behaviour Compat.QueryManipulator
 
   @impl Compat.QueryManipulator

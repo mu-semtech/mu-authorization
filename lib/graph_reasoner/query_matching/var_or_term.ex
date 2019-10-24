@@ -1,6 +1,6 @@
-alias InterpreterTerms.SymbolMatch, as: Sym
-
 defmodule GraphReasoner.QueryMatching.VarOrTerm do
+  alias InterpreterTerms.SymbolMatch, as: Sym
+
   @moduledoc """
   Provides helpers for working with VarOrTerm.  Mainly simple ways of
   extracting the information which is nested more deeply in this

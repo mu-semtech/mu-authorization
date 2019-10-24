@@ -1,7 +1,10 @@
 alias Acl.Accessibility.Always, as: AlwaysAccessible
 
 defmodule AlwaysAccessible do
+
   defstruct []
+
+  @type t :: %AlwaysAccessible{}
 
   @moduledoc """
   Represents the graph constraint for content that is always

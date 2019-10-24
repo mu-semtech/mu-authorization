@@ -1,7 +1,7 @@
-alias GraphReasoner.ModelInfo.Config, as: Config
-alias GraphReasoner.ModelInfo.Class, as: Class
-
 defmodule GraphReasoner.ModelInfo do
+  alias GraphReasoner.ModelInfo.Config, as: Config
+  alias GraphReasoner.ModelInfo.Class, as: Class
+
   @moduledoc """
   Stores information about the model in the triplestore which the
   optimizer can use to better understand queries.

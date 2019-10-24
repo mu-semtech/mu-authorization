@@ -1,7 +1,7 @@
-alias Acl.GroupSpec, as: GroupSpec
-alias Acl.GraphSpec, as: GraphSpec
-
 defmodule Acl.GroupSpec do
+  alias Acl.GroupSpec, as: GroupSpec
+  alias Acl.GraphSpec, as: GraphSpec
+
   require Logger
   require ALog
 
@@ -29,6 +29,8 @@ defmodule Acl.GroupSpec do
   """
 
   defimpl Acl.GroupSpec.Protocol do
+    @spec accessible?(Acl.GroupSpec.Protocol.t(), Plug.Conn.t()) ::
+            {:fail} | {:ok, [Acl.GroupSpec.Protocol.matched_user_group()]}
     def accessible?(%GroupSpec{access: access, name: name} = group_spec, request) do
       case Acl.Accessibility.Protocol.accessible?(access, group_spec, request) do
         {:fail} ->

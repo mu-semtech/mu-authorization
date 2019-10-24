@@ -1,7 +1,7 @@
-alias Acl.GraphSpec.Constraint.Protocol, as: Pr
-alias Updates.QueryAnalyzer.Types.Quad, as: Quad
-
 defprotocol Acl.GraphSpec.Constraint.Protocol do
+  alias Acl.GraphSpec.Constraint.Protocol, as: Pr
+  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+
   @type t :: struct()
 
   @doc """

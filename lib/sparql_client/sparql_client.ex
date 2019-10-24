@@ -15,7 +15,7 @@ defmodule SparqlClient do
 
   # def query(query, options \\ [ query_type: :read])
 
-  @spec query(String.t(), query_type: query_types) :: any
+  @spec query(String.t(), [query_type: query_types, request: Plug.Conn.t()]) :: any
   def query(query, options) when is_binary(query) do
     query_max_execution_time = Application.get_env(:"mu-authorization", :query_max_execution_time)
 
@@ -145,7 +145,7 @@ defmodule SparqlClient do
   defp query_timeout_for_call(2), do: 8_000
   defp query_timeout_for_call(1), do: 20_000
 
-  @spec execute_parsed(any, query_type: query_types) :: any
+  @spec execute_parsed(any, [query_type: query_types, request: Plug.Conn.t]) :: any
   def execute_parsed(query, options) do
     query
     |> Compat.update_query()

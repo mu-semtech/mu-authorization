@@ -1,11 +1,12 @@
 alias Acl.GraphSpec.Constraint.ResourceFormat, as: ResourceFormat
-alias Updates.QueryAnalyzer.Iri, as: Iri
-alias Updates.QueryAnalyzer.Types.Quad, as: Quad
-alias Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol, as: PredMatch
-alias Acl.GraphSpec.Constraint.Resource.AllPredicates, as: AllPredicates
-alias Acl.GraphSpec.Constraint.Resource.NoPredicates, as: NoPredicates
 
 defmodule ResourceFormat do
+  alias Updates.QueryAnalyzer.Iri, as: Iri
+  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+  alias Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol, as: PredMatch
+  alias Acl.GraphSpec.Constraint.Resource.AllPredicates, as: AllPredicates
+  alias Acl.GraphSpec.Constraint.Resource.NoPredicates, as: NoPredicates
+
   require Logger
   require ALog
 

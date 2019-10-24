@@ -1,7 +1,8 @@
 alias Regen.Processors.Maybe, as: Maybe
-alias Regen.Status, as: State
 
 defmodule Maybe do
+  alias Regen.Status, as: State
+
   defstruct [:element, {:state, %State{}}, {:self_generator, :none}]
 
   defimpl Regen.Protocol do

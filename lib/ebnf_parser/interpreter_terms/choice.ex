@@ -1,7 +1,7 @@
-alias Generator.State, as: State
-# import EbnfParser.GeneratorConstructor, only: [ {:dispatch_generation, 2} ]
-
 defmodule InterpreterTerms.Choice do
+  alias Generator.State, as: State
+  # import EbnfParser.GeneratorConstructor, only: [ {:dispatch_generation, 2} ]
+
   defstruct [:options, {:state, %State{}}]
 
   def dispatch_generation(alpha, beta) do

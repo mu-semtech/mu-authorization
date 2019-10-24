@@ -4,7 +4,7 @@ defmodule Delta.Config do
   components should be informed.
   """
 
-  @type target :: String.t
+  @type target :: String.t()
 
   @doc """
   Links to each endpoint to which the delta's will be sent.
@@ -15,7 +15,6 @@ defmodule Delta.Config do
     [
       # "http://resource/.mu/delta",
       # "http://example:8080/delta"
-     ]
+    ]
   end
-
 end

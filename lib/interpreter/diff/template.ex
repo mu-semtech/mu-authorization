@@ -1,10 +1,11 @@
 alias Interpreter.Diff.Template, as: Template
-alias Interpreter.Diff, as: Diff
-alias InterpreterTerms.SymbolMatch, as: Sym
-alias InterpreterTerms.WordMatch, as: Word
-alias Interpreter.Diff.Variable, as: Variable
 
 defmodule Template do
+  alias Interpreter.Diff, as: Diff
+  alias InterpreterTerms.SymbolMatch, as: Sym
+  alias InterpreterTerms.WordMatch, as: Word
+  alias Interpreter.Diff.Variable, as: Variable
+
   defstruct tree_template: nil, array_template: nil, used_solutions: [], score: nil
 
   # Accessors

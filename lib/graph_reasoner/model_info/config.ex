@@ -1,8 +1,8 @@
-alias GraphReasoner.ModelInfo.Class, as: Class
-alias GraphReasoner.ModelInfo.Property, as: Property
-alias GraphReasoner.ModelInfo
-
 defmodule GraphReasoner.ModelInfo.Config do
+  alias GraphReasoner.ModelInfo.Class, as: Class
+  alias GraphReasoner.ModelInfo.Property, as: Property
+  alias GraphReasoner.ModelInfo
+
   @moduledoc """
   Informs the GraphReasoner about model information in the
   triplestore.

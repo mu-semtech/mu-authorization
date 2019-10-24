@@ -1,5 +1,3 @@
-alias GraphReasoner.QueryInfo, as: QueryInfo
-
 # A strategy for defining access
 #
 # We will attach graph constraints to the predicates
@@ -15,6 +13,8 @@ alias GraphReasoner.QueryInfo, as: QueryInfo
 #
 # later: 1 and 2 will be combined so we can iterate on the gained knowledge.
 # later: 2 will also attach types to the object type of the triple
+
+alias GraphReasoner.QueryInfo, as: QueryInfo
 
 defmodule QueryInfo do
   defstruct terms_map: %{

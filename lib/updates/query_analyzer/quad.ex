@@ -1,7 +1,8 @@
 alias Updates.QueryAnalyzer.Types.Quad, as: Quad
-alias Updates.QueryAnalyzer.Variable, as: Var
 
 defmodule Quad do
+  alias Updates.QueryAnalyzer.Variable, as: Var
+
   defstruct [:graph, :subject, :predicate, :object]
 
   # TODO: further specify the definition of subject, predicate, object

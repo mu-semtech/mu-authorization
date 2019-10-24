@@ -1,8 +1,8 @@
-alias Updates.QueryAnalyzer.Iri, as: Iri
-alias Acl.GraphSpec, as: GraphSpec
-alias Acl.GraphSpec.Constraint.Resource, as: ResourceConstraint
-
 defmodule Acl.GraphSpec do
+  alias Updates.QueryAnalyzer.Iri, as: Iri
+  alias Acl.GraphSpec, as: GraphSpec
+  alias Acl.GraphSpec.Constraint.Resource, as: ResourceConstraint
+
   require Logger
   require ALog
 

@@ -1,7 +1,7 @@
-alias Updates.QueryAnalyzer.Types.Quad, as: Quad
-alias SparqlServer.Router.AccessGroupSupport, as: AccessGroupSupport
-
 defmodule Delta.Message do
+  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+  alias SparqlServer.Router.AccessGroupSupport, as: AccessGroupSupport
+
   @moduledoc """
   Contains code to construct the correct messenges for informing
   clients.

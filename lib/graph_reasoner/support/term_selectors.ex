@@ -1,8 +1,8 @@
-alias GraphReasoner.Support.TermSelectors
-alias InterpreterTerms.SymbolMatch, as: Sym
-alias InterpreterTerms.WordMatch, as: Word
-
 defmodule TermSelectors do
+  alias GraphReasoner.Support.TermSelectors
+  alias InterpreterTerms.SymbolMatch, as: Sym
+  alias InterpreterTerms.WordMatch, as: Word
+
   @moduledoc """
   Supporting selectors for terms which did not readily belonged
   elsewhere.  These are terms that fall through our abstractions and

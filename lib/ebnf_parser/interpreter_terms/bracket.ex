@@ -1,11 +1,9 @@
-alias Generator.State, as: State
-alias Generator.Result, as: Result
 alias InterpreterTerms.Bracket, as: Bracket
 
-# defmodule InterpreterTerms.Bracket.Interpreter do
-# end
-
 defmodule InterpreterTerms.BracketResult do
+  alias Generator.State, as: State
+  alias Generator.Result, as: Result
+
   defstruct [:character]
 
   defimpl String.Chars do
@@ -16,6 +14,9 @@ defmodule InterpreterTerms.BracketResult do
 end
 
 defmodule Bracket do
+  alias Generator.State, as: State
+  alias Generator.Result, as: Result
+
   defstruct [:options, {:state, %State{}}]
 
   defimpl EbnfParser.GeneratorProtocol do

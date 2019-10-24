@@ -1,7 +1,3 @@
-alias Regen.Processors.Symbol, as: Symbol
-alias Regen.Status, as: State
-alias InterpreterTerms.SymbolMatch, as: SymbolMatch
-
 # The symbol will firstly fail matching if an incorrect symbol could
 # was found in the results.  If the correct symbol was found,
 # subresults will be generated for this submatch.
@@ -10,7 +6,12 @@ alias InterpreterTerms.SymbolMatch, as: SymbolMatch
 # consumed, will be returned.  In the emitted results, the strings are
 # always pushed on top of the flat "produced_content" property.
 
+alias Regen.Processors.Symbol, as: Symbol
+
 defmodule Symbol do
+  alias Regen.Status, as: State
+  alias InterpreterTerms.SymbolMatch, as: SymbolMatch
+
   defstruct [:symbol, :state, {:ebnf, :none}, {:self_element, :none}, {:sub_generator, :none}]
 
   defimpl Regen.Protocol do

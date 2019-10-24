@@ -1,7 +1,7 @@
-alias InterpreterTerms.SymbolMatch, as: Sym
-alias InterpreterTerms.WordMatch, as: Word
-
 defmodule Interpreter.Diff do
+  alias InterpreterTerms.SymbolMatch, as: Sym
+  alias InterpreterTerms.WordMatch, as: Word
+
   def similarity(a, b) do
     {matching, total} = similarity_calc(a, b)
     matching / total

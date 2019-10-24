@@ -73,7 +73,7 @@ defmodule Acl do
     case active_groups_info do
       [] ->
         # No active groups found, pose the query to nothing and yield no used groups
-        { Manipulators.SparqlQuery.add_from_graph(query, "http://mu.semte.ch/graphs/empty"), [] }
+        {Manipulators.SparqlQuery.add_from_graph(query, "http://mu.semte.ch/graphs/empty"), []}
 
       _ ->
         active_groups_info

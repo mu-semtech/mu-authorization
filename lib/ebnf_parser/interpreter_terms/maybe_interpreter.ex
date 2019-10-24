@@ -1,10 +1,11 @@
-alias Generator.Result, as: Result
 alias InterpreterTerms.Maybe.Interpreter, as: MaybeEmitter
-alias Generator.State, as: State
-# import EbnfParser.Generator, only: [emit: 1]
-# import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
 
 defmodule MaybeEmitter do
+  alias Generator.Result, as: Result
+  alias Generator.State, as: State
+  # import EbnfParser.Generator, only: [emit: 1]
+  # import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
+
   defstruct [:generator, :state]
 
   # Generator protocol implementation dispatches to walk

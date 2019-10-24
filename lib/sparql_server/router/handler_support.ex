@@ -1,6 +1,6 @@
-alias SparqlServer.Router.AccessGroupSupport, as: AccessGroupSupport
-
 defmodule SparqlServer.Router.HandlerSupport do
+  alias SparqlServer.Router.AccessGroupSupport, as: AccessGroupSupport
+
   require Logger
   require ALog
 
@@ -33,8 +33,8 @@ defmodule SparqlServer.Router.HandlerSupport do
           GenServer.call(pid, {:handle_query, query, kind, conn}, timeout)
         catch
           :exit, {:timeout, call_info} ->
-            Support.JobCancellation.cancel!( pid )
-            exit( {:timeout, call_info} )
+            Support.JobCancellation.cancel!(pid)
+            exit({:timeout, call_info})
         end
       end,
       timeout
@@ -82,18 +82,18 @@ defmodule SparqlServer.Router.HandlerSupport do
         manipulate_update_query(parsed_form, conn)
       end
 
-    query_type = if Enum.any?( new_parsed_forms, fn (q) -> !is_select_query(q) end ) do
-      :read
-    else
-      :write
-    end
+    query_type =
+      if Enum.any?(new_parsed_forms, fn q -> !is_select_query(q) end) do
+        :read
+      else
+        :write
+      end
 
     encoded_response =
       new_parsed_forms
       |> ALog.di("New parsed forms")
-      |> Enum.reduce(true, fn elt, _ ->
-        SparqlClient.execute_parsed(elt, request: conn, query_type: query_type)
-      end)
+      |> Enum.map(&SparqlClient.execute_parsed(&1, request: conn, query_type: query_type))
+      |> List.first()
       |> Poison.encode!()
 
     post_processing.()

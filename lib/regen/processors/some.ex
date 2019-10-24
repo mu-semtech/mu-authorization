@@ -1,7 +1,8 @@
 alias Regen.Processors.Some, as: Some
-alias Regen.Status, as: State
 
 defmodule Some do
+  alias Regen.Status, as: State
+
   defstruct [
     # expression version of the parsed element
     :element,

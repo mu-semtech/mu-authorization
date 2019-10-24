@@ -1,5 +1,3 @@
-alias Generator.State, as: State
-alias Generator.Result, as: Result
 alias InterpreterTerms.HexCharacter, as: HexCharacter
 
 defmodule InterpreterTerms.HexCharacterResult do
@@ -13,6 +11,8 @@ defmodule InterpreterTerms.HexCharacterResult do
 end
 
 defmodule HexCharacter do
+  alias Generator.State, as: State
+  alias Generator.Result, as: Result
   defstruct [:number, {:state, %State{}}]
 
   defimpl EbnfParser.GeneratorProtocol do

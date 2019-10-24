@@ -1,5 +1,3 @@
-alias InterpreterTerms.SymbolMatch, as: Sym
-
 # We want to check if the first portion of the query consists of a set
 # of prefixes which we already know.  If that is the case, we can
 # shortcut the definition and pull these prefixes off.
@@ -10,6 +8,8 @@ alias InterpreterTerms.SymbolMatch, as: Sym
 # Once we have our prefixes, we should move them to the right spot.
 
 defmodule Interpreter.CachedInterpreter do
+  alias InterpreterTerms.SymbolMatch, as: Sym
+
   require Logger
   require ALog
   use GenServer

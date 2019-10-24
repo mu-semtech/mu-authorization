@@ -1,10 +1,11 @@
-alias Generator.State, as: State
-alias Generator.Result, as: Result
 alias InterpreterTerms.Array.Interpreter, as: ArrayEmitter
-# import EbnfParser.Generator, only: [emit: 1]
-# import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
 
 defmodule ArrayEmitter do
+  alias Generator.State, as: State
+  alias Generator.Result, as: Result
+  # import EbnfParser.Generator, only: [emit: 1]
+  # import EbnfParser.GeneratorConstructor, only: [dispatch_generation: 2]
+
   defstruct elements: [],
             state: %State{},
             child_generator: :none,

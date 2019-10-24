@@ -1,8 +1,9 @@
 alias GraphReasoner.ModelInfo.Class, as: Class
-alias GraphReasoner.ModelInfo.Property, as: Property
-alias GraphReasoner.ModelInfo, as: ModelInfo
 
 defmodule Class do
+  alias GraphReasoner.ModelInfo.Property, as: Property
+  alias GraphReasoner.ModelInfo, as: ModelInfo
+
   @moduledoc """
   Represents a class in the model definition.
   """

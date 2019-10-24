@@ -1,6 +1,6 @@
-alias Generator.State, as: State
-
 defmodule InterpreterTerms.Symbol do
+  alias Generator.State, as: State
+
   defstruct [:symbol, {:state, %State{}}]
 
   defimpl EbnfParser.GeneratorProtocol do

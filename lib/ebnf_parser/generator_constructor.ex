@@ -1,20 +1,20 @@
-alias Generator.State, as: State
-alias InterpreterTerms.Array, as: Array
-alias InterpreterTerms.Word, as: Word
-alias InterpreterTerms.Choice, as: Choice
-alias InterpreterTerms.Some, as: Some
-alias InterpreterTerms.Many, as: Many
-alias InterpreterTerms.Bracket, as: Bracket
-alias InterpreterTerms.NotBracket, as: NotBracket
-alias InterpreterTerms.Minus, as: Minus
-alias InterpreterTerms.Symbol, as: Symbol
-alias InterpreterTerms.Maybe, as: Maybe
-alias InterpreterTerms.HexCharacter, as: HexCharacter
-alias InterpreterTerms.Regex, as: RegexTerm
-
-alias EbnfParser.GeneratorProtocol, as: GP
-
 defmodule EbnfParser.GeneratorConstructor do
+  alias Generator.State, as: State
+  alias InterpreterTerms.Array, as: Array
+  alias InterpreterTerms.Word, as: Word
+  alias InterpreterTerms.Choice, as: Choice
+  alias InterpreterTerms.Some, as: Some
+  alias InterpreterTerms.Many, as: Many
+  alias InterpreterTerms.Bracket, as: Bracket
+  alias InterpreterTerms.NotBracket, as: NotBracket
+  alias InterpreterTerms.Minus, as: Minus
+  alias InterpreterTerms.Symbol, as: Symbol
+  alias InterpreterTerms.Maybe, as: Maybe
+  alias InterpreterTerms.HexCharacter, as: HexCharacter
+  alias InterpreterTerms.Regex, as: RegexTerm
+
+  alias EbnfParser.GeneratorProtocol, as: GP
+
   require Logger
   require ALog
 

@@ -1,6 +1,6 @@
-alias GraphReasoner.{TypeReasoner, ModelInfo, QueryInfo}
-
 defmodule TypeReasoner do
+  alias GraphReasoner.{TypeReasoner, ModelInfo, QueryInfo}
+
   @moduledoc """
   The TypeReasoner derives types for known entities and pushes the
   types around.

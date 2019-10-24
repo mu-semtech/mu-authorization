@@ -1,8 +1,9 @@
 alias Regen.Processors.Many, as: Many
-alias Regen.Processors.Some, as: Some
-alias Regen.Status, as: State
 
 defmodule Many do
+  alias Regen.Processors.Some, as: Some
+  alias Regen.Status, as: State
+
   defstruct [:element, {:state, %State{}}, {:self_generator, :none}, {:rest_generator, :none}]
 
   defimpl Regen.Protocol do

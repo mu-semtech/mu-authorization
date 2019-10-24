@@ -1,6 +1,6 @@
-alias Updates.QueryAnalyzer.Iri, as: Iri
-
 defmodule Cache.Types do
+  alias Updates.QueryAnalyzer.Iri, as: Iri
+
   require Logger
   require ALog
   use GenServer

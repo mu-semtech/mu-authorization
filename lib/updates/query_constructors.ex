@@ -1,7 +1,7 @@
-alias InterpreterTerms.SymbolMatch, as: Sym
-alias Updates.QueryAnalyzer.Types.Quad, as: Quad
-
 defmodule Updates.QueryConstructors do
+  alias InterpreterTerms.SymbolMatch, as: Sym
+  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+
   def make_select_query(variable_syms, group_graph_pattern_sym) do
     %Sym{
       symbol: :Sparql,

@@ -1,6 +1,6 @@
-alias Updates.QueryAnalyzer.Types.Quad, as: Quad
-
 defmodule Delta do
+  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+
   require Logger
   require ALog
 
