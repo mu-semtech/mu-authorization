@@ -99,7 +99,7 @@ defmodule EbnfParser.Sparql do
            ~r/^([A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}_:0-9]|(%[0-9A-Fa-f][0-9A-Fa-f])|(\\[_~\.\-!$&'()*+,;=\/?#@%]))(([A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}_\-0-9\x{00B7}\x{0300}-\x{036F}\x{203F}-\x{2040}\.:]|(%[0-9A-Fa-f][0-9A-Fa-f])|(\\[_~\.\-!$&'()*+,;=\/?#@%]))*(([A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}_\-0-9\x{00B7}\x{0300}-\x{036F}\x{203F}-\x{2040}:])|(%[0-9a-zA-Z][0-9a-zA-Z])|(\\[_~\.\-!$&'()*+,;=\/?\#@%])))?/u
        ]}
     )
-    |> Map.put(:IRIREF, {true, [regex: ~r/^<([^<>\\"{}|^`\x{00}-\x{20}])*>/um]})
+    |> Map.put(:IRIREF, {true, [regex: ~r/^<([^<>\\"{}|^`\x{00}-\x{20}])*>/u]})
   end
 
   def parse_sparql_as_ordered_array do
