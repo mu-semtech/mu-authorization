@@ -12,14 +12,13 @@ defmodule ManyEmitter do
     # generator for the first step.
     :child_generator,
     # generator which emits for
-    {:some_generator, :none},
     # all the next steps.
+    {:some_generator, :none},
     # contains the result of our
+    # child, for combinatory
+    # purposes.
     {:child_result, :none}
   ]
-
-  # child, for combinatory
-  # purposes.
 
   def emit(generator) do
     EbnfParser.Generator.emit(generator)

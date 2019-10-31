@@ -15,6 +15,10 @@ defmodule Generator.Result do
   @doc """
   Combines two results for a list match.
   The first supplied result is the one that was generated earlier.
+
+  This is used when a generator bases itself on another generator for
+  its results.  A many operation may base itself on the some operator
+  in which case results would need to be combined.
   """
   @spec combine_results(t, t) :: t
   def combine_results(base_result, new_result) do

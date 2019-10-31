@@ -3,6 +3,11 @@ defmodule InterpreterTerms.Array do
 
   defstruct [:elements, {:state, %State{}}]
 
+  @type t :: %InterpreterTerms.Array{
+          elements: [EbnfParser.GeneratorConstructor.ebnf_term()],
+          state: Generator.State.t()
+        }
+
   defimpl EbnfParser.GeneratorProtocol do
     def make_generator(%InterpreterTerms.Array{elements: elements, state: state}) do
       # The list generator will have to generate a result for its

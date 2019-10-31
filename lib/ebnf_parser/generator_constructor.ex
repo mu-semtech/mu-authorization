@@ -18,6 +18,26 @@ defmodule EbnfParser.GeneratorConstructor do
   require Logger
   require ALog
 
+  @type(
+    ebnf_term ::
+      :paren_group
+      | :maybe_many
+      | :one_or_more
+      | :bracket_selector
+      | :not_bracket_selector
+      | :minus
+      | :symbol
+      | :maybe
+      | :hex_character
+      | :one_of
+      | :regex
+      | :single_quoted_string,
+    :double_quoted_string
+  )
+
+  @type rule :: list | {ebnf_term, any}
+  @spec dispatch_generation(rule, State.t()) :: GP.t()
+
   def dispatch_generation(list, %State{} = state) when is_list(list) do
     dispatch_generation({:paren_group, list}, state)
   end

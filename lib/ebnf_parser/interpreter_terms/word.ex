@@ -1,14 +1,11 @@
-alias Generator.State, as: State
-alias Generator.Result, as: Result
-alias InterpreterTerms.Word, as: Word
-alias InterpreterTerms.Nothing, as: Nothing
-
-import Generator.State, only: [is_terminal: 1]
-
 defmodule InterpreterTerms.WordMatch do
   defstruct [:word, {:whitespace, ""}, {:external, %{}}]
 
-  @type t :: %InterpreterTerms.WordMatch{}
+  @type t :: %InterpreterTerms.WordMatch{
+          word: String.t(),
+          whitespace: String.t(),
+          external: map()
+        }
 
   defimpl String.Chars do
     def to_string(%InterpreterTerms.WordMatch{word: word}) do
@@ -18,7 +15,17 @@ defmodule InterpreterTerms.WordMatch do
 end
 
 defmodule InterpreterTerms.Word do
+  alias InterpreterTerms.Word, as: Word
+  alias Generator.State, as: State
+  alias Generator.Result, as: Result
+  alias InterpreterTerms.Nothing, as: Nothing
+
   defstruct word: "", state: %State{}
+
+  @type t :: %InterpreterTerms.Word{
+          word: String.t(),
+          state: State.t()
+        }
 
   # Nothing special to build
   defimpl EbnfParser.GeneratorProtocol do
@@ -29,6 +36,8 @@ defmodule InterpreterTerms.Word do
 
   # The generator drops spaces and tries to match
   defimpl EbnfParser.Generator do
+    import Generator.State, only: [is_terminal: 1]
+
     def emit(%Word{word: word, state: state}) do
       # Drop spaces if allowed
       {state, whitespace} =

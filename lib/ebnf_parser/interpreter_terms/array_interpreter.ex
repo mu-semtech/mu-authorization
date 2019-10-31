@@ -12,10 +12,13 @@ defmodule ArrayEmitter do
             rest_generator: :none,
             last_child_result: %Result{}
 
+  @spec emit(EbnfParser.Generator.t()) :: EbnfParser.Generator.response()
   defp emit(alpha) do
     EbnfParser.Generator.emit(alpha)
   end
 
+  @spec dispatch_generation(EbnfParser.GeneratorConstructor.rule(), Generator.State.t()) ::
+          EbfnParser.GenereratorProtocol.t()
   defp dispatch_generation(alpha, beta) do
     EbnfParser.GeneratorConstructor.dispatch_generation(alpha, beta)
   end
@@ -28,6 +31,7 @@ defmodule ArrayEmitter do
   end
 
   # there are no elements
+  @spec walk(EbnfParser.Generator.t()) :: EbnfParser.Generator.response()
   def walk(%ArrayEmitter{child_generator: :none, elements: []}) do
     {:fail}
   end
