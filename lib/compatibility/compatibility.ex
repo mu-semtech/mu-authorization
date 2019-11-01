@@ -1,5 +1,8 @@
 defmodule Compat.DatabaseAdapter do
   @callback update_query(query :: InterpreterTerms.query()) :: InterpreterTerms.query()
+
+  @callback perform_query(SparqlClient.query_string(), SparqlClient.Connection.options()) ::
+              SparqlClient.Connection.query_response()
 end
 
 defmodule Compat.QueryManipulator do
@@ -15,4 +18,7 @@ defmodule Compat do
 
   @impl Compat.DatabaseAdapter
   def update_query(query), do: layer().update_query(query)
+
+  @impl Compat.DatabaseAdapter
+  def perform_query(query, options), do: layer().perform_query(query, options)
 end

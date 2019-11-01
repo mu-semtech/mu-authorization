@@ -106,8 +106,15 @@ defmodule SparqlClient.WorkloadInfo do
     end
   end
 
+  @spec report_timeout(query_types) :: :ok
+  def report_timeout(query_types) do
+    # Follows same flow as report_cancellation
+    report_cancellation( query_types )
+  end
+
   @spec report_cancellation(query_types) :: :ok
   def report_cancellation(query_type) do
+    # Follows same flow as report_timeout
     if enabled?() do
       GenServer.cast(__MODULE__, {:report_cancellation, self(), query_type})
     else

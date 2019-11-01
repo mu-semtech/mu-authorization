@@ -12,10 +12,11 @@ defmodule SparqlClient do
   @max_retries 10
 
   @type query_types :: :read | :write | :read_for_write
+  @type query_string :: String.t()
+  @type parsed_query_response :: Poison.Parser.t() | Poison.no_return()
 
-  # def query(query, options \\ [ query_type: :read])
-
-  @spec query(String.t(), [query_type: query_types, request: Plug.Conn.t()]) :: any
+  @spec query(query_string, query_type: query_types, request: Plug.Conn.t()) ::
+          parsed_query_response
   def query(query, options) when is_binary(query) do
     query_max_execution_time = Application.get_env(:"mu-authorization", :query_max_execution_time)
 
@@ -31,7 +32,7 @@ defmodule SparqlClient do
         outgoing_headers
       end
 
-    poison_options = [recv_timeout: options[:timeout]]
+    # poison_options = [recv_timeout: options[:timeout]]
 
     ALog.ii(query, "Sending sparql query to backend")
 
@@ -41,12 +42,12 @@ defmodule SparqlClient do
 
     query_info = InfoEndpoint.start_query(query)
 
-    do_execute_query({query, query_info, outgoing_headers, poison_options, options[:query_type]})
+    do_execute_query({query, query_info, outgoing_headers, options, options[:query_type]})
   end
 
   @spec do_execute_query(
           {String.t(), SparqlClient.QueryInfo.t(), Keyword.t(), Keyword.t(), query_types}
-        ) :: any
+        ) :: parsed_query_response
   defp do_execute_query(query_spec), do: do_execute_query(query_spec, @max_retries)
 
   defp do_execute_query({query, query_info, _, _, _}, 0) do
@@ -56,7 +57,7 @@ defmodule SparqlClient do
   end
 
   defp do_execute_query(
-         {query, query_info, outgoing_headers, poison_options, query_type},
+         {query, query_info, outgoing_headers, options, query_type},
          retries
        ) do
     timeout = query_timeout_for_call(retries)
@@ -73,46 +74,55 @@ defmodule SparqlClient do
     end
 
     try do
-      # Enable the following line to pretend the database is down:
-      # - raise "No sending query, pretending database is down"
+      query_options = options ++ [headers: outgoing_headers]
 
-      response =
-        HTTPoison.post!(
-          Application.get_env(:"mu-authorization", :default_sparql_endpoint),
-          [
-            "query=" <>
-              URI.encode_www_form(query) <>
-              "&format=" <> URI.encode_www_form("application/sparql-results+json")
-          ],
-          outgoing_headers,
-          poison_options
-        ).body
+      case Compat.perform_query(query, query_options) do
+        {:fail} ->
+          raise "Failed to execute query"
 
-      Logging.EnvLog.log(
-        :log_outgoing_sparql_query_responses,
-        "Response to sparql query: #{response}"
-      )
+        {:incomplete, _} ->
+          # TODO: REMOVE DUPLICATION FROM RESCUE BELOW
+          Logger.warn(
+            "Failed to answer query #{query} on database within time (try #{
+              @max_retries - retries
+            })"
+          )
 
-      Logging.EnvLog.inspect(query, :inspect_outgoing_sparql_query_responses,
-        label: "Response to sparql query:"
-      )
+          query_info = InfoEndpoint.retry_query(query_info)
+          WorkloadInfo.report_timeout(query_type)
 
-      Logging.EnvLog.log(
-        :log_outgoing_sparql_query_roundtrip,
-        "Outgoing sparql query: #{query}\nincoming sparql response #{response}"
-      )
+          do_execute_query(
+            {query, query_info, outgoing_headers, options, query_type},
+            retries - 1
+          )
 
-      try do
-        decoded_result = Poison.decode!(response)
-        WorkloadInfo.report_success(query_type)
-        InfoEndpoint.end_query(query_info)
-        decoded_result
-      rescue
-        exception ->
-          Logger.warn("Failed to decode response from database")
-          IO.inspect(response, label: "Response which could not be decoded")
-          # TODO when upgrading elixir, change to reraise
-          raise exception
+        {:ok, response} ->
+          Logging.EnvLog.log(
+            :log_outgoing_sparql_query_responses,
+            "Response to sparql query: #{response}"
+          )
+
+          Logging.EnvLog.inspect(query, :inspect_outgoing_sparql_query_responses,
+            label: "Response to sparql query:"
+          )
+
+          Logging.EnvLog.log(
+            :log_outgoing_sparql_query_roundtrip,
+            "Outgoing sparql query: #{query}\nincoming sparql response #{response}"
+          )
+
+          try do
+            decoded_result = Poison.decode!(response)
+            WorkloadInfo.report_success(query_type)
+            InfoEndpoint.end_query(query_info)
+            decoded_result
+          rescue
+            exception ->
+              Logger.warn("Failed to decode response from database")
+              IO.inspect(response, label: "Response which could not be decoded")
+              # TODO when upgrading elixir, change to reraise
+              raise exception
+          end
       end
     rescue
       exception ->
@@ -128,7 +138,7 @@ defmodule SparqlClient do
         WorkloadInfo.report_failure(query_type)
 
         do_execute_query(
-          {query, query_info, outgoing_headers, poison_options, query_type},
+          {query, query_info, outgoing_headers, options, query_type},
           retries - 1
         )
     end
@@ -145,7 +155,7 @@ defmodule SparqlClient do
   defp query_timeout_for_call(2), do: 8_000
   defp query_timeout_for_call(1), do: 20_000
 
-  @spec execute_parsed(any, [query_type: query_types, request: Plug.Conn.t]) :: any
+  @spec execute_parsed(any, query_type: query_types, request: Plug.Conn.t()) :: any
   def execute_parsed(query, options) do
     query
     |> Compat.update_query()
