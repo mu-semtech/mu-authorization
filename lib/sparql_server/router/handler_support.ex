@@ -18,13 +18,30 @@ defmodule SparqlServer.Router.HandlerSupport do
     handle_query_with_worker(query, kind, conn)
   end
 
+  @spec try_get_mu_request_timeout(Plug.Conn.t()) :: integer | nil
+  defp try_get_mu_request_timeout(conn) do
+    case Plug.Conn.get_req_header(conn, "mu-request-timeout") do
+      [value | _] ->
+        try do
+          String.to_integer(value)
+        rescue
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
   @doc """
   Handles the query, like handle_query/3 but using a worker instead.
   This should speed up the execution.
   """
   def handle_query_with_worker(query, kind, conn) do
     # TODO: treat timeout more exactly by subtracting time needed for fetching worker
-    timeout = Application.get_env(:"mu-authorization", :query_max_processing_time)
+    timeout =
+      try_get_mu_request_timeout(conn) ||
+        Application.get_env(:"mu-authorization", :query_max_processing_time)
 
     :poolboy.transaction(
       :query_worker,
