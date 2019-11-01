@@ -3,21 +3,28 @@ defmodule SparqlClient.QueryInfo do
   Information about a single query run.
   """
 
-  defstruct query: nil, launched_at: nil, retries: 0
+  defstruct [{:query, nil}, {:launched_at, nil}, {:retries, 0}, :id]
 
-  @type t :: %SparqlClient.QueryInfo{query: String.t(), launched_at: any(), retries: integer()}
+  @type id :: any()
+
+  @type t :: %SparqlClient.QueryInfo{
+          query: String.t(),
+          launched_at: Elixir.DateTime.t(),
+          retries: integer(),
+          id: id()
+        }
 
   @doc """
   Creates a new info object for a query.
   """
-  @spec new(String.t()) :: t()
-  def new(query) do
-    %__MODULE__{query: query, launched_at: DateTime.utc_now()}
+  @spec new(String.t(), id()) :: t()
+  def new(query, id) do
+    %__MODULE__{query: query, launched_at: DateTime.utc_now(), id: id}
   end
 
   @spec increase_retry_count(t()) :: t()
   def increase_retry_count(qi = %__MODULE__{}) do
-    %{ qi | retries: qi.retries + 1 }
+    %{qi | retries: qi.retries + 1}
   end
 
   @spec launched_at(t()) :: DateTime.t()
