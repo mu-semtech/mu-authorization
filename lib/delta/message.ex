@@ -62,13 +62,13 @@ defmodule Delta.Message do
     Map.put(map, "origin", origin)
   end
 
-  defp convert_quad(%Quad{subject: subject, predicate: predicate, object: object}) do
-    [s, p, o] =
+  defp convert_quad(%Quad{graph: graph, subject: subject, predicate: predicate, object: object}) do
+    [g, s, p, o] =
       Enum.map(
-        [subject, predicate, object],
+        [graph, subject, predicate, object],
         &Updates.QueryAnalyzer.P.to_sparql_result_value/1
       )
 
-    %{"subject" => s, "predicate" => p, "object" => o}
+    %{"graph" => g, "subject" => s, "predicate" => p, "object" => o}
   end
 end
