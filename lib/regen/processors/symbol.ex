@@ -12,6 +12,8 @@ defmodule Symbol do
   alias Regen.Status, as: State
   alias InterpreterTerms.SymbolMatch, as: SymbolMatch
 
+  @type t :: %Symbol{}
+
   defstruct [:symbol, :state, {:ebnf, :none}, {:self_element, :none}, {:sub_generator, :none}]
 
   defimpl Regen.Protocol do

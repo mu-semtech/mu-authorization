@@ -16,6 +16,8 @@ defmodule Some do
     {:locked_states, []}
   ]
 
+  @type t :: %Some{}
+
   defimpl Regen.Protocol do
     def emit(%Some{} = some) do
       Some.walk(some)

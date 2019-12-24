@@ -13,6 +13,8 @@ defmodule Choice do
 
   defstruct options: [], state: %State{}, option_generators: :none, generated_options: []
 
+  @type t :: %Choice{}
+
   defimpl Regen.Protocol do
     def emit(%Choice{} = choice) do
       Choice.walk_choice(choice)

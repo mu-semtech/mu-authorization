@@ -1,4 +1,13 @@
 defmodule Regen.Constructor do
+  @type t ::
+          Regen.Processors.Word.t()
+          | Regen.Processors.Array.t()
+          | Regen.Processors.Choice.t()
+          | Regen.Processors.Some.t()
+          | Regen.Processors.Many.t()
+          | Regen.Processors.Maybe.t()
+          | Regen.Processors.Symbol.t()
+
   @doc """
   Converts a parsed EBNF element to a generator
   """

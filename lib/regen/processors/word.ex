@@ -1,6 +1,8 @@
 defmodule Regen.Processors.Word do
   defstruct [:word, :state]
 
+  @type t :: %Regen.Processors.Word{}
+
   defimpl Regen.Protocol do
     def emit(%Regen.Processors.Word{} = word) do
       Regen.Processors.Word.emit(word)

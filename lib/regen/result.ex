@@ -9,6 +9,7 @@ defmodule Regen.Result do
     end
   end
 
+  @spec as_sparql(Regen.Status.t(), map()) :: Parser.unparsed_query()
   def as_sparql(%Regen.Status{produced_content: arr}, options \\ %{}) do
     as_sparql_p("", Enum.reverse(arr), ensure_basic_options(options))
   end

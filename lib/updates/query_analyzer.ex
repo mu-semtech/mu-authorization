@@ -11,6 +11,10 @@ defmodule Updates.QueryAnalyzer do
   require Logger
   require ALog
 
+  @type value :: Iri.t() | Var.t() | Bool.t() | Str.t() | Number.t()
+  @type quad :: Updates.QueryAnalyzer.Types.Quad.t()
+  @type options :: map
+
   @moduledoc """
   Performs analysis on a sparql InsertData query and yields the
   triples to insert in quad-format.
@@ -81,7 +85,8 @@ defmodule Updates.QueryAnalyzer do
   - Prologue ::= ( BaseDecl | PrefixDecl )*
   - BaseDecl ::= 'BASE' IRIREF
   - PrefixDecl ::= 'PREFIX' PNAME_NS IRIREF
-  - Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | DeleteWhere | Modify
+
+  - Update1 ::= --Load-- | --Clear-- | --Drop-- | Add | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | DeleteWhere | Modify
 
   Terms which were added for DELETE DATA
   - DeleteData ::= 'DELETE' 'DATA' QuadData
@@ -95,12 +100,18 @@ defmodule Updates.QueryAnalyzer do
   Terms which were added for DELETE WHERE
   - DeleteClause ::= 'DELETE' QuadPattern",
   - DeleteWhere ::= 'DELETE' 'WHERE' QuadPattern"
+
+  Terms which were added for GRAPH operations
+  - Add ::= 'ADD' 'SILENT'? GraphOrDefault 'TO' GraphOrDefault",
+  - GraphOrDefault ::= --'DEFAULT'-- | 'GRAPH'? iri",
   """
 
+  @spec extract_quads(Parser.query()) :: [Quad.t()]
   def extract_quads(query) do
     quads(query, %{})
   end
 
+  @spec quads(Parser.query(), options) :: [Quad.t()]
   def quads(%Sym{symbol: :Sparql, submatches: [match]}, options) do
     # Sparql ::= QueryUnit | UpdateUnit
     case match do
@@ -136,13 +147,14 @@ defmodule Updates.QueryAnalyzer do
   end
 
   def quads(%Sym{symbol: :Update1, submatches: [match]}, options) do
-    # Update1 ::= --Load-- | --Clear-- | --Drop-- | --Add-- | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | DeleteWhere | Modify
+    # Update1 ::= --Load-- | --Clear-- | --Drop-- | Add | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | DeleteWhere | Modify
 
     case match do
       %Sym{symbol: :InsertData} -> quads(match, options)
       %Sym{symbol: :DeleteData} -> quads(match, options)
       %Sym{symbol: :DeleteWhere} -> quads(match, options)
       %Sym{symbol: :Modify} -> quads(match, options)
+      %Sym{symbol: :Add} -> quads(match, options)
     end
   end
 
@@ -170,6 +182,70 @@ defmodule Updates.QueryAnalyzer do
       end)
 
     [delete: quads(quad_data, options)]
+  end
+
+  def quads(%Sym{symbol: :Add, submatches: matches}, options) do
+    # Add ::= 'ADD' 'SILENT'? GraphOrDefault 'TO' GraphOrDefault",
+
+    [from_graph, to_graph] =
+      case matches do
+        [%Word{word: "ADD"}, %Word{word: "SILENT"}, from, %Word{word: "TO"}, to] ->
+          [from, to]
+
+        [%Word{word: "ADD"}, from, %Word{word: "TO"}, to] ->
+          [from, to]
+      end
+      |> Enum.map(&quads(&1, options))
+
+    # TODO: this makes no sense for non-sudo queries.  Hence we could
+    # scrapt execution for any non-sudo queries
+
+    # TODO: based on the particular graph we select from, and the name
+    # of the graph we push content to, we could intelligently detect
+    # where to push the data to.  There is currently no worked out
+    # concept of executing a sudo query for a particular user, but
+    # such case could present us with some interesting base
+    # contsructs.
+
+    authorization_groups = Map.get(options, :authorization_groups)
+
+    cond do
+      from_graph == to_graph ->
+        # Noop if from_graph is to_graph
+        # TODO: should we signal all copied triples as delta in this case?
+        []
+
+      authorization_groups == :sudo ->
+        # Select all quads from from_graph and convert them to to_graph
+        quads =
+          from_graph
+          |> Updates.QueryConstructors.make_select_triples_from_graph_query()
+          |> SparqlServer.Router.HandlerSupport.manipulate_select_query(
+            authorization_groups,
+            :read_for_write
+          )
+          # TODO: add connection info
+          |> SparqlClient.execute_parsed(query_type: :read_for_write)
+          |> SparqlClient.response()
+          |> SparqlClient.extract_results()
+          |> convert_spo_results_to_quads(to_graph)
+
+        [{:insert, quads}]
+
+      true ->
+        # There is currently no solution for non sudo queries.
+        []
+    end
+  end
+
+  def quads(%Sym{symbol: :GraphOrDefault, submatches: submatches}, options) do
+    # GraphOrDefault ::= --'DEFAULT'-- | 'GRAPH'? iri
+    case submatches do
+      [%Word{word: "GRAPH"}, iri] -> iri
+      [%Sym{symbol: :iri} = iri] -> iri
+    end
+    |> primitive_value(options)
+    |> Updates.QueryAnalyzer.P.to_solution_sym()
   end
 
   def quads(%Sym{symbol: :Modify, submatches: matches}, options) do
@@ -491,6 +567,7 @@ defmodule Updates.QueryAnalyzer do
     [quad]
   end
 
+  @spec primitive_value(Parser.query(), options) :: value
   def primitive_value(%Sym{symbol: :Verb, submatches: [%Word{}]}, _) do
     # Verb ::= VarOrIri | 'a'
     Iri.make_a()
@@ -755,6 +832,7 @@ defmodule Updates.QueryAnalyzer do
   Yields a list of all variables which are containted in the query,
   with duplicates removed.
   """
+  @spec find_variables_in_quads([quad]) :: [Var.t()]
   def find_variables_in_quads(quads) do
     quads
     |> Enum.flat_map(&Quad.as_list/1)
@@ -762,6 +840,7 @@ defmodule Updates.QueryAnalyzer do
     |> Enum.uniq()
   end
 
+  @spec update_options_for_with(Sym.t(), options) :: options
   def update_options_for_with(%Sym{symbol: :iri} = sym, options) do
     # TODO double_check the use of :default_graph.  The may be used
     # incorrectly as the basis for empty predicates.
@@ -771,6 +850,8 @@ defmodule Updates.QueryAnalyzer do
     |> Map.put(:default_graph, iri)
   end
 
+  @spec construct_select_query([Var.t()], Sym.t(), options) ::
+          {Parser.query(), Acl.allowed_groups()}
   def construct_select_query(variables, group_graph_pattern_sym, options) do
     # In order to build the select query, we need to walk the right tree.
     # At this stage, we have our options (which we can use to set the default graph)
@@ -799,6 +880,7 @@ defmodule Updates.QueryAnalyzer do
     # |> Manipulators.Recipes.set_from_graph # This should be replaced by the previous rule in the future
   end
 
+  @spec construct_insert_query_from_quads([quad], options) :: Parser.query()
   def construct_insert_query_from_quads(quads, options) do
     # TODO: this should be clearing when the query is executed
     clear_cache_for_typed_quads(quads, options)
@@ -810,6 +892,7 @@ defmodule Updates.QueryAnalyzer do
     # |> TODO add prefixes
   end
 
+  @spec construct_delete_query_from_quads([quad], options) :: Parser.query()
   def construct_delete_query_from_quads(quads, options) do
     # TODO: this should be clearing when the query is executed
     clear_cache_for_typed_quads(quads, options)
@@ -947,5 +1030,17 @@ defmodule Updates.QueryAnalyzer do
     # |> dispatch_insert_quads_to_desired_graphs
     |> construct_insert_query_from_quads(options)
     |> SparqlClient.execute_parsed(query_type: :write)
+  end
+
+  @spec convert_spo_results_to_quads(SparqlClient.QueryResponse.bindings(), String.t()) ::
+          [quad]
+  def convert_spo_results_to_quads(spo_results, graph) do
+    spo_results
+    |> Enum.map(fn %{"s" => subject, "p" => predicate, "o" => object} ->
+      [graph, subject, predicate, object] =
+        Enum.map([graph, subject, predicate, object], &primitive_value(&1, %{}))
+
+      Quad.make(graph, subject, predicate, object)
+    end)
   end
 end

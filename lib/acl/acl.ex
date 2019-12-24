@@ -2,6 +2,10 @@ defmodule Acl do
   require Logger
   require ALog
 
+  @type allowed_groups :: [allowed_group] | :sudo
+  @type allowed_group :: {String.t(), [String.t()]}
+  @opaque quad :: Updates.QueryAnalyzer.Types.Quad.t()
+
   @moduledoc """
   Acl allows you to define and verify Access Control Lists.  It is
   used to specify who can see what, and where it should be updated.
@@ -18,6 +22,8 @@ defmodule Acl do
   A current example of applicable access rights can be found in
   Acl.UserGroups.Config
   """
+  @spec process_quads_for_update([quad], allowed_groups, Acl.UserGroups.Config.t()) ::
+          {allowed_groups, [quad]}
   def process_quads_for_update(quads, _, :sudo) do
     {[], quads}
   end
@@ -59,6 +65,8 @@ defmodule Acl do
   Yields the new query, and all the accessibility groups from which
   this query was constructed.
   """
+  @spec process_query(Parser.query(), Acl.UserGroups.Config.t(), allowed_groups) ::
+          {Parser.query, allowed_groups}
   def process_query(query, _, :sudo) do
     {query, []}
   end
@@ -93,6 +101,9 @@ defmodule Acl do
     end
   end
 
+  @spec active_user_groups_info(Acl.UserGroups.Config.t(), allowed_groups) :: [
+          {Acl.UserGroups.Config.user_group(), [allowed_group]}
+        ]
   def active_user_groups_info(user_groups, authorization_groups) do
     ALog.di(authorization_groups, "Authorization groups")
     ALog.di(user_groups, "User groups")
@@ -122,7 +133,8 @@ defmodule Acl do
   Yields the authorization groups to which the current user would have
   access.  This content may be cached.
   """
-  def user_authorization_groups(user_groups, request) do
+  @spec user_authorization_groups(Acl.UserGroups.Config.t(), Plug.Conn.t()) :: allowed_groups
+  def(user_authorization_groups(user_groups, request)) do
     user_groups
     |> Enum.map(&{&1, Acl.GroupSpec.Protocol.accessible?(&1, request)})
     |> ALog.di("Accessibility Info")

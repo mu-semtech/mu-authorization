@@ -1,7 +1,7 @@
 defmodule Manipulators do
   require Logger
 
-  @spec apply_manipulators(String.t(), any) :: any
+  @spec apply_manipulators(Parser.unparsed_query, any) :: any
   def apply_manipulators(query, manipulators) do
     { _, element } = Parser.parse_query_first(query)
 

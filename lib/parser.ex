@@ -1,16 +1,17 @@
 defmodule Parser do
   @moduledoc """
-  Parser for the W3C EBNF syntax.
+  Entrypoint to parse SPARQL queries and the W3C EBNF syntax.
   """
   @type syntax :: %{optional(atom) => any}
   @type unparsed_query :: String.t()
+  @type query :: %InterpreterTerms.SymbolMatch{} | %InterpreterTerms.WordMatch{}
 
   @spec parse_sparql() :: syntax
   def parse_sparql() do
     EbnfParser.Sparql.syntax()
   end
 
-  @spec parse_query(unparsed_query, atom) :: InterpreterTerms.query() | {:fail}
+  @spec parse_query(unparsed_query, atom) :: query() | {:fail}
   def parse_query(string, rule \\ :Sparql) do
     EbnfInterpreter.match_sparql_rule(rule, string)
   end
@@ -62,7 +63,7 @@ defmodule Parser do
   @doc """
   Parses the query and yields the first (possibly non-complete) match.
   """
-  @spec parse_query_first(String.t(), atom) :: { unparsed_query, InterpreterTerms.query() } | {:fail}
+  @spec parse_query_first(String.t(), atom) :: {unparsed_query, query()} | {:fail}
   def parse_query_first(query, rule_name \\ :Sparql, syntax \\ parse_sparql()) do
     rule = {:symbol, rule_name}
     state = %Generator.State{chars: String.graphemes(query), syntax: syntax}
@@ -97,6 +98,7 @@ defmodule Parser do
     want to test whether a solution would exist or not.  This is not
     cheaper to execute than finding a solution.
   """
+  @spec test_full_solution(unparsed_query, atom) :: true | false
   def test_full_solution(query, rule_name \\ :Sparql) do
     rule = {:symbol, rule_name}
     state = %Generator.State{chars: String.graphemes(query), syntax: Parser.parse_sparql()}

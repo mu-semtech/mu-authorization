@@ -141,6 +141,8 @@ end
 defmodule Var do
   defstruct [:full_name]
 
+  @type t :: %Var{full_name: String.t()}
+
   def from_string(value) do
     %Var{full_name: value}
   end
@@ -197,6 +199,8 @@ end
 defmodule Bool do
   defstruct [:value]
 
+  @type t :: %Bool{value: boolean}
+
   def from_string(value) do
     bool =
       case String.downcase(value) do
@@ -249,6 +253,11 @@ end
 
 defmodule Str do
   defstruct [:str, {:lang, false}, {:type, false}]
+
+  @type t ::
+          %Str{str: String.t(), lang: false, type: false}
+          | %Str{str: String.t(), lang: true, type: false}
+          | %Str{str: String.t(), lang: false, type: true}
 
   def from_string(string) do
     %Str{str: string}

@@ -2,8 +2,8 @@ defmodule SparqlServer.Router.AccessGroupSupport do
   require Logger
   require ALog
 
-  @type decoded_json_access_groups :: [decoded_json_access_group] | :sudo
-  @type decoded_json_access_group :: Acl.Accessibility.Protocol.t()
+  @opaque decoded_json_access_groups :: Acl.allowed_groups
+  @opaque decoded_json_access_group :: Acl.allowed_group
 
   @moduledoc """
   Provides supporting functions for working with the encoding and

@@ -29,6 +29,8 @@ defmodule Array do
             rest_generator: :none,
             last_child_result: :none
 
+  @type t :: %Array{}
+
   defimpl Regen.Protocol do
     def emit(%Array{} = array) do
       Array.walk(array)

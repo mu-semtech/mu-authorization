@@ -71,7 +71,16 @@ defmodule SparqlClient.WorkloadInfo do
   """
 
   @query_types [:read, :write, :read_for_write]
-  @type t :: %Workload{}
+  @type t :: %Workload{
+          running_pid_map: %{read: [pid], write: [pid], read_for_write: [pid]},
+          waiting_from_map: %{read: [pid], read_for_write: [pid], write: [pid]},
+          running_count: integer,
+          recovery_mode: boolean,
+          last_interval_failure_count: integer,
+          last_interval_success_count: integer,
+          database_failure_load: float
+        }
+
   @type query_types :: SparqlClient.query_types()
 
   @doc """
@@ -109,7 +118,7 @@ defmodule SparqlClient.WorkloadInfo do
   @spec report_timeout(query_types) :: :ok
   def report_timeout(query_types) do
     # Follows same flow as report_cancellation
-    report_cancellation( query_types )
+    report_cancellation(query_types)
   end
 
   @spec report_cancellation(query_types) :: :ok
@@ -306,7 +315,7 @@ defmodule SparqlClient.WorkloadInfo do
 
   @spec count_and_remove(Enum.t(), any | (any -> boolean)) :: {Enum.t(), number}
   defp count_and_remove(enum, matcher) when is_function(matcher) do
-    {enum, number} =
+    {reversed_enum, number} =
       enum
       |> Enum.reduce({[], 0}, fn elem, {items, removal_count} ->
         if matcher.(elem) do
@@ -316,7 +325,7 @@ defmodule SparqlClient.WorkloadInfo do
         end
       end)
 
-    {Enum.reverse(enum), number}
+    {Enum.reverse(reversed_enum), number}
   end
 
   defp count_and_remove(enum, pid) do

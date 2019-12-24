@@ -3,8 +3,8 @@ defprotocol Acl.GroupSpec.Protocol do
   alias Acl.GroupSpec.Protocol, as: GPr
 
   # struct()
-  @type t :: Acl.GroupSpec.t() | Acl.GroupSpec.GraphCleanup.t(),
-  @type query :: struct()
+  @type t :: Acl.GroupSpec.t() | Acl.GroupSpec.GraphCleanup.t()
+  @type query :: Parser.query()
   @type matched_user_group :: {String.t(), [String.t()]}
 
   @doc """

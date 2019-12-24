@@ -163,6 +163,19 @@ defmodule SparqlClient do
     |> query(options)
   end
 
+  @doc """
+  Converts the raw response into a structured key-based response with easier accessors.
+  """
+  @spec response(parsed_query_response) :: SparqlClient.QueryResponse.t()
+  def response(response), do: SparqlClient.QueryResponse.from_parsed_response(response)
+
+  @doc """
+  Extracts the results (results.bindings) from the response.
+  """
+  def extract_results(%SparqlClient.QueryResponse{} = response) do
+    response.results.bindings
+  end
+
   def extract_results(parsed_response) do
     parsed_response
     |> Map.get("results")

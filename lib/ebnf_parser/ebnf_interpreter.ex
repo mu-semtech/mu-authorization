@@ -1,5 +1,5 @@
 defmodule EbnfInterpreter do
-  @doc """
+  @moduledoc """
   Most eager interpreter of syntax which we could implement.  This
   consumes all content which was available and tries to match as much
   content as possible.

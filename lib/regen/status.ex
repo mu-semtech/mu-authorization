@@ -1,6 +1,8 @@
 defmodule Regen.Status do
   defstruct [{:elements, []}, {:produced_content, []}, {:syntax, :none}]
 
+  @type t :: %Regen.Status{}
+
   defimpl Inspect do
     def inspect(%Regen.Status{elements: elts, produced_content: content, syntax: syntax}, opts) do
       syntax_display =

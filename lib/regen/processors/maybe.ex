@@ -5,6 +5,8 @@ defmodule Maybe do
 
   defstruct [:element, {:state, %State{}}, {:self_generator, :none}]
 
+  @type t :: %Maybe{}
+
   defimpl Regen.Protocol do
     def emit(%Maybe{} = maybe) do
       Maybe.walk(maybe)

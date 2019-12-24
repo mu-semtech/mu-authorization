@@ -11,7 +11,7 @@ defmodule Acl.GroupSpec do
           graphs: GraphSpec.t(),
           useage: [useage_method]
         }
-  @type useage_method :: :read | :write | :read_for_write
+  @type useage_method :: SparqlClient.query_types
 
   defstruct [:name, :access, :graphs, :useage]
 

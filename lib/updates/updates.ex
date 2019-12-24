@@ -2,6 +2,7 @@ defmodule Updates do
   require Logger
   require ALog
 
+  @spec quads_for_query(Parser.unparsed_query()) :: [Updates.QueryAnalyzer.Types.Quad.t()]
   def quads_for_query(query) do
     Parser.parse_query_all(query)
     |> Enum.filter(&Generator.Result.full_match?/1)

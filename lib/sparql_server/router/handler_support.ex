@@ -149,25 +149,39 @@ defmodule SparqlServer.Router.HandlerSupport do
 
   ### Manipulates the select query yielding back the valid set of
   ### queries which should be executed on the database.
-  defp manipulate_select_query(query, conn) do
+  defp manipulate_select_query(query, %Plug.Conn{} = conn) do
     {conn, authorization_groups} = AccessGroupSupport.calculate_access_groups(conn)
 
-    # TODO: apply Acl.UserGroups.Config to select queries
     {conn, query} =
       if authorization_groups == :sudo do
         {conn, query}
       else
-        {query, _access_groups} =
-          query
-          # TODO: check how BaseDecl should be interpreted, possibly also remove that.
-          |> Manipulators.SparqlQuery.remove_from_statements()
-          |> Acl.process_query(Acl.UserGroups.for_use(:read), authorization_groups)
-
+        query = manipulate_select_query(query, authorization_groups, :read)
         conn = AccessGroupSupport.put_access_groups(conn, authorization_groups)
+
         {conn, query}
       end
 
     {conn, [query], fn -> :ok end}
+  end
+
+  @doc """
+  Updates a select query to cope with the supplied access rights
+  """
+  @spec manipulate_select_query(
+          Parser.query(),
+          SparqlServer.Router.AccessGroupSupport.decoded_json_access_groups(),
+          SparqlClient.query_types()
+        ) :: Parser.query()
+  def manipulate_select_query(query, authorization_groups, useage) do
+    if authorization_groups == :sudo do
+      query
+    else
+      query
+      |> Manipulators.SparqlQuery.remove_from_statements()
+      |> Acl.process_query(Acl.UserGroups.for_use(useage), authorization_groups)
+      |> elem(0)
+    end
   end
 
   ### Manipulates the update query yielding back the valid set of

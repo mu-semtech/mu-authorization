@@ -6,6 +6,8 @@ defmodule Many do
 
   defstruct [:element, {:state, %State{}}, {:self_generator, :none}, {:rest_generator, :none}]
 
+  @type t :: %Many{}
+
   defimpl Regen.Protocol do
     def emit(%Many{} = many) do
       Many.walk(many)
