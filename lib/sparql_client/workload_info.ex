@@ -321,7 +321,7 @@ defmodule SparqlClient.WorkloadInfo do
         if matcher.(elem) do
           {items, removal_count + 1}
         else
-          {[items | elem], removal_count}
+          {[elem | items], removal_count}
         end
       end)
 
