@@ -40,7 +40,7 @@ The result of the `user_groups` function is a list of GroupSpec objects. Every s
 There are two kinds of access rules, a rule that simply gives access to all users (`AlwaysAccessible`) and a rule that gives access according to a certain (`AccessByQuery`). The `AlwaysAccessible` rule is straight forward, the `AccessByQuery` rule deserves some explaining. It has two properties:
 
 -   **vars:** the variables exported by the query. These will be consumed by the corresponding [`GraphSpecs`](#orge2d6c30) of this rule.
--   **query:** a query string that computes the access for the current user. `<SESSION_URI>` is replaced with the URI of the current session.
+-   **query:** a query string that computes the access for the current user. `<SESSION_ID>` is replaced with the URI of the current session.
 
 Here is an example of such an `access` query:
 
