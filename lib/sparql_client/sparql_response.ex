@@ -1,6 +1,11 @@
 defmodule SparqlClient.QueryResponse do
   @moduledoc "Parsing of query responses for more structured processing with type checking"
 
+  alias Updates.QueryAnalyzer.Iri, as: Iri
+  alias Updates.QueryAnalyzer.String, as: Str
+  alias Updates.QueryAnalyzer.Boolean, as: Bool
+  alias Updates.QueryAnalyzer.NumericLiteral, as: Number
+
   defstruct head: %{}, results: %{}
 
   use Accessible
@@ -54,8 +59,8 @@ defmodule SparqlClient.QueryResponse do
   defp parse_head(_), do: %{}
 
   @spec parse_results(map()) :: results
-  defp parse_results(%{"results" => %{"bindings" => bindings}}) do
-    %{results: %{bindings: Enum.map(bindings, &parse_single_binding/1)}}
+  defp parse_results(%{"bindings" => bindings}) do
+    %{bindings: Enum.map(bindings, &parse_single_binding/1)}
   end
 
   @spec parse_single_binding(map()) :: single_binding
@@ -68,23 +73,38 @@ defmodule SparqlClient.QueryResponse do
   end
 
   @spec parse_single_binding_value(map()) :: single_binding_value
-  defp parse_single_binding_value(%{"type" => "bnode", value: value}) do
+  defp parse_single_binding_value(%{"type" => "bnode", "value" => value}) do
     %{type: :bnode, value: value}
   end
 
-  defp parse_single_binding_value(%{"type" => "literal", value: value, datatype: datatype}) do
+  defp parse_single_binding_value(%{"type" => "literal", "value" => value, "datatype" => datatype}) do
     %{type: :literal, value: value, datatype: datatype}
   end
 
-  defp parse_single_binding_value(%{"type" => "literal", value: value, "xml:lang": lang}) do
+  defp parse_single_binding_value(%{"type" => "literal", "value" => value, "xml:lang" => lang}) do
     %{type: :literal, value: value, lang: lang}
   end
 
-  defp parse_single_binding_value(%{"type" => "literal", value: value}) do
+  defp parse_single_binding_value(%{"type" => "literal", "value" => value}) do
     %{type: :literal, value: value}
   end
 
-  defp parse_single_binding_value(%{"type" => "uri", value: value}) do
+  defp parse_single_binding_value(%{"type" => "uri", "value" => value}) do
     %{type: :uri, value: value}
+  end
+
+  # Iri.t() | Var.t() | Bool.t() | Str.t() | Number.t()
+  @spec primitive_value( single_binding_value ) :: Updates.QueryAnalyzer.value
+  def primitive_value(%{type: :uri, value: value}) do
+    Iri.from_iri_string( Iri.wrap_iri_string( value ) )
+  end
+
+  def primitive_value(%{type: :literal, value: value, lang: lang}) do
+    Str.from_langstring(value, lang)
+  end
+
+  def primitive_value(%{type: :literal, value: value, datatype: datatype}) do
+    # TODO: support other things than numbers
+    Number.from_string("\"\"\"#{value}\"\"\"^<#{datatype}>")
   end
 end

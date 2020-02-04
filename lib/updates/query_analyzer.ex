@@ -1041,8 +1041,9 @@ defmodule Updates.QueryAnalyzer do
   def convert_spo_results_to_quads(spo_results, graph) do
     spo_results
     |> Enum.map(fn %{"s" => subject, "p" => predicate, "o" => object} ->
-      [graph, subject, predicate, object] =
-        Enum.map([graph, subject, predicate, object], &primitive_value(&1, %{}))
+      graph = primitive_value( graph, %{} )
+      [subject, predicate, object] =
+        Enum.map([subject, predicate, object], &SparqlClient.QueryResponse.primitive_value/1)
 
       Quad.make(graph, subject, predicate, object)
     end)
