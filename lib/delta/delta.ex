@@ -1,11 +1,10 @@
 defmodule Delta do
-  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+  alias Updates.QueryAnalyzer, as: QueryAnalyzer
 
   require Logger
   require ALog
 
-  @type insert_type :: :update | :delete
-  @type delta :: [{insert_type, [Quad.t()]}]
+  @type delta :: QueryAnalyzer.quad_changes()
 
   @moduledoc """
   This service consumes altered triples and sends them to interested
@@ -18,7 +17,8 @@ defmodule Delta do
   tuples of form {insert_type, quads} in which insert_type is one of
   :insert or :delete.
   """
-  @spec publish_updates(delta, [any], Plug.Conn.t()) :: delta
+  @spec publish_updates(QueryAnalyzer.quad_changes(), [any], Plug.Conn.t()) ::
+          QueryAnalyzer.quad_changes()
   def publish_updates(delta, authorization_groups, conn) do
     origin =
       conn

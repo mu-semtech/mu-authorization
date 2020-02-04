@@ -2,9 +2,10 @@ defmodule Acl do
   require Logger
   require ALog
 
+  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+
   @type allowed_groups :: [allowed_group] | :sudo
   @type allowed_group :: {String.t(), [String.t()]}
-  @opaque quad :: Updates.QueryAnalyzer.Types.Quad.t()
 
   @moduledoc """
   Acl allows you to define and verify Access Control Lists.  It is
@@ -22,8 +23,8 @@ defmodule Acl do
   A current example of applicable access rights can be found in
   Acl.UserGroups.Config
   """
-  @spec process_quads_for_update([quad], allowed_groups, Acl.UserGroups.Config.t()) ::
-          {allowed_groups, [quad]}
+  @spec process_quads_for_update([Quad.t()], allowed_groups, Acl.UserGroups.Config.t()) ::
+          {allowed_groups, [Quad.t()]}
   def process_quads_for_update(quads, _, :sudo) do
     {[], quads}
   end

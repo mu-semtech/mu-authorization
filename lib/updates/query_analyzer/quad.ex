@@ -6,7 +6,7 @@ defmodule Quad do
   defstruct [:graph, :subject, :predicate, :object]
 
   # TODO: further specify the definition of subject, predicate, object
-  @opaque value :: Updates.QueryAnalyzer.value()
+  @type value :: Updates.QueryAnalyzer.value()
   @type t :: %Quad{graph: value, subject: value, predicate: value, object: value}
 
   @doc """

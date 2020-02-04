@@ -1,5 +1,7 @@
 defmodule SparqlServer.Router.HandlerSupport do
   alias SparqlServer.Router.AccessGroupSupport, as: AccessGroupSupport
+  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+  alias Updates.QueryAnalyzer, as: QueryAnalyzer
 
   require Logger
   require ALog
@@ -10,6 +12,8 @@ defmodule SparqlServer.Router.HandlerSupport do
   connection (to which the response may be sent) is yielded back,
   together with the response which should be set on the client.
   """
+  @spec handle_query(String.t(), SparqlClient.query_types(), Plug.Conn.t()) ::
+          {Plug.Conn.t(), any}
   def handle_query(query, kind, conn) do
     Logging.EnvLog.log(:log_incoming_sparql_queries, "Incoming SPARQL query: #{query}")
 
@@ -206,7 +210,7 @@ defmodule SparqlServer.Router.HandlerSupport do
     updated_quads =
       query
       |> ALog.di("Parsed query")
-      |> Updates.QueryAnalyzer.quads(%{
+      |> Updates.QueryAnalyzer.quad_changes(%{
         default_graph:
           Updates.QueryAnalyzer.Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
         authorization_groups: authorization_groups
@@ -224,6 +228,7 @@ defmodule SparqlServer.Router.HandlerSupport do
 
     executable_queries =
       updated_quads
+      |> join_quad_updates
       |> Enum.map(fn {statement, processed_quads} ->
         case statement do
           :insert ->
@@ -243,6 +248,47 @@ defmodule SparqlServer.Router.HandlerSupport do
     {conn, executable_queries, delta_updater}
   end
 
+  @spec join_quad_updates(Updates.QueryAnalyzer.quad_changes()) ::
+          Updates.QueryAnalyzer.quad_changes()
+  defp join_quad_updates(elts) do
+    elts
+    |> Enum.map(fn {op, quads} -> {op, MapSet.new(quads)} end)
+    |> join_quad_map_updates([])
+    |> Enum.map(fn {op, quads} -> {op, MapSet.to_list(quads)} end)
+    |> Enum.reject(&match?({_, []}, &1))
+  end
+
+  @type map_quad :: {QueryAnalyzer.quad_change_key(), MapSet.t(Quad.t())}
+
+  @spec join_quad_map_updates([map_quad], [map_quad]) :: [map_quad]
+  defp join_quad_map_updates([], res), do: res
+  defp join_quad_map_updates([elt | rest], []), do: join_quad_map_updates(rest, [elt])
+
+  defp join_quad_map_updates([{type, quads} | rest], [{type, other_quads}]),
+    do: join_quad_map_updates(rest, [{type, MapSet.union(quads, other_quads)}])
+
+  defp join_quad_map_updates([quads | rest], [other_quads]) do
+    new_other_quads = fold_quad_map_updates( other_quads, quads )
+    join_quad_map_updates(rest, [new_other_quads, quads])
+  end
+
+  defp join_quad_map_updates([quad_updates | rest], [left, right]) do
+    new_left = fold_quad_map_updates(left, quad_updates)
+    new_right = fold_quad_map_updates(right, quad_updates)
+
+    join_quad_map_updates(rest, [new_left, new_right])
+  end
+
+  @spec fold_quad_map_updates(map_quad, map_quad) :: map_quad
+  defp fold_quad_map_updates({key, left_quads}, {key, right_quads}),
+    # :inserts, :inserts or :deletes, :deletes
+    do: {key, MapSet.union(left_quads, right_quads)}
+
+  defp fold_quad_map_updates({left_type, left_quads}, {_right_type, right_quads}),
+    # :inserts, :deletes or :deletes, :inserts
+    do: {left_type, MapSet.difference(left_quads, right_quads)}
+
+  @spec enforce_write_rights([Quad.t()], Acl.UserGroups.Config.t()) :: [Quad.t()]
   defp enforce_write_rights(quads, authorization_groups) do
     Logger.info("Enforcing write rights")
     user_groups_for_update = Acl.UserGroups.for_use(:write)

@@ -11,8 +11,10 @@ defmodule Updates.QueryAnalyzer do
   require Logger
   require ALog
 
+  @type quad_change_key :: :insert | :delete
+  @type quad_change :: { quad_change_key, [Quad.t()] }
+  @type quad_changes :: [ quad_changes ]
   @type value :: Iri.t() | Var.t() | Bool.t() | Str.t() | Number.t()
-  @type quad :: Updates.QueryAnalyzer.Types.Quad.t()
   @type options :: map
 
   @moduledoc """
@@ -39,7 +41,7 @@ defmodule Updates.QueryAnalyzer do
   analyzed query.  The WHERE clause is a good example of something we
   don't expect to parse for update queries.
 
-  Terms which yield quads:
+  Terms which yield quads or quad_changes:
 
   - InsertData ::= 'INSERT' 'DATA' QuadData
   - QuadData ::= '{' Quads '}'
@@ -106,27 +108,27 @@ defmodule Updates.QueryAnalyzer do
   - GraphOrDefault ::= --'DEFAULT'-- | 'GRAPH'? iri",
   """
 
-  @spec extract_quads(Parser.query()) :: [Quad.t()]
-  def extract_quads(query) do
-    quads(query, %{})
+  @spec quad_changes(Parser.query()) :: quad_changes
+  def quad_changes(query) do
+    quad_changes(query, %{})
   end
 
-  @spec quads(Parser.query(), options) :: [Quad.t()]
-  def quads(%Sym{symbol: :Sparql, submatches: [match]}, options) do
+  @spec quad_changes(Parser.query(), options) :: quad_changes
+  def quad_changes(%Sym{symbol: :Sparql, submatches: [match]}, options) do
     # Sparql ::= QueryUnit | UpdateUnit
     case match do
-      %Sym{symbol: :UpdateUnit} -> quads(match, options)
+      %Sym{symbol: :UpdateUnit} -> quad_changes(match, options)
     end
   end
 
-  def quads(%Sym{symbol: :UpdateUnit, submatches: [match]}, options) do
+  def quad_changes(%Sym{symbol: :UpdateUnit, submatches: [match]}, options) do
     # UpdateUnit ::= Update
     case match do
-      %Sym{symbol: :Update} -> quads(match, options)
+      %Sym{symbol: :Update} -> quad_changes(match, options)
     end
   end
 
-  def quads(%Sym{symbol: :Update, submatches: matches}, options) do
+  def quad_changes(%Sym{symbol: :Update, submatches: matches}, options) do
     # Update ::= Prologue ( Update1 ( ';' Update )? )?
     case matches do
       [_prologue_sym] ->
@@ -134,31 +136,31 @@ defmodule Updates.QueryAnalyzer do
 
       [prologue_sym, update_one_sym] ->
         new_options = import_prologue(prologue_sym, options)
-        quads(update_one_sym, new_options)
+        quad_changes(update_one_sym, new_options)
 
       [prologue_sym, update_one_sym, %Word{}, update_sym] ->
         new_options = import_prologue(prologue_sym, options)
 
         Quad.append(
-          quads(update_one_sym, new_options),
-          quads(update_sym, new_options)
+          quad_changes(update_one_sym, new_options),
+          quad_changes(update_sym, new_options)
         )
     end
   end
 
-  def quads(%Sym{symbol: :Update1, submatches: [match]}, options) do
+  def quad_changes(%Sym{symbol: :Update1, submatches: [match]}, options) do
     # Update1 ::= --Load-- | --Clear-- | --Drop-- | Add | --Move-- | --Copy-- | --Create-- | InsertData | DeleteData | DeleteWhere | Modify
 
     case match do
-      %Sym{symbol: :InsertData} -> quads(match, options)
-      %Sym{symbol: :DeleteData} -> quads(match, options)
-      %Sym{symbol: :DeleteWhere} -> quads(match, options)
-      %Sym{symbol: :Modify} -> quads(match, options)
-      %Sym{symbol: :Add} -> quads(match, options)
+      %Sym{symbol: :InsertData} -> quad_changes(match, options)
+      %Sym{symbol: :DeleteData} -> quad_changes(match, options)
+      %Sym{symbol: :DeleteWhere} -> quad_changes(match, options)
+      %Sym{symbol: :Modify} -> quad_changes(match, options)
+      %Sym{symbol: :Add} -> quad_changes(match, options)
     end
   end
 
-  def quads(%Sym{symbol: :InsertData, submatches: matches}, options) do
+  def quad_changes(%Sym{symbol: :InsertData, submatches: matches}, options) do
     # InsertData ::= 'INSERT' 'DATA' QuadData
 
     # scan matches to find the single QuadData element:
@@ -171,7 +173,7 @@ defmodule Updates.QueryAnalyzer do
     [insert: quads(quad_data, options)]
   end
 
-  def quads(%Sym{symbol: :DeleteData, submatches: matches}, options) do
+  def quad_changes(%Sym{symbol: :DeleteData, submatches: matches}, options) do
     # DeleteData ::= 'DELETE' 'DATA' QuadData
 
     # scan matchesto find the single QuadData element:
@@ -184,7 +186,7 @@ defmodule Updates.QueryAnalyzer do
     [delete: quads(quad_data, options)]
   end
 
-  def quads(%Sym{symbol: :Add, submatches: matches}, options) do
+  def quad_changes(%Sym{symbol: :Add, submatches: matches}, options) do
     # Add ::= 'ADD' 'SILENT'? GraphOrDefault 'TO' GraphOrDefault",
 
     [from_graph, to_graph] =
@@ -238,17 +240,7 @@ defmodule Updates.QueryAnalyzer do
     end
   end
 
-  def quads(%Sym{symbol: :GraphOrDefault, submatches: submatches}, options) do
-    # GraphOrDefault ::= --'DEFAULT'-- | 'GRAPH'? iri
-    case submatches do
-      [%Word{word: "GRAPH"}, iri] -> iri
-      [%Sym{symbol: :iri} = iri] -> iri
-    end
-    |> primitive_value(options)
-    |> Updates.QueryAnalyzer.P.to_solution_sym()
-  end
-
-  def quads(%Sym{symbol: :Modify, submatches: matches}, options) do
+  def quad_changes(%Sym{symbol: :Modify, submatches: matches}, options) do
     # [ ] Modify ::= ( 'WITH' iri )? ( DeleteClause InsertClause? | InsertClause ) UsingClause* 'WHERE' ++GroupGraphPattern++
 
     group_graph_pattern_sym =
@@ -335,14 +327,7 @@ defmodule Updates.QueryAnalyzer do
     |> ALog.di("All updated quads")
   end
 
-  def quads(%Sym{symbol: :DeleteClause, submatches: matches}, options) do
-    # DeleteClause ::= 'DELETE' QuadPattern",
-
-    [%Word{}, %Sym{symbol: :QuadPattern} = subsym] = matches
-    quads(subsym, options)
-  end
-
-  def quads(%Sym{symbol: :DeleteWhere, submatches: matches}, options) do
+  def quad_changes(%Sym{symbol: :DeleteWhere, submatches: matches}, options) do
     # DeleteWhere ::= 'DELETE' 'WHERE' QuadPattern"
     quad_pattern = Enum.find(matches, &match?(%Sym{symbol: :QuadPattern}, &1))
 
@@ -365,6 +350,14 @@ defmodule Updates.QueryAnalyzer do
     [{:delete, fill_in_triples_template(template, group_graph_pattern, options)}]
   end
 
+  @spec quads( Parser.query(), options ) :: [Quad.t()]
+  def quads(%Sym{symbol: :DeleteClause, submatches: matches}, options) do
+    # DeleteClause ::= 'DELETE' QuadPattern",
+
+    [%Word{}, %Sym{symbol: :QuadPattern} = subsym] = matches
+    quads(subsym, options)
+  end
+
   def quads(%Sym{symbol: :InsertClause, submatches: matches}, options) do
     # InsertClause ::= 'INSERT' QuadPattern
 
@@ -381,6 +374,16 @@ defmodule Updates.QueryAnalyzer do
       %Word{} -> false
     end)
     |> quads(options)
+  end
+
+  def quads(%Sym{symbol: :GraphOrDefault, submatches: submatches}, options) do
+    # GraphOrDefault ::= --'DEFAULT'-- | 'GRAPH'? iri
+    case submatches do
+      [%Word{word: "GRAPH"}, iri] -> iri
+      [%Sym{symbol: :iri} = iri] -> iri
+    end
+    |> primitive_value(options)
+    |> Updates.QueryAnalyzer.P.to_solution_sym()
   end
 
   def quads(%Sym{symbol: :QuadData, submatches: matches}, options) do
@@ -832,7 +835,7 @@ defmodule Updates.QueryAnalyzer do
   Yields a list of all variables which are containted in the query,
   with duplicates removed.
   """
-  @spec find_variables_in_quads([quad]) :: [Var.t()]
+  @spec find_variables_in_quads([Quad.t()]) :: [Var.t()]
   def find_variables_in_quads(quads) do
     quads
     |> Enum.flat_map(&Quad.as_list/1)
@@ -880,7 +883,7 @@ defmodule Updates.QueryAnalyzer do
     # |> Manipulators.Recipes.set_from_graph # This should be replaced by the previous rule in the future
   end
 
-  @spec construct_insert_query_from_quads([quad], options) :: Parser.query()
+  @spec construct_insert_query_from_quads([Quad.t()], options) :: Parser.query()
   def construct_insert_query_from_quads(quads, options) do
     # TODO: this should be clearing when the query is executed
     clear_cache_for_typed_quads(quads, options)
@@ -892,7 +895,7 @@ defmodule Updates.QueryAnalyzer do
     # |> TODO add prefixes
   end
 
-  @spec construct_delete_query_from_quads([quad], options) :: Parser.query()
+  @spec construct_delete_query_from_quads([Quad.t()], options) :: Parser.query()
   def construct_delete_query_from_quads(quads, options) do
     # TODO: this should be clearing when the query is executed
     clear_cache_for_typed_quads(quads, options)
@@ -996,6 +999,7 @@ defmodule Updates.QueryAnalyzer do
     String.slice(string, 0, String.length(string) - 1)
   end
 
+  @spec fill_in_triples_template( any, any, any ) :: [Quad.t()]
   defp fill_in_triples_template(quads_with_vars, group_graph_pattern_sym, options) do
     # TODO the query sent to the database should take the current
     # user's access rights into account.  The query should not be
@@ -1033,7 +1037,7 @@ defmodule Updates.QueryAnalyzer do
   end
 
   @spec convert_spo_results_to_quads(SparqlClient.QueryResponse.bindings(), String.t()) ::
-          [quad]
+          [Quad.t()]
   def convert_spo_results_to_quads(spo_results, graph) do
     spo_results
     |> Enum.map(fn %{"s" => subject, "p" => predicate, "o" => object} ->
