@@ -7,6 +7,11 @@ defmodule Acl do
   @type allowed_groups :: [allowed_group] | :sudo
   @type allowed_group :: {String.t(), [String.t()]}
 
+  @default_graph_iri %Updates.QueryAnalyzer.Iri{
+    iri: "<http://mu.semte.ch/application>",
+    real_name: "<http://mu.semte.ch/application>"
+  }
+
   @moduledoc """
   Acl allows you to define and verify Access Control Lists.  It is
   used to specify who can see what, and where it should be updated.
@@ -44,10 +49,15 @@ defmodule Acl do
       |> List.flatten()
       |> Enum.uniq()
 
+    quads_moved_to_application =
+      quads
+      |> Enum.map(&Map.put(&1, :graph, @default_graph_iri))
+      |> Enum.uniq
+
     resulting_quads =
       active_groups_info
       |> ALog.di("Active Groups Info")
-      |> Enum.reduce(quads, fn {active_group, active_group_specs}, acc ->
+      |> Enum.reduce(quads_moved_to_application, fn {active_group, active_group_specs}, acc ->
         ALog.di(active_group, "Processing quads through active group")
         ALog.di(Process.info(self(), :current_stacktrace), "Stack trace process_quads_for_update")
         # active_group_spec should be an array of specs
@@ -67,7 +77,7 @@ defmodule Acl do
   this query was constructed.
   """
   @spec process_query(Parser.query(), Acl.UserGroups.Config.t(), allowed_groups) ::
-          {Parser.query, allowed_groups}
+          {Parser.query(), allowed_groups}
   def process_query(query, _, :sudo) do
     {query, []}
   end
