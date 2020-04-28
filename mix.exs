@@ -61,7 +61,8 @@ defmodule MuAuthorization.MixProject do
       {:poison, "~> 3.1"},
       {:poolboy, "~> 1.5.1"},
       {:plug, "~> 1.5"},
-      {:cowboy, "~> 2.4"}
+      {:cowboy, "~> 2.4"},
+      {:observer_cli, "~> 1.5"}
     ]
   end
 end
