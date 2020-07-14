@@ -55,37 +55,42 @@ defmodule Manipulators.SparqlQuery do
   end
 
   def add_from_graph(element, graph \\ "http://mu.semte.ch/application") do
+    # The clause we want to insert
+    dataset_clause = %InterpreterTerms.SymbolMatch{
+      symbol: :DatasetClause,
+      submatches: [
+        %InterpreterTerms.WordMatch{word: "FROM"},
+        %InterpreterTerms.SymbolMatch{
+          symbol: :DefaultGraphClause,
+          submatches: [
+            %InterpreterTerms.SymbolMatch{
+              symbol: :SourceSelector,
+              submatches: [
+                %InterpreterTerms.SymbolMatch{
+                  symbol: :iri,
+                  submatches: [
+                    %InterpreterTerms.SymbolMatch{
+                      symbol: :IRIREF,
+                      string: "<" <> graph <> ">",
+                      submatches: :none
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+
     Manipulators.Basics.map_matches(element, fn element ->
       case element do
         # TODO: We should verify SelectQuery -> SelectClause
         %InterpreterTerms.SymbolMatch{symbol: :SelectClause} ->
-          {:insert_after,
-           %InterpreterTerms.SymbolMatch{
-             symbol: :DatasetClause,
-             submatches: [
-               %InterpreterTerms.WordMatch{word: "FROM"},
-               %InterpreterTerms.SymbolMatch{
-                 symbol: :DefaultGraphClause,
-                 submatches: [
-                   %InterpreterTerms.SymbolMatch{
-                     symbol: :SourceSelector,
-                     submatches: [
-                       %InterpreterTerms.SymbolMatch{
-                         symbol: :iri,
-                         submatches: [
-                           %InterpreterTerms.SymbolMatch{
-                             symbol: :IRIREF,
-                             string: "<" <> graph <> ">",
-                             submatches: :none
-                           }
-                         ]
-                       }
-                     ]
-                   }
-                 ]
-               }
-             ]
-           }}
+          {:insert_after, dataset_clause}
+
+        ask = %InterpreterTerms.SymbolMatch{symbol: :AskQuery, submatches: [word | rest]} ->
+          {:replace_by, %{ask | submatches: [word, dataset_clause | rest]}}
 
         %InterpreterTerms.SymbolMatch{symbol: :SubSelect} ->
           {:skip}
