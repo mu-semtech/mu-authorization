@@ -30,6 +30,15 @@ defmodule CH do
       ArgumentError -> default
     end
   end
+
+  def system_float(name, default \\ false) do
+    try do
+      (System.get_env(name) || "")
+      |> String.to_float()
+    rescue
+      ArgumentError -> default
+    end
+  end
 end
 
 # This configuration is loaded before any dependency and is restricted
@@ -62,7 +71,8 @@ config :"mu-authorization",
   query_max_processing_time: CH.system_number("QUERY_MAX_PROCESSING_TIME", 120_000),
   query_max_execution_time: CH.system_number("QUERY_MAX_EXECUTION_TIME", 60_000),
   database_recovery_mode_enabled: CH.system_boolean("DATABASE_OVERLOAD_RECOVERY"),
-  log_database_recovery_mode_tick: CH.system_boolean("LOG_DATABASE_OVERLOAD_TICK")
+  log_database_recovery_mode_tick: CH.system_boolean("LOG_DATABASE_OVERLOAD_TICK"),
+  testing_auth_query_error_rate: CH.system_float("TESTING_AUTH_QUERY_ERROR_RATE")
 
 # and access this configuration in your application as:
 #

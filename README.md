@@ -100,9 +100,10 @@ Flags which can be either on or off translate the environment variable string to
 - `LOG_DELTA_MESSAGES` : Allows logging of delta messages as they're sent to other consumers
 - `LOG_DELTA_CLIENT_COMMUNICATION` : Allows logging of the communication caused by the delta system
 - `LOG_TEMPLATE_MATCHER_PERFORMANCE` : Emits information regarding use of precalculated templates when analysing queries
- - `LOG_OUTGOING_SPARQL_QUERY_RESPONSES` : Logs the responses coming back from the backing triplestore
- - `INSPECT_OUTGOING_SPARQL_QUERY_RESPONSES` : Inspects the responses coming back from the backing triplestore
- - `LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP` : Logs both the request and the response to/from the backing triplestore closely together in the logs.
+- `LOG_OUTGOING_SPARQL_QUERY_RESPONSES` : Logs the responses coming back from the backing triplestore
+- `INSPECT_OUTGOING_SPARQL_QUERY_RESPONSES` : Inspects the responses coming back from the backing triplestore
+- `LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP` : Logs both the request and the response to/from the backing triplestore closely together in the logs
+- `TESTING_AUTH_QUERY_ERROR_RATE`: Chance a query should fail to execute when trying to test fault-tolerance of consuming services, float ranging [0,1]
 
 ## Timeout configuration
 

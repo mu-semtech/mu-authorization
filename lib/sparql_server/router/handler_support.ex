@@ -73,7 +73,18 @@ defmodule SparqlServer.Router.HandlerSupport do
     end
   end
 
+  defp maybe_cancel_job_for_testing do
+    failure_rate = Application.get_env(:"mu-authorization", :testing_auth_query_error_rate)
+
+    if is_float( failure_rate ) and :rand.uniform() < failure_rate  do
+      IO.puts( "Letting query fail from failure_rate" )
+      throw({:job_cancelled})
+    end
+  end
+
   def handle_query_with_template_local_store(query, kind, conn, template_local_store) do
+    maybe_cancel_job_for_testing()
+
     top_level_key =
       case kind do
         :query -> :QueryUnit
