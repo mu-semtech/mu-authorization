@@ -7,6 +7,7 @@ defmodule SparqlServer.Router do
   use Plug.Router
   require Logger
   require ALog
+  require Poison
 
   alias SparqlClient.InfoEndpoint
 
@@ -49,7 +50,8 @@ defmodule SparqlServer.Router do
 
     IO.inspect(running_queries, [{:label, "Currently running queries"} | inspect_options])
 
-    send_resp(conn, 200, inspect(running_queries, inspect_options))
+    json = running_queries |> Enum.map(fn (q) -> %{ type: "queries", id: q.id, attributes: q } end)
+    send_resp(conn, 200, Poison.encode!(%{ data: json }))
   end
 
   get "/processing-queries" do
@@ -58,7 +60,8 @@ defmodule SparqlServer.Router do
 
     IO.inspect(processing_queries, [{:label, "Currently processing queries"} | inspect_options])
 
-    send_resp(conn, 200, inspect(processing_queries, inspect_options))
+    json = processing_queries |> Enum.map(fn (q) -> %{ type: "queries", id: q.id, attributes: q } end)
+    send_resp(conn, 200, Poison.encode!(%{ data: json }))
   end
 
   get "/recovery-status" do
@@ -67,7 +70,7 @@ defmodule SparqlServer.Router do
 
     IO.inspect(state, [{:label, "Current recovery status"} | inspect_options])
 
-    send_resp(conn, 200, inspect(state, inspect_options))
+    send_resp(conn, 200, Poison.encode!(state))
   end
 
   match(_, do: send_resp(conn, 404, "404 error not found"))
