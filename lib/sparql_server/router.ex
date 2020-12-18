@@ -51,7 +51,10 @@ defmodule SparqlServer.Router do
     IO.inspect(running_queries, [{:label, "Currently running queries"} | inspect_options])
 
     json = running_queries |> Enum.map(fn (q) -> %{ type: "queries", id: q.id, attributes: q } end)
-    send_resp(conn, 200, Poison.encode!(%{ data: json }))
+
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, Poison.encode!(%{ data: json }))
   end
 
   get "/processing-queries" do
@@ -61,7 +64,10 @@ defmodule SparqlServer.Router do
     IO.inspect(processing_queries, [{:label, "Currently processing queries"} | inspect_options])
 
     json = processing_queries |> Enum.map(fn (q) -> %{ type: "queries", id: q.id, attributes: q } end)
-    send_resp(conn, 200, Poison.encode!(%{ data: json }))
+
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, Poison.encode!(%{ data: json }))
   end
 
   get "/recovery-status" do
@@ -74,7 +80,9 @@ defmodule SparqlServer.Router do
 
     IO.inspect(last_completed_workload_info, [{:label, "Current recovery status"} | inspect_options])
 
-    send_resp(conn, 200, Poison.encode!(last_completed_workload_info))
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, Poison.encode!(last_completed_workload_info))
   end
 
   match(_, do: send_resp(conn, 404, "404 error not found"))
