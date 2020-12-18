@@ -10,7 +10,8 @@ defmodule SparqlClient.WorkloadInfo do
             last_interval_failure_count: 0,
             last_interval_success_count: 0,
             database_failure_load: 0,
-            last_finished_workload: nil
+            last_finished_workload: nil,
+            start_time: DateTime.utc_now()
 
   use Accessible
 
@@ -80,7 +81,8 @@ defmodule SparqlClient.WorkloadInfo do
           last_interval_failure_count: integer,
           last_interval_success_count: integer,
           database_failure_load: float,
-          last_finished_workload: %Workload{last_finished_workload: nil} | nil
+          last_finished_workload: %Workload{last_finished_workload: nil} | nil,
+          start_time: DateTime.t()
         }
 
   @type query_types :: SparqlClient.query_types()
@@ -226,7 +228,8 @@ defmodule SparqlClient.WorkloadInfo do
         recovery_mode: new_recovery_mode,
         last_interval_success_count: 0,
         last_interval_failure_count: 0,
-        last_finished_workload: %{last_finished_workload | last_finished_workload: nil}
+        last_finished_workload: %{last_finished_workload | last_finished_workload: nil},
+        start_time: DateTime.utc_now()
     }
 
     {:noreply, new_workload}

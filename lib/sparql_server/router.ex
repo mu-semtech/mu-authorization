@@ -65,12 +65,16 @@ defmodule SparqlServer.Router do
   end
 
   get "/recovery-status" do
-    state = SparqlClient.WorkloadInfo.get_state()
+    last_completed_workload_info =
+      SparqlClient.WorkloadInfo.get_state()
+      |> Map.get(:last_finished_workload)
+      |> Map.update!(:start_time, &DateTime.to_iso8601/1)
+
     inspect_options = [limit: 100_000, pretty: true, width: 180]
 
-    IO.inspect(state, [{:label, "Current recovery status"} | inspect_options])
+    IO.inspect(last_completed_workload_info, [{:label, "Current recovery status"} | inspect_options])
 
-    send_resp(conn, 200, Poison.encode!(state))
+    send_resp(conn, 200, Poison.encode!(last_completed_workload_info))
   end
 
   match(_, do: send_resp(conn, 404, "404 error not found"))
