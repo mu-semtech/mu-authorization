@@ -9,7 +9,8 @@ defmodule SparqlClient.WorkloadInfo do
             recovery_mode: false,
             last_interval_failure_count: 0,
             last_interval_success_count: 0,
-            database_failure_load: 0
+            database_failure_load: 0,
+            last_finished_workload: nil
 
   use Accessible
 
@@ -78,7 +79,8 @@ defmodule SparqlClient.WorkloadInfo do
           recovery_mode: boolean,
           last_interval_failure_count: integer,
           last_interval_success_count: integer,
-          database_failure_load: float
+          database_failure_load: float,
+          last_finished_workload: %Workload{last_finished_workload: nil} | nil
         }
 
   @type query_types :: SparqlClient.query_types()
@@ -182,6 +184,8 @@ defmodule SparqlClient.WorkloadInfo do
   end
 
   def handle_cast(:clocktick, %Workload{} = workload) do
+    last_finished_workload = workload
+
     old_failure_factor = workload.database_failure_load * @previous_interval_keep_factor
 
     new_failure_factor =
@@ -221,7 +225,8 @@ defmodule SparqlClient.WorkloadInfo do
       | database_failure_load: new_failure_load,
         recovery_mode: new_recovery_mode,
         last_interval_success_count: 0,
-        last_interval_failure_count: 0
+        last_interval_failure_count: 0,
+        last_finished_workload: %{last_finished_workload | last_finished_workload: nil}
     }
 
     {:noreply, new_workload}
