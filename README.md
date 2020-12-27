@@ -388,6 +388,12 @@ It is possible too many queries are sent to mu-authorization, making it go in ov
 
 The service also provides a `/recovery-status` endpoint to get some info on the status of the recovery system.
 
+### Other configuration
+Some configuration doesn't fit in previous topics.  These settings are described in this section.
+
+- `ERROR_ON_UNWRITTEN_DATA` : It may be that you request to write manipulations which will not be written to the triplestore because you do not have the necessary rights.  Turning this flag on will make the full manipulation fail in that case.
+
+
 ### Gotchas
 -   Authorization examines the graphs the user has access to when writing triples and only writes to graphs a triple belongs to. If no such graph exists, nothing is written to the endpoint. A 201 status code is returned nonetheless.
 -   Services should always strive to use SEAS to access the database. If session information is not necessary or should not be applied because the service validates access rights in its own way, the header `mu-auth-sudo` should be set to `true` in the SPARQL request sent to the service.

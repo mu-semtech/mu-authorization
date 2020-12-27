@@ -72,7 +72,8 @@ config :"mu-authorization",
   query_max_execution_time: CH.system_number("QUERY_MAX_EXECUTION_TIME", 60_000),
   database_recovery_mode_enabled: CH.system_boolean("DATABASE_OVERLOAD_RECOVERY"),
   log_database_recovery_mode_tick: CH.system_boolean("LOG_DATABASE_OVERLOAD_TICK"),
-  testing_auth_query_error_rate: CH.system_float("TESTING_AUTH_QUERY_ERROR_RATE")
+  testing_auth_query_error_rate: CH.system_float("TESTING_AUTH_QUERY_ERROR_RATE"),
+  error_on_unwritten_data: CH.system_boolean("ERROR_ON_UNWRITTEN_DATA")
 
 # and access this configuration in your application as:
 #

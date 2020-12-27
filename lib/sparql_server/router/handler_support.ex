@@ -76,8 +76,8 @@ defmodule SparqlServer.Router.HandlerSupport do
   defp maybe_cancel_job_for_testing do
     failure_rate = Application.get_env(:"mu-authorization", :testing_auth_query_error_rate)
 
-    if is_float( failure_rate ) and :rand.uniform() < failure_rate  do
-      IO.puts( "Letting query fail from failure_rate" )
+    if is_float(failure_rate) and :rand.uniform() < failure_rate do
+      IO.puts("Letting query fail from failure_rate")
       throw({:job_cancelled})
     end
   end
@@ -107,30 +107,37 @@ defmodule SparqlServer.Router.HandlerSupport do
       |> wrap_query_in_toplevel
       |> ALog.di("Wrapped parsed query")
 
-    {conn, new_parsed_forms, post_processing} =
+    query_manipulator =
       if is_select_query(parsed_form) do
-        manipulate_select_query(parsed_form, conn)
+        &manipulate_select_query/2
       else
-        manipulate_update_query(parsed_form, conn)
+        &manipulate_update_query/2
       end
 
-    query_type =
-      if Enum.any?(new_parsed_forms, fn q -> !is_select_query(q) end) do
-        :read
-      else
-        :write
-      end
+    case query_manipulator.(parsed_form, conn) do
+      {conn, new_parsed_forms, post_processing} ->
+        query_type =
+          if Enum.any?(new_parsed_forms, fn q -> !is_select_query(q) end) do
+            :read
+          else
+            :write
+          end
 
-    encoded_response =
-      new_parsed_forms
-      |> ALog.di("New parsed forms")
-      |> Enum.map(&SparqlClient.execute_parsed(&1, request: conn, query_type: query_type))
-      |> List.first()
-      |> Poison.encode!()
+        encoded_response =
+          new_parsed_forms
+          |> ALog.di("New parsed forms")
+          |> Enum.map(&SparqlClient.execute_parsed(&1, request: conn, query_type: query_type))
+          |> List.first()
+          |> Poison.encode!()
 
-    post_processing.()
+        post_processing.()
 
-    {conn, encoded_response, new_template_local_store}
+        {conn, {200, encoded_response}, new_template_local_store}
+
+      {:fail, reason} ->
+        encoded_response_string = Poison.encode!([%{status: "403", title: reason}])
+        {conn, {403, encoded_response_string}, new_template_local_store}
+    end
   end
 
   def wrap_query_in_toplevel(%InterpreterTerms.SymbolMatch{symbol: :Sparql} = matched) do
@@ -206,7 +213,7 @@ defmodule SparqlServer.Router.HandlerSupport do
 
     {conn, authorization_groups} = AccessGroupSupport.calculate_access_groups(conn)
 
-    # TODO DRY into/from Updates.QueryAnalyzer.insert_quads
+    # TODO: DRY into/from Updates.QueryAnalyzer.insert_quads
 
     # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
     options = %{
@@ -218,7 +225,7 @@ defmodule SparqlServer.Router.HandlerSupport do
       }
     }
 
-    updated_quads =
+    analyzed_quads =
       query
       |> ALog.di("Parsed query")
       |> Updates.QueryAnalyzer.quad_changes(%{
@@ -228,35 +235,90 @@ defmodule SparqlServer.Router.HandlerSupport do
       })
       |> Enum.reject(&match?({_, []}, &1))
       |> ALog.di("Non-empty operations")
-      |> Enum.map(fn {statement, quads} ->
-        ALog.di(quads, "detected quads")
-        ALog.di(statement, "quads operation")
+      |> enrich_manipulations_with_access_rights(authorization_groups)
+      |> maybe_verify_all_triples_written()
 
-        processed_quads = enforce_write_rights(quads, authorization_groups)
+    case analyzed_quads do
+      {:fail, reason} ->
+        {:fail, reason}
 
-        {statement, processed_quads}
-      end)
+      _ ->
+        processed_manipulations =
+          analyzed_quads
+          |> IO.inspect(label: "Analyzed quads")
+          |> Enum.map(fn {manipulation, _requested_quads, effective_quads} ->
+            {manipulation, effective_quads}
+          end)
 
-    executable_queries =
-      updated_quads
-      |> join_quad_updates
-      |> Enum.map(fn {statement, processed_quads} ->
-        case statement do
-          :insert ->
-            Updates.QueryAnalyzer.construct_insert_query_from_quads(processed_quads, options)
+        executable_queries =
+          processed_manipulations
+          |> join_quad_updates
+          |> Enum.map(fn {statement, processed_quads} ->
+            case statement do
+              :insert ->
+                Updates.QueryAnalyzer.construct_insert_query_from_quads(processed_quads, options)
 
-          :delete ->
-            Updates.QueryAnalyzer.construct_delete_query_from_quads(processed_quads, options)
+              :delete ->
+                Updates.QueryAnalyzer.construct_delete_query_from_quads(processed_quads, options)
+            end
+          end)
+
+        delta_updater = fn ->
+          Delta.publish_updates(processed_manipulations, authorization_groups, conn)
         end
-      end)
 
-    delta_updater = fn ->
-      Delta.publish_updates(updated_quads, authorization_groups, conn)
+        # TODO: should we set the access groups on update queries too?
+        # see AccessGroupSupport.put_access_groups/2 ( conn, authorization_groups )
+        {conn, executable_queries, delta_updater}
     end
+  end
 
-    # TODO should we set the access groups on update queries too?
-    # see AccessGroupSupport.put_access_groups/2 ( conn, authorization_groups )
-    {conn, executable_queries, delta_updater}
+  defp enrich_manipulations_with_access_rights(manipulations, authorization_groups) do
+    manipulations
+    |> Enum.map(fn {kind, quads} ->
+      processed_quads = enforce_write_rights(quads, authorization_groups)
+      {kind, quads, processed_quads}
+    end)
+  end
+
+  # If requested by configuration, this code will verify all triples
+  # are going to be written to the triplestore.
+  defp maybe_verify_all_triples_written(enriched_manipulations) do
+    if Application.get_env(:"mu-authorization", :error_on_unwritten_data) do
+      all_manipulations_complete =
+        enriched_manipulations
+        |> Enum.all?(fn {_manipulation, requested_quads, effective_quads} ->
+          requested_triples =
+            requested_quads
+            |> Enum.map(&{&1.subject, &1.predicate, &1.object})
+            |> MapSet.new()
+
+          effective_triples =
+            effective_quads
+            |> Enum.map(&{&1.subject, &1.predicate, &1.object})
+            |> MapSet.new()
+
+          all_triples_written? = Set.equal?(requested_triples, effective_triples)
+
+          unless all_triples_written? do
+            IO.inspect(
+              Set.difference(requested_triples, effective_triples),
+              label: "These triples would not be
+          written to the triplestore"
+            )
+          end
+
+          all_triples_written?
+      end)
+        
+      if(all_manipulations_complete) do
+        enriched_manipulations
+      else
+        {:fail, "Not all triples would be written to the triplestore."}
+      end
+    else
+      enriched_manipulations
+    end
   end
 
   @spec join_quad_updates(Updates.QueryAnalyzer.quad_changes()) ::
@@ -279,7 +341,7 @@ defmodule SparqlServer.Router.HandlerSupport do
     do: join_quad_map_updates(rest, [{type, MapSet.union(quads, other_quads)}])
 
   defp join_quad_map_updates([quads | rest], [other_quads]) do
-    new_other_quads = fold_quad_map_updates( other_quads, quads )
+    new_other_quads = fold_quad_map_updates(other_quads, quads)
     join_quad_map_updates(rest, [new_other_quads, quads])
   end
 

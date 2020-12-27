@@ -13,7 +13,7 @@ defmodule Updates.QueryAnalyzer do
 
   @type quad_change_key :: :insert | :delete
   @type quad_change :: { quad_change_key, [Quad.t()] }
-  @type quad_changes :: [ quad_changes ]
+  @type quad_changes :: [ quad_change ]
   @type value :: Iri.t() | Var.t() | Bool.t() | Str.t() | Number.t()
   @type options :: map
 
