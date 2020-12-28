@@ -384,7 +384,6 @@ It is possible too many queries are sent to mu-authorization, making it go in ov
 
 - `DATABASE_OVERLOAD_RECOVERY` : Enables the overload recovery system.  Note that this has not been tested and may not yet help in case of failure.
 - `LOG_DATABASE_OVERLOAD_TICK` : Logs a message whenever the database overload system executes a recalculation.  Helps to see if it's still alive.
-- `TESTING_AUTH_QUERY_ERROR_RATE`: Chance a query should fail to execute when trying to test fault-tolerance of consuming services, float ranging [0,1]
 
 The service also provides a `/recovery-status` endpoint to get some info on the status of the recovery system.
 
@@ -392,6 +391,7 @@ The service also provides a `/recovery-status` endpoint to get some info on the 
 Some configuration doesn't fit in previous topics.  These settings are described in this section.
 
 - `ERROR_ON_UNWRITTEN_DATA` : It may be that you request to write manipulations which will not be written to the triplestore because you do not have the necessary rights.  Turning this flag on will make the full manipulation fail in that case.
+- `TESTING_AUTH_QUERY_ERROR_RATE`: Chance a query should fail to execute when trying to test fault-tolerance of consuming services, float ranging [0,1]
 
 
 ### Gotchas
