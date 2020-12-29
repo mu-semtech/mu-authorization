@@ -245,7 +245,6 @@ defmodule SparqlServer.Router.HandlerSupport do
       _ ->
         processed_manipulations =
           analyzed_quads
-          |> IO.inspect(label: "Analyzed quads")
           |> Enum.map(fn {manipulation, _requested_quads, effective_quads} ->
             {manipulation, effective_quads}
           end)
