@@ -15,7 +15,7 @@ defmodule SparqlServer.Router.Handler.Worker do
     Support.JobCancellation.flush()
 
     try do
-      {conn, encoded_response, new_local_template_store} =
+      {conn, {status_code, encoded_response}, new_local_template_store} =
         SparqlServer.Router.HandlerSupport.handle_query_with_template_local_store(
           query_string,
           kind,
@@ -23,11 +23,11 @@ defmodule SparqlServer.Router.Handler.Worker do
           local_template_store
         )
 
-      {:reply, {conn, encoded_response}, new_local_template_store}
+      {:reply, {conn, status_code, encoded_response}, new_local_template_store}
     catch
       {:job_cancelled} ->
         IO.puts("Job was cancelled, no need to continue")
-        {:noreply, local_template_store}
+        {:reply, {conn, 500, Poison.encode!(%{ errors: %{ title: "Job cancelled", status: "500" }})}, local_template_store}
     end
   end
 end

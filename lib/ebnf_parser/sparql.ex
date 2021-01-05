@@ -73,11 +73,11 @@ defmodule EbnfParser.Sparql do
     # TODO add other string literals
     |> Map.put(
       :STRING_LITERAL_LONG1,
-      {true, [regex: ~r/^'''(''|')?([^\\']|(\\[tbnrf'"\\]))*'''/m]}
+      {true, [regex: ~r/^'''(''|')?([^\\']|(\\[tbnrf'"\\]))*'''/mf]}
     )
     |> Map.put(
       :STRING_LITERAL_LONG2,
-      {true, [regex: ~r/^"""(""|")?([^\\"]|(\\[tbnrf"'\\]))*"""/m]}
+      {true, [regex: ~r/^"""(""|")?([^\\"]|(\\[tbnrf"'\\]))*"""/mf]}
     )
     |> Map.put(
       :STRING_LITERAL1,

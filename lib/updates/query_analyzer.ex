@@ -13,7 +13,7 @@ defmodule Updates.QueryAnalyzer do
 
   @type quad_change_key :: :insert | :delete
   @type quad_change :: { quad_change_key, [Quad.t()] }
-  @type quad_changes :: [ quad_changes ]
+  @type quad_changes :: [ quad_change ]
   @type value :: Iri.t() | Var.t() | Bool.t() | Str.t() | Number.t()
   @type options :: map
 
@@ -956,6 +956,25 @@ defmodule Updates.QueryAnalyzer do
     # whether some escaping may be necssary.  We should compare the
     # SPARQL1.1 protocol, with the query syntax.
 
+    perform_string_escaping = fn (str) ->
+      # Characters which are \uXXXX are returned in their UTF-8 form
+      # and it seems we're allowed to send them that way too.  The \
+      # character is returned "raw" as well, hence we have to escape
+      # it.  Since we don't have other escapings occuring with the \,
+      # we can just escape it first.
+
+      # TODO: check if UTF-8 characters must be escaped upon sending.
+      # Such a thing might make this logic move to the regenerator
+      # instead, depending on how we choose to interpret INSERT DATA.
+      str
+      |> String.replace("\\", "\\\\")
+      |> String.replace("\"", "\\\"")
+    end
+
+    wrap_in_triple_quotes = fn (str) ->
+      "\"\"\"" <> str <> "\"\"\""
+    end
+
     case binding_value do
       %{"type" => "uri", "value" => value} ->
         # We supply an empty options object, it will not be used
@@ -963,8 +982,8 @@ defmodule Updates.QueryAnalyzer do
 
       %{"type" => "literal", "xml:lang" => lang, value: value} ->
         value
-        |> String.replace("\"", "\\\"")
-        |> (fn x -> "\"\"\"" <> x <> "\"\"\"" end).()
+        |> perform_string_escaping.()
+        |> wrap_in_triple_quotes.()
         |> Str.from_langstring(lang)
 
       # It seems Virtuoso emits typed-literal rather than literal
@@ -974,16 +993,16 @@ defmodule Updates.QueryAnalyzer do
         type_iri = Iri.from_iri_string("<" <> datatype <> ">", %{})
 
         value
-        |> String.replace("\"", "\\\"")
-        |> (fn x -> "\"\"\"" <> x <> "\"\"\"" end).()
+        |> perform_string_escaping.()
+        |> wrap_in_triple_quotes.()
         |> Str.from_typestring(type_iri)
 
       # TODO it seems only URIs are allowed here, but we should be
       # certain stores don't break this assumption
       %{"type" => "literal", "value" => value} ->
         value
-        |> String.replace("\"", "\\\"")
-        |> (fn x -> "\"\"\"" <> x <> "\"\"\"" end).()
+        |> perform_string_escaping.()
+        |> wrap_in_triple_quotes.()
         |> Str.from_string()
 
         # %{ "type" => "bnode", "value": value } -> # <-- we don't do

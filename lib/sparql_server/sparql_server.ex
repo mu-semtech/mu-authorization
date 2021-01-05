@@ -56,6 +56,7 @@ defmodule SparqlServer do
       label: "server setup, log database recovery mode tick"
     )
 
+
     Logging.EnvLog.inspect(
       Application.get_env(:"mu-authorization", :testing_auth_query_error_rate),
       :testing_auth_query_error_rate,

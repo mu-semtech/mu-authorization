@@ -146,12 +146,10 @@ defmodule SparqlServer.Router do
     |> Map.put(:req_headers, new_request_headers)
   end
 
-  ### Sends the supplied results on the connection, setting the
-  ### necessary header and response type.
-  defp send_sparql_response({conn, response}) do
+  defp send_sparql_response({conn, http_status_code, response}) do
     conn
     |> put_resp_content_type("application/sparql-results+json")
-    |> send_resp(200, response)
+    |> send_resp(http_status_code, response)
   end
 
   ### Allows us to debug log the request id.  Currently doesn't
