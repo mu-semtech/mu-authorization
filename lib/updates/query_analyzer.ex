@@ -12,14 +12,15 @@ defmodule Updates.QueryAnalyzer do
   require ALog
 
   @type quad_change_key :: :insert | :delete
-  @type quad_change :: { quad_change_key, [Quad.t()] }
-  @type quad_changes :: [ quad_change ]
+  @type quad_change :: {quad_change_key, [Quad.t()]}
+  @type quad_changes :: [quad_change]
   @type value :: Iri.t() | Var.t() | Bool.t() | Str.t() | Number.t()
   @type options :: map
 
   @moduledoc """
-  Performs analysis on a sparql InsertData query and yields the
-  triples to insert in quad-format.
+  Performs analysis on a sparql InsertData, DeleteData, DeleteWhere,
+  Modify, or Construct query and yields the triples to insert in
+  quad-format.
 
   Our analyzer assumes no blank nodes to exist in the query.
 
@@ -350,7 +351,7 @@ defmodule Updates.QueryAnalyzer do
     [{:delete, fill_in_triples_template(template, group_graph_pattern, options)}]
   end
 
-  @spec quads( Parser.query(), options ) :: [Quad.t()]
+  @spec quads(Parser.query(), options) :: [Quad.t()]
   def quads(%Sym{symbol: :DeleteClause, submatches: matches}, options) do
     # DeleteClause ::= 'DELETE' QuadPattern",
 
@@ -956,7 +957,7 @@ defmodule Updates.QueryAnalyzer do
     # whether some escaping may be necssary.  We should compare the
     # SPARQL1.1 protocol, with the query syntax.
 
-    perform_string_escaping = fn (str) ->
+    perform_string_escaping = fn str ->
       # Characters which are \uXXXX are returned in their UTF-8 form
       # and it seems we're allowed to send them that way too.  The \
       # character is returned "raw" as well, hence we have to escape
@@ -971,7 +972,7 @@ defmodule Updates.QueryAnalyzer do
       |> String.replace("\"", "\\\"")
     end
 
-    wrap_in_triple_quotes = fn (str) ->
+    wrap_in_triple_quotes = fn str ->
       "\"\"\"" <> str <> "\"\"\""
     end
 
@@ -1018,7 +1019,7 @@ defmodule Updates.QueryAnalyzer do
     String.slice(string, 0, String.length(string) - 1)
   end
 
-  @spec fill_in_triples_template( any, any, any ) :: [Quad.t()]
+  @spec fill_in_triples_template(any, any, any) :: [Quad.t()]
   defp fill_in_triples_template(quads_with_vars, group_graph_pattern_sym, options) do
     # TODO the query sent to the database should take the current
     # user's access rights into account.  The query should not be
@@ -1060,7 +1061,8 @@ defmodule Updates.QueryAnalyzer do
   def convert_spo_results_to_quads(spo_results, graph) do
     spo_results
     |> Enum.map(fn %{"s" => subject, "p" => predicate, "o" => object} ->
-      graph = primitive_value( graph, %{} )
+      graph = primitive_value(graph, %{})
+
       [subject, predicate, object] =
         Enum.map([subject, predicate, object], &SparqlClient.QueryResponse.primitive_value/1)
 
