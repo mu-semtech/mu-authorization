@@ -1,4 +1,4 @@
-FROM madnificent/elixir-server:1.9
+FROM madnificent/elixir-server:1.10.0
 
 ENV MU_SPARQL_ENDPOINT 'http://database:8890/sparql'
 ENV LOG_ELIXIR_STARTUP_COMMAND 'true'
