@@ -33,15 +33,19 @@ defmodule SparqlServer.Router do
   end
 
   get "/sparql" do
-    params = conn.query_string |> URI.decode_query()
+    if conn.query_string do
+      params = conn.query_string |> URI.decode_query()
 
-    ALog.di(conn, "Received GET connection")
-    conn = downcase_request_headers(conn)
-    debug_log_request_id(conn)
+      ALog.di(conn, "Received GET connection")
+      conn = downcase_request_headers(conn)
+      debug_log_request_id(conn)
 
-    query = params["query"]
+      query = params["query"]
 
-    handle_query_processing_and_response(query, :query, conn)
+      handle_query_processing_and_response(query, :query, conn)
+    else
+      render_default_page
+    end
   end
 
   get "/running-queries" do
@@ -89,6 +93,25 @@ defmodule SparqlServer.Router do
 
   ################
   ### Internal logic
+
+  defp render_default_page do
+    conn
+    |> Plug.Conn.put_resp_header("content-type", "application/ld+json")
+    |> send_resp(200, "{
+      \"@context\": {
+        \"sd\": \"http://www.w3.org/ns/sparql-service-description#\",
+        \"rdf\": \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\",
+        \"ical:dtstart\": {
+          \"@type\": \"xsd:dateTime\"
+        }
+      },
+      \"@id\": \"http://mu.semte.ch/services/mu-authorization\",
+      \"rdf:type\": { \"@id\": \"sd:Service\" },
+      \"sd:endpoint\": {\"@id\": \"/sparql\"},
+      \"sd:supportedLanguage\": [{\"@id\": \"sd:SPARQL11Query\"}, {\"@id\": \"sd:SPARQL11Update\"}],
+      \"sd:resultFormat\": {\"@id\": \"http://www.w3.org/ns/formats/SPARQL_Results_JSON\"}
+    }")
+  end
 
   defp handle_query_processing_and_response(query, method, conn) do
     qi = InfoEndpoint.start_processing_query(query)
