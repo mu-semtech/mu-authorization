@@ -24,7 +24,7 @@ defmodule SparqlClient.WorkloadInfo do
 
   @clocktick_interval 5000
 
-  @initial_clocktick_interval 10000
+  @initial_clocktick_interval 10_000
 
   @previous_interval_keep_factor 0.5
 
@@ -139,7 +139,7 @@ defmodule SparqlClient.WorkloadInfo do
   Executes a timeout in case of read requests.
   """
   @spec timeout(query_types, integer) :: :ok
-  def timeout(query_type, max_timeout \\ 60000) do
+  def timeout(query_type, max_timeout \\ 60_000) do
     if enabled?() do
       GenServer.call(__MODULE__, {:timeout, query_type}, max_timeout)
     else
@@ -172,7 +172,7 @@ defmodule SparqlClient.WorkloadInfo do
   end
 
   def get_state() do
-    GenServer.call(__MODULE__, :get_state, 25000)
+    GenServer.call(__MODULE__, :get_state, 25_000)
   end
 
   def start_link(_) do
