@@ -395,7 +395,7 @@ defmodule GraphReasoner do
             {:iri, Updates.QueryAnalyzer.Iri.from_symbol(item, prologue_map)}
 
           true ->
-            IO.inspect(item, label: "Could not process item")
+            Logging.EnvLog.inspect(item, :error, label: "Could not process item")
         end
       end
 

@@ -300,10 +300,10 @@ defmodule SparqlServer.Router.HandlerSupport do
           all_triples_written? = Set.equal?(requested_triples, effective_triples)
 
           unless all_triples_written? do
-            IO.inspect(
+            Logging.EnvLog.inspect(
               Set.difference(requested_triples, effective_triples),
-              label: "These triples would not be
-          written to the triplestore"
+              :error,
+              label: "These triples would not be written to the triplestore"
             )
           end
 

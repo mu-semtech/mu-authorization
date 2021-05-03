@@ -123,13 +123,13 @@ defmodule SparqlServer.Router do
       |> send_sparql_response
     catch
       :exit, {:timeout, call_info} ->
-        IO.puts("Server overload, could not answer request within allocated time")
-        IO.inspect(call_info, label: "Failed call")
-
+        Logging.EnvLog.inspect(call_info, :errors, label: "Server overload, failed call")
         send_resp(conn, 503, "Processing request took too long")
 
       :exit, info ->
-        IO.inspect(info, label: "Unknown exit message received when processing query")
+        Logging.EnvLog.inspect(info, :errors,
+          label: "Unknown exit message received when processing query"
+        )
 
         send_resp(conn, 500, "Unknown error occurred when processing query")
     after
