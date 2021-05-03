@@ -135,7 +135,7 @@ defmodule SparqlServer.Router.HandlerSupport do
         {conn, {200, encoded_response}, new_template_local_store}
 
       {:fail, reason} ->
-        encoded_response_string = Poison.encode!(%{ errors: [%{status: "403", title: reason}]})
+        encoded_response_string = Poison.encode!(%{errors: [%{status: "403", title: reason}]})
         {conn, {403, encoded_response_string}, new_template_local_store}
     end
   end
@@ -308,8 +308,8 @@ defmodule SparqlServer.Router.HandlerSupport do
           end
 
           all_triples_written?
-      end)
-        
+        end)
+
       if(all_manipulations_complete) do
         enriched_manipulations
       else

@@ -37,15 +37,16 @@ defmodule Interpreter.CachedInterpreter do
 
   # Tries to find a full solution for the query parsing.
   def parse_query_full(query, :Sparql, syntax) do
-    sub_solution = parse_query_full(query, :QueryUnit, syntax) || parse_query_full(query, :UpdateUnit, syntax)
+    sub_solution =
+      parse_query_full(query, :QueryUnit, syntax) || parse_query_full(query, :UpdateUnit, syntax)
 
     if sub_solution do
       %Sym{symbol: :Sparql, string: sub_solution.string, submatches: [sub_solution]}
     else
       IO.puts("Could not parse query")
-      IO.inspect( query, printable_limit: 10_000, label: "Unparsable query in copyable form" )
+      IO.inspect(query, printable_limit: 10_000, label: "Unparsable query in copyable form")
       IO.puts("=== BEGIN === Unparsable query in human readable form")
-      IO.puts( query )
+      IO.puts(query)
       IO.puts("===  END  === Unparsable query in human readable form")
       nil
     end

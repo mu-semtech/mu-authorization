@@ -54,11 +54,11 @@ defmodule SparqlServer.Router do
 
     IO.inspect(running_queries, [{:label, "Currently running queries"} | inspect_options])
 
-    json = running_queries |> Enum.map(fn (q) -> %{ type: "queries", id: q.id, attributes: q } end)
+    json = running_queries |> Enum.map(fn q -> %{type: "queries", id: q.id, attributes: q} end)
 
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(200, Poison.encode!(%{ data: json }))
+    |> send_resp(200, Poison.encode!(%{data: json}))
   end
 
   get "/processing-queries" do
@@ -67,11 +67,11 @@ defmodule SparqlServer.Router do
 
     IO.inspect(processing_queries, [{:label, "Currently processing queries"} | inspect_options])
 
-    json = processing_queries |> Enum.map(fn (q) -> %{ type: "queries", id: q.id, attributes: q } end)
+    json = processing_queries |> Enum.map(fn q -> %{type: "queries", id: q.id, attributes: q} end)
 
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(200, Poison.encode!(%{ data: json }))
+    |> send_resp(200, Poison.encode!(%{data: json}))
   end
 
   get "/recovery-status" do
@@ -82,7 +82,9 @@ defmodule SparqlServer.Router do
 
     inspect_options = [limit: 100_000, pretty: true, width: 180]
 
-    IO.inspect(last_completed_workload_info, [{:label, "Current recovery status"} | inspect_options])
+    IO.inspect(last_completed_workload_info, [
+      {:label, "Current recovery status"} | inspect_options
+    ])
 
     conn
     |> put_resp_content_type("application/json")

@@ -27,7 +27,9 @@ defmodule SparqlServer.Router.Handler.Worker do
     catch
       {:job_cancelled} ->
         IO.puts("Job was cancelled, no need to continue")
-        {:reply, {conn, 500, Poison.encode!(%{ errors: %{ title: "Job cancelled", status: "500" }})}, local_template_store}
+
+        {:reply, {conn, 500, Poison.encode!(%{errors: %{title: "Job cancelled", status: "500"}})},
+         local_template_store}
     end
   end
 end

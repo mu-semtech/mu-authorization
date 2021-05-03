@@ -94,9 +94,9 @@ defmodule SparqlClient.QueryResponse do
   end
 
   # Iri.t() | Var.t() | Bool.t() | Str.t() | Number.t()
-  @spec primitive_value( single_binding_value ) :: Updates.QueryAnalyzer.value
+  @spec primitive_value(single_binding_value) :: Updates.QueryAnalyzer.value()
   def primitive_value(%{type: :uri, value: value}) do
-    Iri.from_iri_string( Iri.wrap_iri_string( value ) )
+    Iri.from_iri_string(Iri.wrap_iri_string(value))
   end
 
   def primitive_value(%{type: :literal, value: value, lang: lang}) do
