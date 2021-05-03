@@ -52,7 +52,11 @@ defmodule SparqlServer.Router do
     running_queries = InfoEndpoint.get_running_queries()
     inspect_options = [limit: 100_000, pretty: true, width: 180]
 
-    IO.inspect(running_queries, [{:label, "Currently running queries"} | inspect_options])
+    Logging.EnvLog.inspect(
+      running_queries,
+      :log_workload_info_requests,
+      [{:label, "Currently running queries"} | inspect_options]
+    )
 
     json = running_queries |> Enum.map(fn q -> %{type: "queries", id: q.id, attributes: q} end)
 
@@ -65,7 +69,11 @@ defmodule SparqlServer.Router do
     processing_queries = InfoEndpoint.get_processing_queries()
     inspect_options = [limit: 100_000, pretty: true, width: 180]
 
-    IO.inspect(processing_queries, [{:label, "Currently processing queries"} | inspect_options])
+    Logging.EnvLog.inspect(
+      processing_queries,
+      :log_workload_info_requests,
+      [{:label, "Currently processing queries"} | inspect_options]
+    )
 
     json = processing_queries |> Enum.map(fn q -> %{type: "queries", id: q.id, attributes: q} end)
 
@@ -82,9 +90,11 @@ defmodule SparqlServer.Router do
 
     inspect_options = [limit: 100_000, pretty: true, width: 180]
 
-    IO.inspect(last_completed_workload_info, [
-      {:label, "Current recovery status"} | inspect_options
-    ])
+    Logging.EnvLog.inspect(
+      last_completed_workload_info,
+      :log_workload_info_requests,
+      [{:label, "Current recovery status"} | inspect_options]
+    )
 
     conn
     |> put_resp_content_type("application/json")

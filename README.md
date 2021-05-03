@@ -373,6 +373,7 @@ Flags which can be either on or off translate the environment variable string to
 - `LOG_OUTGOING_SPARQL_QUERY_RESPONSES` : Logs the responses coming back from the backing triplestore
 - `INSPECT_OUTGOING_SPARQL_QUERY_RESPONSES` : Inspects the responses coming back from the backing triplestore
 - `LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP` : Logs both the request and the response to/from the backing triplestore closely together in the logs
+- `LOG_WORKLOAD_INFO_REQUESTS` : Logs workload information to the console when it is requested through an http call
 
 ### Query timeout configuration
 Complex SPARQL queries can take a long time to process and execute. The time mu-authorization is allowed to spend on this processing and execution before timing out can be configured through the following environment variables:
