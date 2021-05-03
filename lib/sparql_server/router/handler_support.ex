@@ -310,7 +310,7 @@ defmodule SparqlServer.Router.HandlerSupport do
           all_triples_written?
         end)
 
-      if(all_manipulations_complete) do
+      if all_manipulations_complete do
         enriched_manipulations
       else
         {:fail, "Not all triples would be written to the triplestore."}

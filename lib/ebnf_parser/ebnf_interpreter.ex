@@ -421,7 +421,7 @@ defmodule EbnfInterpreter do
     {terminal, rule} = Map.get(syntax, name)
 
     chars =
-      if(!Map.get(options, :terminal) and terminal) do
+      if !Map.get(options, :terminal) and terminal do
         Enum.drop_while(chars, fn x -> x in [" ", "\t", "\n"] end)
       else
         chars
@@ -496,7 +496,7 @@ defmodule EbnfInterpreter do
 
     # Strip spaces from front
     chars =
-      if(!Map.get(options, :terminal) and terminal) do
+      if !Map.get(options, :terminal) and terminal do
         Enum.drop_while(chars, fn x -> x in [" ", "\t", "\n"] end)
       else
         chars
