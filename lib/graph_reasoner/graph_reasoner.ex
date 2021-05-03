@@ -166,28 +166,29 @@ defmodule GraphReasoner do
     # :: Walk the tree of results
     discovery_result =
       Manipulators.Basics.map_matches(match, fn item ->
-        unless match?(%Sym{symbol: _symbol}, item) do
-          # :: ignore the item if it is not a SymbolMatch
-          {:continue}
-        else
-          %Sym{symbol: symbol} = item
+        case item do
+          %Sym{symbol: symbol} ->
+            # :: if the item is a symbol
+            cond do
+              Enum.find(@accepted_symbols, &match?({^symbol, :deep}, &1)) ->
+                # :: deeply accepted symbols can just be accepted
+                # IO.inspect( symbol, label: "This symbol is allowed without walking children" )
+                {:skip}
 
-          cond do
-            Enum.find(@accepted_symbols, &match?({^symbol, :deep}, &1)) ->
-              # :: deeply accepted symbols can just be accepted
-              # IO.inspect( symbol, label: "This symbol is allowed without walking children" )
-              {:skip}
+              Enum.find(@accepted_symbols, &match?(^symbol, &1)) ->
+                # :: accepted symbols are allowed, but their children have to be checked
+                # IO.inspect( symbol, label: "This symbol is allowed if children are allowed" )
+                {:continue}
 
-            Enum.find(@accepted_symbols, &match?(^symbol, &1)) ->
-              # :: accepted symbols are allowed, but their children have to be checked
-              # IO.inspect( symbol, label: "This symbol is allowed if children are allowed" )
-              {:continue}
+              true ->
+                # :: no match was found for this symbol, the query cannot be accepted
+                # IO.inspect( symbol, label: "This symbol is not allowed" )
+                {:exit, false}
+            end
 
-            true ->
-              # :: no match was found for this symbol, the query cannot be accepted
-              # IO.inspect( symbol, label: "This symbol is not allowed" )
-              {:exit, false}
-          end
+          _ ->
+            # :: ignore the item if it is not a SymbolMatch
+            {:continue}
         end
       end)
 
