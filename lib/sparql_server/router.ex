@@ -33,18 +33,20 @@ defmodule SparqlServer.Router do
   end
 
   get "/sparql" do
-    if conn.query_string do
-      params = conn.query_string |> URI.decode_query()
+    case conn.query_string do
+      "" ->
+        render_default_page(conn)
 
-      ALog.di(conn, "Received GET connection")
-      conn = downcase_request_headers(conn)
-      debug_log_request_id(conn)
+      query_string ->
+        params = URI.decode_query(query_string)
 
-      query = params["query"]
+        ALog.di(conn, "Received GET connection")
+        conn = downcase_request_headers(conn)
+        debug_log_request_id(conn)
 
-      handle_query_processing_and_response(query, :query, conn)
-    else
-      render_default_page
+        query = params["query"]
+
+        handle_query_processing_and_response(query, :query, conn)
     end
   end
 
@@ -106,7 +108,7 @@ defmodule SparqlServer.Router do
   ################
   ### Internal logic
 
-  defp render_default_page do
+  defp render_default_page(conn) do
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/ld+json")
     |> send_resp(200, "{
