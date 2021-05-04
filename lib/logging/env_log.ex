@@ -16,6 +16,11 @@ defmodule Logging.EnvLog do
   end
 
   @doc """
+  See log/2.
+  """
+  def puts(name, content), do: log(name, content)
+
+  @doc """
   Conditional variant of IO.inspect/2.  First argument is the entity to
   inspect, second is the condition to check, the rest are options for
   IO.inspect.
