@@ -1,4 +1,6 @@
 defmodule GraphReasoner do
+  alias Updates.QueryAnalyzer.Iri
+  alias Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol
   alias GraphReasoner.QueryInfo, as: QueryInfo
   alias GraphReasoner.QueryMatching, as: QueryMatching
   alias InterpreterTerms.WordMatch, as: Word
@@ -227,12 +229,12 @@ defmodule GraphReasoner do
     initialize_iri_from_symbol = fn iri_symbol, query_info ->
       iri =
         iri_symbol
-        |> Updates.QueryAnalyzer.Iri.from_symbol(prologue)
+        |> Iri.from_symbol(prologue)
 
       iri_string =
         iri
         |> Map.get(:iri)
-        |> Updates.QueryAnalyzer.Iri.unwrap_iri_string()
+        |> Iri.unwrap_iri_string()
 
       QueryInfo.init_term(query_info, iri_symbol, %{iri: iri, iri_string: iri_string})
     end
@@ -390,10 +392,10 @@ defmodule GraphReasoner do
             {:term, QueryMatching.VarOrTerm.term!(item)}
 
           match?(%Word{word: "a"}, item) ->
-            {:iri, Updates.QueryAnalyzer.Iri.make_a()}
+            {:iri, Iri.make_a()}
 
           match?(%Sym{symbol: :iri}, item) ->
-            {:iri, Updates.QueryAnalyzer.Iri.from_symbol(item, prologue_map)}
+            {:iri, Iri.from_symbol(item, prologue_map)}
 
           true ->
             Logging.EnvLog.inspect(item, :error, label: "Could not process item")
@@ -621,7 +623,7 @@ defmodule GraphReasoner do
           matching_graph_specs =
             group_spec.graphs
             |> Enum.filter(fn graph_spec ->
-              Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.member?(
+              PredicateMatchProtocol.member?(
                 graph_spec.constraint.predicates,
                 pathIri
               )

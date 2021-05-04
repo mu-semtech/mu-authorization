@@ -1,6 +1,9 @@
 defmodule SparqlServer.Router.HandlerSupport do
+  alias InterpreterTerms.SymbolMatch, as: Sym
+  alias Updates.QueryAnalyzer
+  alias QueryAnalyzer.Iri
   alias SparqlServer.Router.AccessGroupSupport, as: AccessGroupSupport
-  alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+  alias QueryAnalyzer.Types.Quad, as: Quad
   alias Updates.QueryAnalyzer, as: QueryAnalyzer
 
   require Logger
@@ -140,13 +143,13 @@ defmodule SparqlServer.Router.HandlerSupport do
     end
   end
 
-  def wrap_query_in_toplevel(%InterpreterTerms.SymbolMatch{symbol: :Sparql} = matched) do
+  def wrap_query_in_toplevel(%Sym{symbol: :Sparql} = matched) do
     matched
   end
 
-  def wrap_query_in_toplevel(%InterpreterTerms.SymbolMatch{string: str} = matched) do
+  def wrap_query_in_toplevel(%Sym{string: str} = matched) do
     # Only public for benchmark
-    %InterpreterTerms.SymbolMatch{
+    %Sym{
       symbol: :Sparql,
       string: str,
       submatches: [matched]
@@ -158,9 +161,9 @@ defmodule SparqlServer.Router.HandlerSupport do
   """
   def is_select_query(query) do
     case query do
-      %InterpreterTerms.SymbolMatch{
+      %Sym{
         symbol: :Sparql,
-        submatches: [%InterpreterTerms.SymbolMatch{symbol: :QueryUnit}]
+        submatches: [%Sym{symbol: :QueryUnit}]
       } ->
         true
 
@@ -213,24 +216,22 @@ defmodule SparqlServer.Router.HandlerSupport do
 
     {conn, authorization_groups} = AccessGroupSupport.calculate_access_groups(conn)
 
-    # TODO: DRY into/from Updates.QueryAnalyzer.insert_quads
+    # TODO: DRY into/from QueryAnalyzer.insert_quads
 
     # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
     options = %{
-      default_graph:
-        Updates.QueryAnalyzer.Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
+      default_graph: Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
       prefixes: %{
-        "xsd" => Updates.QueryAnalyzer.Iri.from_iri_string("<http://www.w3.org/2001/XMLSchema#>"),
-        "foaf" => Updates.QueryAnalyzer.Iri.from_iri_string("<http://xmlns.com/foaf/0.1/>")
+        "xsd" => Iri.from_iri_string("<http://www.w3.org/2001/XMLSchema#>"),
+        "foaf" => Iri.from_iri_string("<http://xmlns.com/foaf/0.1/>")
       }
     }
 
     analyzed_quads =
       query
       |> ALog.di("Parsed query")
-      |> Updates.QueryAnalyzer.quad_changes(%{
-        default_graph:
-          Updates.QueryAnalyzer.Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
+      |> QueryAnalyzer.quad_changes(%{
+        default_graph: Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
         authorization_groups: authorization_groups
       })
       |> Enum.reject(&match?({_, []}, &1))
@@ -255,10 +256,10 @@ defmodule SparqlServer.Router.HandlerSupport do
           |> Enum.map(fn {statement, processed_quads} ->
             case statement do
               :insert ->
-                Updates.QueryAnalyzer.construct_insert_query_from_quads(processed_quads, options)
+                QueryAnalyzer.construct_insert_query_from_quads(processed_quads, options)
 
               :delete ->
-                Updates.QueryAnalyzer.construct_delete_query_from_quads(processed_quads, options)
+                QueryAnalyzer.construct_delete_query_from_quads(processed_quads, options)
             end
           end)
 
@@ -320,8 +321,8 @@ defmodule SparqlServer.Router.HandlerSupport do
     end
   end
 
-  @spec join_quad_updates(Updates.QueryAnalyzer.quad_changes()) ::
-          Updates.QueryAnalyzer.quad_changes()
+  @spec join_quad_updates(QueryAnalyzer.quad_changes()) ::
+          QueryAnalyzer.quad_changes()
   defp join_quad_updates(elts) do
     elts
     |> Enum.map(fn {op, quads} -> {op, MapSet.new(quads)} end)

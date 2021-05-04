@@ -1,4 +1,5 @@
 defmodule SparqlServer.Router.Handler.Worker do
+  alias SparqlServer.Router.HandlerSupport
   require Logger
   require ALog
   use GenServer
@@ -16,7 +17,7 @@ defmodule SparqlServer.Router.Handler.Worker do
 
     try do
       {conn, {status_code, encoded_response}, new_local_template_store} =
-        SparqlServer.Router.HandlerSupport.handle_query_with_template_local_store(
+        HandlerSupport.handle_query_with_template_local_store(
           query_string,
           kind,
           conn,

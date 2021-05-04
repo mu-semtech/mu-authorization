@@ -1,4 +1,5 @@
 defmodule Acl.GraphSpec.Constraint.Resource.AllPredicates do
+  alias __MODULE__
   alias Updates.QueryAnalyzer.Iri, as: Iri
 
   defstruct except: []
@@ -8,7 +9,7 @@ defmodule Acl.GraphSpec.Constraint.Resource.AllPredicates do
   """
 
   defimpl Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol do
-    def member?(%Acl.GraphSpec.Constraint.Resource.AllPredicates{except: except}, %Iri{
+    def member?(%AllPredicates{except: except}, %Iri{
           iri: iri_value
         }) do
       # TODO: wrapping of Iri should be abstracted
