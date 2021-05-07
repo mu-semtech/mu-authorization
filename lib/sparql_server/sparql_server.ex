@@ -73,7 +73,7 @@ defmodule SparqlServer do
       {Interpreter.Diff.Store.Storage, nil},
       {Interpreter.Diff.Store.Manipulator, nil},
       {Plug.Adapters.Cowboy2,
-       scheme: :http, plug: SparqlServer.Router, options: [port: port, timeout: 60_000]},
+       scheme: :http, plug: SparqlServer.Router, options: [port: port]},
       :poolboy.child_spec(:worker, [
         {:name, {:local, :query_worker}},
         {:worker_module, SparqlServer.Router.Handler.Worker},
