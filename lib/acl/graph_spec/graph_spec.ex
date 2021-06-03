@@ -6,9 +6,13 @@ defmodule Acl.GraphSpec do
   require Logger
   require ALog
 
-  @type t :: %GraphSpec{graph: String.t(), constraint: ResourceConstraint.t()}
+  @type t :: %GraphSpec{
+          graph: String.t(),
+          constraint: ResourceConstraint.t(),
+          usage: [Acl.GroupSpec.useage_method()] | nil
+        }
 
-  defstruct [:graph, :constraint]
+  defstruct [:graph, :constraint, :usage]
 
   @moduledoc """
   A GraphSpec indicates which triples should be stored in a specific
