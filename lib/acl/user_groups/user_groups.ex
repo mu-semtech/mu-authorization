@@ -1,4 +1,5 @@
 defmodule Acl.UserGroups do
+  alias Acl.GroupSpec.GraphCleanup, as: GraphCleanup
   alias Acl.UserGroups.Config, as: Config
   alias Acl.GroupSpec, as: GroupSpec
 
@@ -12,6 +13,7 @@ defmodule Acl.UserGroups do
   @spec user_groups_for(Config.t(), GroupSpec.useage_method()) :: Config.t()
   def user_groups_for(user_groups, useage) do
     user_groups
+    |> ensure_graph_cleanup
     |> Enum.reduce([], fn group_spec, acc ->
       case group_spec do
         %GraphCleanup{} ->
@@ -50,5 +52,29 @@ defmodule Acl.UserGroups do
   def for_use(useage) do
     Config.user_groups()
     |> user_groups_for(useage)
+  end
+
+  defp ensure_graph_cleanup(user_groups) do
+    default_graph_cleanup = %GraphCleanup{
+      originating_graph: "http://mu.semte.ch/application",
+      useage: [:write],
+      name: "clean"
+    }
+
+    case List.last(user_groups) do
+      %GraphCleanup{} ->
+        user_groups
+
+      nil ->
+        [default_graph_cleanup]
+
+      _ ->
+        user_groups
+        |> Enum.reverse()
+        |> (fn reversed_groups ->
+              [default_graph_cleanup | reversed_groups]
+            end).()
+        |> Enum.reverse()
+    end
   end
 end
