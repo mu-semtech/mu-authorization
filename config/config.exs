@@ -87,13 +87,13 @@ config :"mu-authorization",
 #     config :logger, level: :info
 #
 
+config :logger,
+  compile_time_purge_matching: :debug,
+  level: :warn
+
 # config :logger,
 #   compile_time_purge_level: :debug,
-#   level: :info
-
-config :logger,
-  compile_time_purge_level: :debug,
-  level: :warn
+#   level: :warn
 
 if Mix.env() == :test do
   config :junit_formatter,

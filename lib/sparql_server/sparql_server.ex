@@ -72,7 +72,7 @@ defmodule SparqlServer do
       {Interpreter.CachedInterpreter, nil},
       {Interpreter.Diff.Store.Storage, nil},
       {Interpreter.Diff.Store.Manipulator, nil},
-      {Plug.Adapters.Cowboy2,
+      {Plug.Cowboy,
        scheme: :http, plug: SparqlServer.Router, options: [port: port]},
       :poolboy.child_spec(:worker, [
         {:name, {:local, :query_worker}},

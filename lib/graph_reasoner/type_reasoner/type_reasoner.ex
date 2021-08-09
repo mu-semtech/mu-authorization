@@ -1,6 +1,6 @@
-defmodule TypeReasoner do
+defmodule GraphReasoner.TypeReasoner do
+  alias GraphReasoner.{ModelInfo, QueryInfo}
   alias Updates.QueryAnalyzer.Iri
-  alias GraphReasoner.{TypeReasoner, ModelInfo, QueryInfo}
 
   @moduledoc """
   The TypeReasoner derives types for known entities and pushes the
