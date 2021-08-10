@@ -15,21 +15,18 @@ defmodule Delta.Message do
 
   @impl true
   def handle_call({:construct, delta, access_groups, origin}, _from, state ) do
-    index = state.index
-    new_state = %{state | index: index + 1}
 
-    json_model = %{
-      "changeSets" =>
-        Enum.map(delta, fn delta_item ->
-          delta_item
-          |> convert_delta_item
-          |> add_allowed_groups(access_groups)
-          |> add_origin(origin)
-        end),
-        "index" => index
-    }
+    {model, new_index} = Enum.map_reduce(delta, state.index, fn delta_item, index ->
+      delta_item
+      |> convert_delta_item
+      |> add_allowed_groups(access_groups)
+      |> add_origin(origin)
+      |> add_index(index)
+    end)
 
-    {:reply, json_model, new_state}
+    new_state = %{state | index: new_index}
+
+    {:reply, model, new_state}
   end
 
   @moduledoc """
@@ -55,11 +52,12 @@ defmodule Delta.Message do
     # services ignore content which came from their end and would
     # allow services to perform updates in the name of a specific
     # user.
-    json_model = GenServer.call( __MODULE__, {:construct, delta, access_groups, origin})
+    # json_model =
 
-    Poison.encode!(json_model)
+    # Poison.encode!(json_model)
+
+    GenServer.call( __MODULE__, {:construct, delta, access_groups, origin})
   end
-
 
   defp convert_delta_item({:insert, quads}) do
     %{"insert" => Enum.map(quads, &convert_quad/1)}
@@ -82,6 +80,10 @@ defmodule Delta.Message do
 
   defp add_origin(map, origin) do
     Map.put(map, "origin", origin)
+  end
+
+  defp add_index(map, index) do
+    {Map.put(map, "index", index), index + 1}
   end
 
   defp convert_quad(%Quad{graph: graph, subject: subject, predicate: predicate, object: object}) do

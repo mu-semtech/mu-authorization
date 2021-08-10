@@ -65,6 +65,7 @@ defmodule SparqlServer do
 
     children = [
       {Cache.Types, %{}},
+      {Delta.Cache, nil},
       {Delta.Message, nil},
       {Support.Id, nil},
       {SparqlClient.InfoEndpoint, nil},

@@ -46,7 +46,8 @@ defmodule Delta do
     delta
     |> Delta.Message.construct(authorization_groups, origin)
     |> Logging.EnvLog.inspect(:log_delta_messages, label: "Constructed body for clients")
-    |> Delta.Messenger.inform_clients(mu_call_id_trail: mu_call_id_trail)
+    |> Delta.Cache.inform(mu_call_id_trail)
+    # |> Delta.Messenger.inform_clients(mu_call_id_trail: mu_call_id_trail)
 
     delta
   end
