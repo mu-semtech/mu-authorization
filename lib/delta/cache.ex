@@ -1,8 +1,6 @@
 defmodule Delta.Cache do
   use GenServer
 
-  @coalesce_time 2 * 1000
-
   def inform(delta, mu_call_id_trail) do
       GenServer.call( __MODULE__, {:inform, delta, mu_call_id_trail})
   end
@@ -25,7 +23,9 @@ defmodule Delta.Cache do
 
 
   defp touch_timeout(state, mu_call_id_trail) do
-    ref = Process.send_after(self(), {:timeout, mu_call_id_trail}, @coalesce_time)
+    timeout_duration = Application.get_env(:"mu-authorization", :delta_cache_timeout)
+
+    ref = Process.send_after(self(), {:timeout, mu_call_id_trail}, timeout_duration)
     new_state = Map.update(state, mu_call_id_trail, %{buffer: [], ref: ref}, fn x ->
       Process.cancel_timer(x.ref)
       # Keep buffer intact
@@ -47,7 +47,6 @@ defmodule Delta.Cache do
     }
 
     json_model
-    |> IO.inspect(label: "hallooooo")
     |> Poison.encode!()
     |> Delta.Messenger.inform_clients(mu_call_id_trail: mu_call_id_trail)
 
