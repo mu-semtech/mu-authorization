@@ -227,6 +227,14 @@ defmodule SparqlServer.Router.HandlerSupport do
       }
     }
 
+    quad_in_store = fn thing ->
+      returned =
+        QueryAnalyzer.construct_ask_query(thing)
+        |> SparqlClient.execute_parsed(request: conn, query_type: :read)
+
+      returned["boolean"]
+    end
+
     analyzed_quads =
       query
       |> ALog.di("Parsed query")
@@ -244,14 +252,18 @@ defmodule SparqlServer.Router.HandlerSupport do
         {:fail, reason}
 
       _ ->
-        processed_manipulations =
+        {true_inserts, true_deletions, false_inserts, false_deletions} =
           analyzed_quads
           |> Enum.map(fn {manipulation, _requested_quads, effective_quads} ->
             {manipulation, effective_quads}
           end)
+          |> reduce_actual_fake(quad_in_store, {MapSet.new(), MapSet.new(), MapSet.new(), MapSet.new()})
+
+
+        actual_processed_manipulations = [{:delete, true_deletions}, {:insert, true_inserts}]
 
         executable_queries =
-          processed_manipulations
+          actual_processed_manipulations
           |> join_quad_updates
           |> Enum.map(fn {statement, processed_quads} ->
             case statement do
@@ -264,13 +276,63 @@ defmodule SparqlServer.Router.HandlerSupport do
           end)
 
         delta_updater = fn ->
-          Delta.publish_updates(processed_manipulations, authorization_groups, conn)
+          Delta.publish_updates(actual_processed_manipulations, authorization_groups, conn)
         end
 
         # TODO: should we set the access groups on update queries too?
         # see AccessGroupSupport.put_access_groups/2 ( conn, authorization_groups )
         {conn, executable_queries, delta_updater}
     end
+  end
+
+  defp reduce_actual_fake([], _, x), do: x
+
+  defp reduce_actual_fake([{:insert, quads} | xs], quad_in_store, state) do
+    new_state =
+      Enum.reduce(
+        quads,
+        state,
+        fn quad, {true_inserts, true_deletions, false_inserts, false_deletions} ->
+          if not quad_in_store.(quad) do
+            {MapSet.put(true_inserts, quad), true_deletions, false_inserts, false_deletions}
+          else
+            if MapSet.member?(true_deletions, quad) do
+              # Element not in store, but would be deleted
+              # So both false insert and false deletion
+              {true_inserts, MapSet.delete(true_deletions, quad), MapSet.put(false_inserts, quad),
+               MapSet.put(false_deletions, quad)}
+            else
+              {true_inserts, true_deletions, MapSet.put(false_inserts, quad), false_deletions}
+            end
+          end
+        end
+      )
+
+    reduce_actual_fake(xs, quad_in_store, new_state)
+  end
+
+  defp reduce_actual_fake([{:delete, quads} | xs], quad_in_store, state) do
+    new_state =
+      Enum.reduce(
+        quads,
+        state,
+        fn quad, {true_inserts, true_deletions, false_inserts, false_deletions} ->
+          if quad_in_store.(quad) do
+            {true_inserts, MapSet.put(true_deletions, quad), false_inserts, false_deletions}
+          else
+            if MapSet.member?(true_inserts, quad) do
+              # Element not in store, but would be deleted
+              # So both false insert and false deletion
+              {MapSet.delete(true_inserts, quad), true_deletions, MapSet.put(false_inserts, quad),
+               MapSet.put(false_deletions, quad)}
+            else
+              {true_inserts, true_deletions, false_inserts, MapSet.put(false_deletions, quad)}
+            end
+          end
+        end
+      )
+
+    reduce_actual_fake(xs, quad_in_store, new_state)
   end
 
   defp enrich_manipulations_with_access_rights(manipulations, authorization_groups) do
@@ -298,11 +360,11 @@ defmodule SparqlServer.Router.HandlerSupport do
             |> Enum.map(&{&1.subject, &1.predicate, &1.object})
             |> MapSet.new()
 
-          all_triples_written? = Set.equal?(requested_triples, effective_triples)
+          all_triples_written? = MapSet.equal?(requested_triples, effective_triples)
 
           unless all_triples_written? do
             Logging.EnvLog.inspect(
-              Set.difference(requested_triples, effective_triples),
+              MapSet.difference(requested_triples, effective_triples),
               :error,
               label: "These triples would not be written to the triplestore"
             )

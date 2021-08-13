@@ -4,6 +4,68 @@ defmodule Updates.QueryConstructors do
   alias InterpreterTerms.WordMatch, as: Word
   alias Updates.QueryAnalyzer.Types.Quad, as: Quad
 
+  @doc """
+  Creates a valid ASK query, for a single quad
+  """
+  def make_ask_query(quad) do
+    quad_pattern = %Sym {
+      symbol: :QuadData,
+      submatches: [
+        %Word{external: %{}, whitespace: "", word: "{"},
+        %Sym{
+          symbol: :Quads,
+          submatches: [
+            make_quad_match_from_quad(quad),
+          ]
+        },
+        %Word{external: %{}, whitespace: "", word: "}"},
+      ]
+    }
+
+    group_graph_pattern = Manipulator.Transform.quad_data_to_group_graph_pattern(quad_pattern)
+
+    %Sym{
+      symbol: :Sparql,
+      submatches: [
+        %Sym{
+          symbol: :QueryUnit,
+          submatches: [
+            %Sym{
+              symbol: :Query,
+              submatches: [
+                %Sym{
+                  symbol: :Prologue,
+                  submatches: []
+                },
+                %Sym{
+                  symbol: :AskQuery,
+                  submatches: [
+                    %Word{word: "ASK"},
+                    %Sym{
+                      symbol: :WhereClause,
+                      submatches: [
+                        %Word{word: "WHERE"},
+                        group_graph_pattern,
+                      ]
+                    },
+                    %Sym{
+                      symbol: :SolutionModifier,
+                      submatches: []
+                    }
+                  ]
+                },
+                %Sym{
+                  symbol: :ValuesClause,
+                  submatches: []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  end
+
   def make_select_query(variable_syms, group_graph_pattern_sym) do
     %Sym{
       symbol: :Sparql,
