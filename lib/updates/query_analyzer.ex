@@ -857,6 +857,9 @@ defmodule Updates.QueryAnalyzer do
     |> Map.put(:default_graph, iri)
   end
 
+  def construct_asks_query(quads) do
+    QueryConstructors.make_asks_query(quads)
+  end
 
   def construct_ask_query(quad) do
     QueryConstructors.make_ask_query(quad)

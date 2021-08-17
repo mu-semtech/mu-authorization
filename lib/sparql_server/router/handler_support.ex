@@ -5,6 +5,7 @@ defmodule SparqlServer.Router.HandlerSupport do
   alias SparqlServer.Router.AccessGroupSupport, as: AccessGroupSupport
   alias QueryAnalyzer.Types.Quad, as: Quad
   alias Updates.QueryAnalyzer, as: QueryAnalyzer
+  alias Updates.QueryAnalyzer.P, as: QueryAnalyzerProtocol
 
   require Logger
   require ALog
@@ -209,6 +210,12 @@ defmodule SparqlServer.Router.HandlerSupport do
     end
   end
 
+  ## Create tuple from literal {type, value}
+  defp get_result_tuple(x) do
+    out = QueryAnalyzerProtocol.to_sparql_result_value(x)
+    {out.type, out.value}
+  end
+
   ### Manipulates the update query yielding back the valid set of
   ### queries which should be executed on the database.
   defp manipulate_update_query(query, conn) do
@@ -227,13 +234,9 @@ defmodule SparqlServer.Router.HandlerSupport do
       }
     }
 
-    quad_in_store = fn thing ->
-      returned =
-        QueryAnalyzer.construct_ask_query(thing)
-        |> SparqlClient.execute_parsed(request: conn, query_type: :read)
-
-      returned["boolean"]
-    end
+    quad_in_store_with_ask =
+      &(QueryAnalyzer.construct_ask_query(&1)
+        |> SparqlClient.execute_parsed(request: conn, query_type: :read))["boolean"]
 
     analyzed_quads =
       query
@@ -252,13 +255,72 @@ defmodule SparqlServer.Router.HandlerSupport do
         {:fail, reason}
 
       _ ->
+        # From current quads, analyse what quads are already present
+        triple_store_content =
+          analyzed_quads
+          |> Enum.flat_map(&elem(&1, 2))
+          |> QueryAnalyzer.construct_asks_query()
+          |> SparqlClient.execute_parsed(request: conn, query_type: :read)
+          |> Map.get("results")
+          |> Map.get("bindings")
+          |> Enum.map(fn %{"o" => object, "s" => subject, "p" => predicate} ->
+            {
+              {subject["type"], subject["value"]},
+              {predicate["type"], predicate["value"]},
+              {object["type"], object["value"]}
+            }
+          end)
+
+        # From current quads, calculate frequency of _triple_
+        # Equal quads have no influence, but same triples from different graphs
+        # cannot be queried with the same CONSTRUCT query
+        # (because CONSTRUCT only returns triples)
+        tested_content_frequencies =
+          analyzed_quads
+          |> Enum.flat_map(&elem(&1, 2))
+          # Same things in same graph are ignored
+          |> Enum.uniq()
+          |> Enum.map(fn %Quad{
+                           subject: subject,
+                           predicate: predicate,
+                           object: object,
+                           graph: _graph
+                         } ->
+            {get_result_tuple(subject), get_result_tuple(predicate), get_result_tuple(object)}
+          end)
+          |> Enum.frequencies()
+
+
+        # Test if a quad is inn the store
+        # If the calculated frequency is one, the existence of the triple in the CONSTRUCT query
+        # uniquely represents the existence of the quad in the triplestore
+        # If the calculated frequency is more, the triple might exist in more graphs
+        # so the CONSTRUCT query does not uniquely represent the quad in the triplestore
+        # so an ASK query is executed (this shouldn't happen too often)
+        quad_in_store = fn %Quad{
+                             subject: subject,
+                             predicate: predicate,
+                             object: object,
+                             graph: _graph
+                           } = quad ->
+          value = {get_result_tuple(subject), get_result_tuple(predicate), get_result_tuple(object)}
+
+          if Map.get(tested_content_frequencies, value, 0) > 1 do
+            quad_in_store_with_ask.(quad)
+          else
+            value in triple_store_content
+          end
+        end
+
         {true_inserts, true_deletions, false_inserts, false_deletions} =
           analyzed_quads
           |> Enum.map(fn {manipulation, _requested_quads, effective_quads} ->
             {manipulation, effective_quads}
           end)
-          |> reduce_actual_fake(quad_in_store, {MapSet.new(), MapSet.new(), MapSet.new(), MapSet.new()})
-
+          |> reduce_actual_fake(
+            quad_in_store,
+            {MapSet.new(), MapSet.new(), MapSet.new(), MapSet.new()}
+          )
 
         actual_processed_manipulations = [{:delete, true_deletions}, {:insert, true_inserts}]
 
@@ -285,8 +347,11 @@ defmodule SparqlServer.Router.HandlerSupport do
     end
   end
 
+  # Reduce :insert and :delete delta's into true and false delta's
   defp reduce_actual_fake([], _, x), do: x
 
+  # An insert is a true delta if the quad is not yet present in the triplestore
+  # If a true deletion would delete this quad, the deletion is actually a false deletion
   defp reduce_actual_fake([{:insert, quads} | xs], quad_in_store, state) do
     new_state =
       Enum.reduce(
@@ -311,6 +376,8 @@ defmodule SparqlServer.Router.HandlerSupport do
     reduce_actual_fake(xs, quad_in_store, new_state)
   end
 
+  # A deletion is a true deletion if the quad is present in the triplestore
+  # If a true insertion would insert this quad, the insert is actually a false insert
   defp reduce_actual_fake([{:delete, quads} | xs], quad_in_store, state) do
     new_state =
       Enum.reduce(
@@ -334,6 +401,7 @@ defmodule SparqlServer.Router.HandlerSupport do
 
     reduce_actual_fake(xs, quad_in_store, new_state)
   end
+
 
   defp enrich_manipulations_with_access_rights(manipulations, authorization_groups) do
     manipulations
