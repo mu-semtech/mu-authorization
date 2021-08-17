@@ -5,7 +5,6 @@ defmodule SparqlServer.Router.HandlerSupport do
   alias SparqlServer.Router.AccessGroupSupport, as: AccessGroupSupport
   alias QueryAnalyzer.Types.Quad, as: Quad
   alias Updates.QueryAnalyzer, as: QueryAnalyzer
-  alias Updates.QueryAnalyzer.P, as: QueryAnalyzerProtocol
 
   require Logger
   require ALog
@@ -111,36 +110,87 @@ defmodule SparqlServer.Router.HandlerSupport do
       |> wrap_query_in_toplevel
       |> ALog.di("Wrapped parsed query")
 
-    query_manipulator =
-      if is_select_query(parsed_form) do
-        &manipulate_select_query/2
-      else
-        &manipulate_update_query/2
+    if is_select_query(parsed_form) do
+      # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
+      options = %{
+        default_graph: Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
+        prefixes: %{
+          "xsd" => Iri.from_iri_string("<http://www.w3.org/2001/XMLSchema#>"),
+          "foaf" => Iri.from_iri_string("<http://xmlns.com/foaf/0.1/>")
+        }
+      }
+
+      Cache.Deltas.flush(options)
+
+      {conn, new_parsed_forms} = manipulate_select_query(parsed_form, conn)
+
+      query_type =
+        if Enum.any?(new_parsed_forms, fn q -> !is_select_query(q) end) do
+          :read
+        else
+          :write
+        end
+
+      encoded_response =
+        new_parsed_forms
+        |> ALog.di("New parsed forms")
+        |> Enum.map(&SparqlClient.execute_parsed(&1, request: conn, query_type: query_type))
+        |> List.first()
+        |> Poison.encode!()
+
+      {conn, {200, encoded_response}, new_template_local_store}
+    else
+      {conn, authorization_groups} = AccessGroupSupport.calculate_access_groups(conn)
+
+      origin =
+        conn
+        |> Map.get(:remote_ip)
+        |> Tuple.to_list()
+        |> Enum.join(".")
+
+
+      mu_call_id_trail =
+        (case Plug.Conn.get_req_header(conn, "mu-call-id-trail") do
+          # ignore extra values for now, they should not happen, but
+          # if they do we don't want to crash either
+          [value | _] -> Poison.decode!(value)
+            _ -> []
+        end)
+        |> Kernel.++(Plug.Conn.get_req_header(conn, "mu-call-id"))
+        |> Poison.encode!()
+
+      analyzed_quads =
+        parsed_form
+        |> ALog.di("Parsed query")
+        |> QueryAnalyzer.quad_changes(%{
+          default_graph: Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
+          authorization_groups: authorization_groups
+        })
+        |> Enum.reject(&match?({_, []}, &1))
+        |> ALog.di("Non-empty operations")
+        |> enrich_manipulations_with_access_rights(authorization_groups)
+        |> maybe_verify_all_triples_written()
+
+      case analyzed_quads do
+        {:fail, reason} ->
+          encoded_response_string = Poison.encode!(%{errors: [%{status: "403", title: reason}]})
+          {conn, {403, encoded_response_string}, new_template_local_store}
+
+        _ ->
+          analyzed_quads
+          |> Enum.map(fn {manipulation, _requested_quads, effective_quads} ->
+            {manipulation, effective_quads}
+          end)
+          |> Cache.Deltas.add_deltas(
+            :construct,
+            origin: origin,
+            mu_call_id_trail: mu_call_id_trail,
+            authorization_groups: AccessGroupSupport.encode_json_access_groups(authorization_groups)
+          )
+
+          succesful = Poison.encode!(%{sucessful: true})
+          {conn, {200, succesful}, new_template_local_store}
       end
-
-    case query_manipulator.(parsed_form, conn) do
-      {conn, new_parsed_forms, post_processing} ->
-        query_type =
-          if Enum.any?(new_parsed_forms, fn q -> !is_select_query(q) end) do
-            :read
-          else
-            :write
-          end
-
-        encoded_response =
-          new_parsed_forms
-          |> ALog.di("New parsed forms")
-          |> Enum.map(&SparqlClient.execute_parsed(&1, request: conn, query_type: query_type))
-          |> List.first()
-          |> Poison.encode!()
-
-        post_processing.()
-
-        {conn, {200, encoded_response}, new_template_local_store}
-
-      {:fail, reason} ->
-        encoded_response_string = Poison.encode!(%{errors: [%{status: "403", title: reason}]})
-        {conn, {403, encoded_response_string}, new_template_local_store}
     end
   end
 
@@ -188,7 +238,7 @@ defmodule SparqlServer.Router.HandlerSupport do
         {conn, query}
       end
 
-    {conn, [query], fn -> :ok end}
+    {conn, [query]}
   end
 
   @doc """
@@ -208,198 +258,6 @@ defmodule SparqlServer.Router.HandlerSupport do
       |> Acl.process_query(Acl.UserGroups.for_use(useage), authorization_groups)
       |> elem(0)
     end
-  end
-
-  ## Create tuple from literal {type, value}
-  defp get_result_tuple(x) do
-    out = QueryAnalyzerProtocol.to_sparql_result_value(x)
-    {out.type, out.value}
-  end
-
-  ### Manipulates the update query yielding back the valid set of
-  ### queries which should be executed on the database.
-  defp manipulate_update_query(query, conn) do
-    Logger.debug("This is an update query")
-
-    {conn, authorization_groups} = AccessGroupSupport.calculate_access_groups(conn)
-
-    # TODO: DRY into/from QueryAnalyzer.insert_quads
-
-    # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
-    options = %{
-      default_graph: Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
-      prefixes: %{
-        "xsd" => Iri.from_iri_string("<http://www.w3.org/2001/XMLSchema#>"),
-        "foaf" => Iri.from_iri_string("<http://xmlns.com/foaf/0.1/>")
-      }
-    }
-
-    quad_in_store_with_ask =
-      &(QueryAnalyzer.construct_ask_query(&1)
-        |> SparqlClient.execute_parsed(request: conn, query_type: :read))["boolean"]
-
-    analyzed_quads =
-      query
-      |> ALog.di("Parsed query")
-      |> QueryAnalyzer.quad_changes(%{
-        default_graph: Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
-        authorization_groups: authorization_groups
-      })
-      |> Enum.reject(&match?({_, []}, &1))
-      |> ALog.di("Non-empty operations")
-      |> enrich_manipulations_with_access_rights(authorization_groups)
-      |> maybe_verify_all_triples_written()
-
-    case analyzed_quads do
-      {:fail, reason} ->
-        {:fail, reason}
-
-      _ ->
-        # From current quads, analyse what quads are already present
-        triple_store_content =
-          analyzed_quads
-          |> Enum.flat_map(&elem(&1, 2))
-          |> QueryAnalyzer.construct_asks_query()
-          |> SparqlClient.execute_parsed(request: conn, query_type: :read)
-          |> Map.get("results")
-          |> Map.get("bindings")
-          |> Enum.map(fn %{"o" => object, "s" => subject, "p" => predicate} ->
-            {
-              {subject["type"], subject["value"]},
-              {predicate["type"], predicate["value"]},
-              {object["type"], object["value"]}
-            }
-          end)
-
-        # From current quads, calculate frequency of _triple_
-        # Equal quads have no influence, but same triples from different graphs
-        # cannot be queried with the same CONSTRUCT query
-        # (because CONSTRUCT only returns triples)
-        tested_content_frequencies =
-          analyzed_quads
-          |> Enum.flat_map(&elem(&1, 2))
-          # Same things in same graph are ignored
-          |> Enum.uniq()
-          |> Enum.map(fn %Quad{
-                           subject: subject,
-                           predicate: predicate,
-                           object: object,
-                           graph: _graph
-                         } ->
-            {get_result_tuple(subject), get_result_tuple(predicate), get_result_tuple(object)}
-          end)
-          |> Enum.frequencies()
-
-
-        # Test if a quad is inn the store
-        # If the calculated frequency is one, the existence of the triple in the CONSTRUCT query
-        # uniquely represents the existence of the quad in the triplestore
-        # If the calculated frequency is more, the triple might exist in more graphs
-        # so the CONSTRUCT query does not uniquely represent the quad in the triplestore
-        # so an ASK query is executed (this shouldn't happen too often)
-        quad_in_store = fn %Quad{
-                             subject: subject,
-                             predicate: predicate,
-                             object: object,
-                             graph: _graph
-                           } = quad ->
-          value = {get_result_tuple(subject), get_result_tuple(predicate), get_result_tuple(object)}
-
-          if Map.get(tested_content_frequencies, value, 0) > 1 do
-            quad_in_store_with_ask.(quad)
-          else
-            value in triple_store_content
-          end
-        end
-
-        {true_inserts, true_deletions, false_inserts, false_deletions} =
-          analyzed_quads
-          |> Enum.map(fn {manipulation, _requested_quads, effective_quads} ->
-            {manipulation, effective_quads}
-          end)
-          |> reduce_actual_fake(
-            quad_in_store,
-            {MapSet.new(), MapSet.new(), MapSet.new(), MapSet.new()}
-          )
-
-        actual_processed_manipulations = [{:delete, true_deletions}, {:insert, true_inserts}]
-
-        executable_queries =
-          actual_processed_manipulations
-          |> join_quad_updates
-          |> Enum.map(fn {statement, processed_quads} ->
-            case statement do
-              :insert ->
-                QueryAnalyzer.construct_insert_query_from_quads(processed_quads, options)
-
-              :delete ->
-                QueryAnalyzer.construct_delete_query_from_quads(processed_quads, options)
-            end
-          end)
-
-        delta_updater = fn ->
-          Delta.publish_updates(actual_processed_manipulations, authorization_groups, conn)
-        end
-
-        # TODO: should we set the access groups on update queries too?
-        # see AccessGroupSupport.put_access_groups/2 ( conn, authorization_groups )
-        {conn, executable_queries, delta_updater}
-    end
-  end
-
-  # Reduce :insert and :delete delta's into true and false delta's
-  defp reduce_actual_fake([], _, x), do: x
-
-  # An insert is a true delta if the quad is not yet present in the triplestore
-  # If a true deletion would delete this quad, the deletion is actually a false deletion
-  defp reduce_actual_fake([{:insert, quads} | xs], quad_in_store, state) do
-    new_state =
-      Enum.reduce(
-        quads,
-        state,
-        fn quad, {true_inserts, true_deletions, false_inserts, false_deletions} ->
-          if not quad_in_store.(quad) do
-            {MapSet.put(true_inserts, quad), true_deletions, false_inserts, false_deletions}
-          else
-            if MapSet.member?(true_deletions, quad) do
-              # Element not in store, but would be deleted
-              # So both false insert and false deletion
-              {true_inserts, MapSet.delete(true_deletions, quad), MapSet.put(false_inserts, quad),
-               MapSet.put(false_deletions, quad)}
-            else
-              {true_inserts, true_deletions, MapSet.put(false_inserts, quad), false_deletions}
-            end
-          end
-        end
-      )
-
-    reduce_actual_fake(xs, quad_in_store, new_state)
-  end
-
-  # A deletion is a true deletion if the quad is present in the triplestore
-  # If a true insertion would insert this quad, the insert is actually a false insert
-  defp reduce_actual_fake([{:delete, quads} | xs], quad_in_store, state) do
-    new_state =
-      Enum.reduce(
-        quads,
-        state,
-        fn quad, {true_inserts, true_deletions, false_inserts, false_deletions} ->
-          if quad_in_store.(quad) do
-            {true_inserts, MapSet.put(true_deletions, quad), false_inserts, false_deletions}
-          else
-            if MapSet.member?(true_inserts, quad) do
-              # Element not in store, but would be deleted
-              # So both false insert and false deletion
-              {MapSet.delete(true_inserts, quad), true_deletions, MapSet.put(false_inserts, quad),
-               MapSet.put(false_deletions, quad)}
-            else
-              {true_inserts, true_deletions, false_inserts, MapSet.put(false_deletions, quad)}
-            end
-          end
-        end
-      )
-
-    reduce_actual_fake(xs, quad_in_store, new_state)
   end
 
 
@@ -451,45 +309,6 @@ defmodule SparqlServer.Router.HandlerSupport do
     end
   end
 
-  @spec join_quad_updates(QueryAnalyzer.quad_changes()) ::
-          QueryAnalyzer.quad_changes()
-  defp join_quad_updates(elts) do
-    elts
-    |> Enum.map(fn {op, quads} -> {op, MapSet.new(quads)} end)
-    |> join_quad_map_updates([])
-    |> Enum.map(fn {op, quads} -> {op, MapSet.to_list(quads)} end)
-    |> Enum.reject(&match?({_, []}, &1))
-  end
-
-  @type map_quad :: {QueryAnalyzer.quad_change_key(), MapSet.t(Quad.t())}
-
-  @spec join_quad_map_updates([map_quad], [map_quad]) :: [map_quad]
-  defp join_quad_map_updates([], res), do: res
-  defp join_quad_map_updates([elt | rest], []), do: join_quad_map_updates(rest, [elt])
-
-  defp join_quad_map_updates([{type, quads} | rest], [{type, other_quads}]),
-    do: join_quad_map_updates(rest, [{type, MapSet.union(quads, other_quads)}])
-
-  defp join_quad_map_updates([quads | rest], [other_quads]) do
-    new_other_quads = fold_quad_map_updates(other_quads, quads)
-    join_quad_map_updates(rest, [new_other_quads, quads])
-  end
-
-  defp join_quad_map_updates([quad_updates | rest], [left, right]) do
-    new_left = fold_quad_map_updates(left, quad_updates)
-    new_right = fold_quad_map_updates(right, quad_updates)
-
-    join_quad_map_updates(rest, [new_left, new_right])
-  end
-
-  @spec fold_quad_map_updates(map_quad, map_quad) :: map_quad
-  defp fold_quad_map_updates({key, left_quads}, {key, right_quads}),
-    # :inserts, :inserts or :deletes, :deletes
-    do: {key, MapSet.union(left_quads, right_quads)}
-
-  defp fold_quad_map_updates({left_type, left_quads}, {_right_type, right_quads}),
-    # :inserts, :deletes or :deletes, :inserts
-    do: {left_type, MapSet.difference(left_quads, right_quads)}
 
   @spec enforce_write_rights([Quad.t()], Acl.UserGroups.Config.t()) :: [Quad.t()]
   defp enforce_write_rights(quads, authorization_groups) do
