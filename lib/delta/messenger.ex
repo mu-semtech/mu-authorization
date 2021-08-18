@@ -6,8 +6,11 @@ defmodule Delta.Messenger do
 
   @moduledoc """
   Sends constructed messages to all interested clients.
+
+  Type of the messages which can be sent to a client.  Currently, this
+  is a binary string.
   """
-  @spec inform_clients(Delta.Message.t(), call_options) :: :ok
+  @spec inform_clients(String.t(), call_options) :: :ok
   def inform_clients(message, options \\ []) do
     # TODO we should create one thread per callee and push messages on
     # there.  As long as the client hasn't shown a sign of life, we

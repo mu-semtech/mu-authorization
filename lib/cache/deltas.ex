@@ -2,6 +2,7 @@ defmodule Cache.Deltas do
   alias Updates.QueryAnalyzer
   alias Updates.QueryAnalyzer.P, as: QueryAnalyzerProtocol
   alias Updates.QueryAnalyzer.Types.Quad, as: Quad
+  alias SparqlServer.Router.AccessGroupSupport, as: AccessGroupSupport
 
   require Logger
   require ALog
@@ -34,9 +35,14 @@ defmodule Cache.Deltas do
   @spec add_deltas(QueryAnalyzer.quad_changes(), cache_logic_key()) :: :ok
   def add_deltas(quad_changes, logic, delta_meta \\ []) do
     case logic do
-      :precache -> GenServer.cast(__MODULE__, {:cache_w_cache, quad_changes})
-      :construct -> GenServer.cast(__MODULE__, {:cache_w_construct, quad_changes, delta_meta})
-      :ask -> GenServer.cast(__MODULE__, {:cache_w_ask, quad_changes})
+      :precache ->
+        GenServer.cast(__MODULE__, {:cache_w_cache, quad_changes})
+
+      :construct ->
+        GenServer.cast(__MODULE__, {:cache_w_construct, quad_changes, Map.new(delta_meta)})
+
+      :ask ->
+        GenServer.cast(__MODULE__, {:cache_w_ask, quad_changes})
     end
   end
 
@@ -116,24 +122,26 @@ defmodule Cache.Deltas do
   # If a true deletion would delete this quad, the deletion is actually a false deletion
   defp add_delta_to_state({:insert, quad}, state) do
     meta = List.first(state.metas)
-    {true_inserts, true_deletions, false_inserts, false_deletions} = state.cache
+    {true_inserts, true_deletions, all_inserts, all_deletions} = state.cache
 
     new_cache =
       if quad_in_store?(meta, quad) do
         if Map.has_key?(true_deletions, quad) do
           # Element not in store, but would be deleted
-          # So both false insert and false deletion
-          {original_index, true_deletions} = Map.pop!(true_deletions, quad)
+          # Remove true_deletion
+          all_inserts = Map.put_new(all_inserts, quad, state.index)
+          true_deletions = Map.delete(true_deletions, quad)
 
-          {true_inserts, Map.delete(true_deletions, quad),
-           Map.put(false_inserts, quad, state.index),
-           Map.put(false_deletions, quad, original_index)}
+          {true_inserts, true_deletions, all_inserts, all_deletions}
         else
-          {true_inserts, true_deletions, Map.put(false_inserts, quad, state.index),
-           false_deletions}
+          all_inserts = Map.put_new(all_inserts, quad, state.index)
+          {true_inserts, true_deletions, all_inserts, all_deletions}
         end
       else
-        {Map.put(true_inserts, quad, state.index), true_deletions, false_inserts, false_deletions}
+        true_inserts = Map.put_new(true_inserts, quad, state.index)
+        all_inserts = Map.put_new(all_inserts, quad, state.index)
+
+        {true_inserts, true_deletions, all_inserts, all_deletions}
       end
 
     %{state | cache: new_cache}
@@ -143,22 +151,26 @@ defmodule Cache.Deltas do
   # If a true insertion would insert this quad, the insert is actually a false insert
   defp add_delta_to_state({:delete, quad}, state) do
     meta = List.first(state.metas)
-    {true_inserts, true_deletions, false_inserts, false_deletions} = state.cache
+    {true_inserts, true_deletions, all_inserts, all_deletions} = state.cache
 
     new_cache =
       if quad_in_store?(meta, quad) do
-        {true_inserts, Map.put(true_deletions, quad, state.index), false_inserts, false_deletions}
+        true_deletions = Map.put(true_deletions, quad, state.index)
+        all_deletions = Map.put(all_deletions, quad, state.index)
+
+        {true_inserts, true_deletions, all_inserts, all_deletions}
       else
         if Map.has_key?(true_inserts, quad) do
           # Element not in store, but would be deleted
           # So both false insert and false deletion
-          {original_index, true_inserts} = Map.pop!(true_inserts, quad)
+          true_inserts = Map.delete(true_inserts, quad)
+          all_deletions = Map.put_new(all_deletions, quad, state.index)
 
-          {true_inserts, true_deletions, Map.put(false_inserts, quad, original_index),
-           Map.put(false_deletions, quad, state.index)}
+          {true_inserts, true_deletions, all_inserts, all_deletions}
         else
-          {true_inserts, true_deletions, false_inserts,
-           Map.put(false_deletions, quad, state.index)}
+          all_deletions = Map.put(all_deletions, quad, state.index)
+
+          {true_inserts, true_deletions, all_inserts, all_deletions}
         end
       end
 
@@ -176,26 +188,42 @@ defmodule Cache.Deltas do
   end
 
   defp delta_update(state) do
-    {true_inserts, true_deletions, _false_inserts, _false_deletions} = state.cache
+    {true_inserts, true_deletions, all_inserts, all_deletions} = state.cache
 
-    # content = Enum.map(true_inserts, &({:insert, &1})) ++ Enum.map(true_deletions, &({:delete, &1}))
+    merge_f = fn _, one, two -> one ++ two end
 
-    inserts = Enum.group_by(true_inserts, &elem(&1, 1), &{:insert, convert_quad(elem(&1, 0))})
-    deletions = Enum.group_by(true_deletions, &elem(&1, 1), &{:delete, convert_quad(elem(&1, 0))})
-    total = Map.merge(inserts, deletions, fn _, one, two -> one ++ two end)
+    inserts =
+      Enum.group_by(true_inserts, &elem(&1, 1), &{:effective_insert, convert_quad(elem(&1, 0))})
+
+    deletions =
+      Enum.group_by(true_deletions, &elem(&1, 1), &{:effective_delete, convert_quad(elem(&1, 0))})
+
+    all_inserts = Enum.group_by(all_inserts, &elem(&1, 1), &{:insert, convert_quad(elem(&1, 0))})
+
+    all_deletions =
+      Enum.group_by(all_deletions, &elem(&1, 1), &{:delete, convert_quad(elem(&1, 0))})
+
+    total =
+      Map.merge(inserts, deletions, merge_f)
+      |> Map.merge(all_inserts, merge_f)
+      |> Map.merge(all_deletions, merge_f)
 
     messages =
       Enum.map(state.metas, fn meta ->
         index = meta.index
 
         other_meta =
-          meta.delta_meta
-          |> Map.new()
-          |> Map.put(:index, index)
+          Map.new()
+          |> add_index(index)
+          |> add_allowed_groups(meta.delta_meta)
+          |> add_origin(meta.delta_meta)
+          |> add_trail(meta.delta_meta)
 
         Map.get(total, index, [])
         |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-        |> Map.merge(other_meta)
+        |> Enum.reduce(other_meta, &add_delta/2)
+
+        # |> Map.merge(other_meta)
       end)
 
     %{
@@ -205,29 +233,71 @@ defmodule Cache.Deltas do
     |> Delta.Messenger.inform_clients()
   end
 
+  # These might be better suited in seperate file
+  defp add_delta({:effective_insert, items}, map) do
+    Map.put(map, "effectiveInserts", items)
+  end
+
+  defp add_delta({:effective_delete, items}, map) do
+    Map.put(map, "effectiveDeletes", items)
+  end
+
+  defp add_delta({:insert, items}, map) do
+    Map.put(map, "inserts", items)
+  end
+
+  defp add_delta({:delete, items}, map) do
+    Map.put(map, "deletes", items)
+  end
+
+  defp add_allowed_groups(map, %{authorization_groups: :sudo}) do
+    Map.put(map, "allowedGroups", "sudo")
+  end
+
+  defp add_allowed_groups(map, %{authorization_groups: groups}) do
+    json_access_groups = AccessGroupSupport.encode_json_access_groups(groups)
+    Map.put(map, "allowedGroups", json_access_groups)
+  end
+
+  defp add_allowed_groups(map, _), do: map
+
+  defp add_trail(map, %{mu_call_id_trail: trail}), do: Map.put(map, "muCallIdTrail", trail)
+  defp add_trail(map, _), do: map
+
+  defp add_origin(map, %{origin: origin}), do: Map.put(map, "origin", origin)
+  defp add_origin(map, _), do: map
+
+  defp add_index(map, index), do: Map.put(map, "index", index)
+
   @doc """
     GenServer.handle_call/3 callback
   """
   def handle_call({:flush, options}, _from, state) do
-    {true_inserts, true_deletions, _false_inserts, _false_deletions} = state.cache
+    {true_inserts, true_deletions, all_inserts, all_deletions} = state.cache
 
     inserts = Map.keys(true_inserts)
 
     unless Enum.empty?(inserts) do
       QueryAnalyzer.construct_insert_query_from_quads(inserts, options)
+      |> Regen.result()
+
+      QueryAnalyzer.construct_insert_query_from_quads(inserts, options)
       |> SparqlClient.execute_parsed(query_type: :write)
-      |> ALog.di("Results from SparqlClient after write")
     end
 
     deletions = Map.keys(true_deletions)
 
     unless Enum.empty?(deletions) do
       QueryAnalyzer.construct_delete_query_from_quads(deletions, options)
+      |> Regen.result()
+
+      QueryAnalyzer.construct_delete_query_from_quads(deletions, options)
       |> SparqlClient.execute_parsed(query_type: :write)
-      |> ALog.di("Results from SparqlClient after write")
     end
 
-    delta_update(state)
+    if not (Enum.empty?(all_inserts) and Enum.empty?(all_deletions)) do
+      delta_update(state)
+    end
 
     new_state = %{state | cache: new_cache(), metas: []}
 

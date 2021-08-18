@@ -92,6 +92,8 @@ config :logger,
   compile_time_purge_level: :debug,
   level: :warn
 
+  # level: :debug
+
 # config :logger,
 #   compile_time_purge_level: :debug,
 #   level: :warn

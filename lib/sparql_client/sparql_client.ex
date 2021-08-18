@@ -34,8 +34,6 @@ defmodule SparqlClient do
 
     # poison_options = [recv_timeout: options[:timeout]]
 
-    ALog.ii(query, "Sending sparql query to backend")
-
     Logging.EnvLog.log(:log_outgoing_sparql_queries, "Outgoing SPARQL query: #{query}")
 
     Logging.EnvLog.inspect(query, :inspect_outgoing_sparql_queries, label: "Outgoing SPARQL query")

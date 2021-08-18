@@ -24,7 +24,6 @@ defmodule SparqlServer.Router do
   post "/sparql" do
     {:ok, body, _} = read_body(conn)
 
-    ALog.di(conn, "Received POST connection")
     conn = downcase_request_headers(conn)
     debug_log_request_id(conn)
 
@@ -40,7 +39,6 @@ defmodule SparqlServer.Router do
       query_string ->
         params = URI.decode_query(query_string)
 
-        ALog.di(conn, "Received GET connection")
         conn = downcase_request_headers(conn)
         debug_log_request_id(conn)
 
