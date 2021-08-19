@@ -10,6 +10,7 @@ defmodule Cache.Deltas do
 
   @type cache_logic_key :: :precache | :construct | :ask
 
+  # {effective inserts, effective deletions, all inserts, all deletions}
   defp new_cache, do: {%{}, %{}, %{}, %{}}
 
   ### GenServer API
@@ -32,17 +33,22 @@ defmodule Cache.Deltas do
     GenServer.call(__MODULE__, {:flush, options})
   end
 
-  @spec add_deltas(QueryAnalyzer.quad_changes(), cache_logic_key()) :: :ok
-  def add_deltas(quad_changes, logic, delta_meta \\ []) do
+  # @spec add_deltas(QueryAnalyzer.quad_changes(), cache_logic_key()) :: :ok
+  def add_deltas(quad_changes, options, logic, delta_meta \\ []) do
     case logic do
-      :precache ->
-        GenServer.cast(__MODULE__, {:cache_w_cache, quad_changes})
+      # TODO
+      # :precache ->
+      #   GenServer.cast(__MODULE__, {:cache_w_cache, quad_changes})
 
       :construct ->
-        GenServer.cast(__MODULE__, {:cache_w_construct, quad_changes, Map.new(delta_meta)})
+        GenServer.cast(
+          __MODULE__,
+          {:cache_w_construct, quad_changes, Map.new(delta_meta), options}
+        )
 
-      :ask ->
-        GenServer.cast(__MODULE__, {:cache_w_ask, quad_changes})
+        # TODO
+        # :ask ->
+        #   GenServer.cast(__MODULE__, {:cache_w_ask, quad_changes})
     end
   end
 
@@ -195,9 +201,12 @@ defmodule Cache.Deltas do
     # Merge on index
     inserts =
       Enum.group_by(true_inserts, &elem(&1, 1), &{:effective_insert, convert_quad(elem(&1, 0))})
+
     deletions =
       Enum.group_by(true_deletions, &elem(&1, 1), &{:effective_delete, convert_quad(elem(&1, 0))})
+
     all_inserts = Enum.group_by(all_inserts, &elem(&1, 1), &{:insert, convert_quad(elem(&1, 0))})
+
     all_deletions =
       Enum.group_by(all_deletions, &elem(&1, 1), &{:delete, convert_quad(elem(&1, 0))})
 
@@ -268,10 +277,7 @@ defmodule Cache.Deltas do
 
   defp add_index(map, index), do: Map.put(map, "index", index)
 
-  @doc """
-    GenServer.handle_call/3 callback
-  """
-  def handle_call({:flush, options}, _from, state) do
+  defp do_flush(state, options) do
     {true_inserts, true_deletions, all_inserts, all_deletions} = state.cache
 
     inserts = Map.keys(true_inserts)
@@ -298,13 +304,36 @@ defmodule Cache.Deltas do
       delta_update(state)
     end
 
-    new_state = %{state | cache: new_cache(), metas: []}
+    %{state | cache: new_cache(), metas: []}
+  end
+
+  @doc """
+    GenServer.handle_call/3 callback
+  """
+  def handle_call({:flush, options}, _from, state) do
+    new_state = do_flush(state, options)
 
     {:reply, :ok, new_state}
   end
 
   # delta_meta: mu_call_id_trail, authorization_groups, origin
-  def handle_cast({:cache_w_construct, quads, delta_meta}, state) do
+  def handle_cast({:cache_w_construct, quads, delta_meta, options}, state) do
+    timeout_sessions = Application.get_env(:"mu-authorization", :quad_change_cache_session)
+    current_timeout = Map.get(state, :ref, nil)
+
+    state = if is_nil(current_timeout) or timeout_sessions do
+      if not is_nil(current_timeout) do
+        Process.cancel_timer(current_timeout)
+      end
+
+      timeout_duration = Application.get_env(:"mu-authorization", :quad_change_cache_timeout)
+      ref = Process.send_after(self(), {:timeout, options}, timeout_duration)
+
+      Map.put(state, :ref, ref)
+    else
+      state
+    end
+
     deltas = Enum.flat_map(quads, fn {type, qs} -> Enum.map(qs, &{type, &1}) end)
     quads = Enum.map(deltas, &elem(&1, 1))
 
@@ -328,7 +357,9 @@ defmodule Cache.Deltas do
     {:noreply, new_state}
   end
 
-  def handle_cast({:cache_w_ask, _quads}, state) do
-    {:noreply, state}
+  def handle_info({:timeout, options}, state) do
+    new_state = do_flush(state, options)
+
+    {:noreply, new_state}
   end
 end

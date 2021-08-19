@@ -110,16 +110,16 @@ defmodule SparqlServer.Router.HandlerSupport do
       |> wrap_query_in_toplevel
       |> ALog.di("Wrapped parsed query")
 
-    if is_select_query(parsed_form) do
-      # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
-      options = %{
-        default_graph: Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
-        prefixes: %{
-          "xsd" => Iri.from_iri_string("<http://www.w3.org/2001/XMLSchema#>"),
-          "foaf" => Iri.from_iri_string("<http://xmlns.com/foaf/0.1/>")
-        }
+    # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
+    options = %{
+      default_graph: Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
+      prefixes: %{
+        "xsd" => Iri.from_iri_string("<http://www.w3.org/2001/XMLSchema#>"),
+        "foaf" => Iri.from_iri_string("<http://xmlns.com/foaf/0.1/>")
       }
+    }
 
+    if is_select_query(parsed_form) do
       Cache.Deltas.flush(options)
 
       {conn, new_parsed_forms} = manipulate_select_query(parsed_form, conn)
@@ -147,14 +147,13 @@ defmodule SparqlServer.Router.HandlerSupport do
         |> Tuple.to_list()
         |> Enum.join(".")
 
-
       mu_call_id_trail =
-        (case Plug.Conn.get_req_header(conn, "mu-call-id-trail") do
+        case Plug.Conn.get_req_header(conn, "mu-call-id-trail") do
           # ignore extra values for now, they should not happen, but
           # if they do we don't want to crash either
           [value | _] -> Poison.decode!(value)
-            _ -> []
-        end)
+          _ -> []
+        end
         |> Kernel.++(Plug.Conn.get_req_header(conn, "mu-call-id"))
         |> Poison.encode!()
 
@@ -181,6 +180,7 @@ defmodule SparqlServer.Router.HandlerSupport do
             {manipulation, effective_quads}
           end)
           |> Cache.Deltas.add_deltas(
+            options,
             :construct,
             origin: origin,
             mu_call_id_trail: mu_call_id_trail,
@@ -259,7 +259,6 @@ defmodule SparqlServer.Router.HandlerSupport do
     end
   end
 
-
   defp enrich_manipulations_with_access_rights(manipulations, authorization_groups) do
     manipulations
     |> Enum.map(fn {kind, quads} ->
@@ -307,7 +306,6 @@ defmodule SparqlServer.Router.HandlerSupport do
       enriched_manipulations
     end
   end
-
 
   @spec enforce_write_rights([Quad.t()], Acl.UserGroups.Config.t()) :: [Quad.t()]
   defp enforce_write_rights(quads, authorization_groups) do
