@@ -21,7 +21,7 @@ defmodule Delta.Messenger do
     # connections.
     Delta.Config.targets()
     |> ALog.di("Targets to inform")
-    |> Enum.map(&spawn(Delta.Messenger, :send_message_to_client, [message, &1, options]))
+    |> Enum.each(&spawn(Delta.Messenger, :send_message_to_client, [message, &1, options]))
 
     :ok
   end

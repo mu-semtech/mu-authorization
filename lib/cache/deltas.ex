@@ -192,17 +192,16 @@ defmodule Cache.Deltas do
 
     merge_f = fn _, one, two -> one ++ two end
 
+    # Merge on index
     inserts =
       Enum.group_by(true_inserts, &elem(&1, 1), &{:effective_insert, convert_quad(elem(&1, 0))})
-
     deletions =
       Enum.group_by(true_deletions, &elem(&1, 1), &{:effective_delete, convert_quad(elem(&1, 0))})
-
     all_inserts = Enum.group_by(all_inserts, &elem(&1, 1), &{:insert, convert_quad(elem(&1, 0))})
-
     all_deletions =
       Enum.group_by(all_deletions, &elem(&1, 1), &{:delete, convert_quad(elem(&1, 0))})
 
+    # Combine all things
     total =
       Map.merge(inserts, deletions, merge_f)
       |> Map.merge(all_inserts, merge_f)
@@ -243,11 +242,11 @@ defmodule Cache.Deltas do
   end
 
   defp add_delta({:insert, items}, map) do
-    Map.put(map, "inserts", items)
+    Map.put(map, "insert", items)
   end
 
   defp add_delta({:delete, items}, map) do
-    Map.put(map, "deletes", items)
+    Map.put(map, "delete", items)
   end
 
   defp add_allowed_groups(map, %{authorization_groups: :sudo}) do
