@@ -18,38 +18,22 @@ defmodule ALog do
   supplied item when debugging.  It just passes the item through.
   Note that the form may be evaluated twice.
   """
-  defmacro di(item, name, inspect_result \\ true) do
-    if inspect_result do
-      quote do
-        result = unquote(item)
-        Logger.debug(fn -> unquote(name) <> ": " <> inspect(result) end)
-        result
-      end
-    else
-      quote do
-        result = unquote(item)
-        Logger.debug(fn -> unquote(name) <> ": " <> result end)
-        result
-      end
+  defmacro di(item, name) do
+    quote do
+      result = unquote(item)
+      Logger.debug(fn -> unquote(name) <> ": " <> inspect(result) end)
+      result
     end
   end
 
   @doc """
   Equivalent to ALog.di, but for warnings.
   """
-  defmacro wi(item, name, inspect_result \\ true) do
-    if inspect_result do
-      quote do
-        result = unquote(item)
-        Logger.warn(fn -> unquote(name) <> ": " <> inspect(result) end)
-        result
-      end
-    else
-      quote do
-        result = unquote(item)
-        Logger.warn(fn -> unquote(name) <> ": " <> result end)
-        result
-      end
+  defmacro wi(item, name) do
+    quote do
+      result = unquote(item)
+      Logger.warn(fn -> unquote(name) <> ": " <> inspect(result) end)
+      result
     end
   end
 
@@ -58,19 +42,11 @@ defmodule ALog do
   supplied item when going through info.  It just passes the item through.
   Note that the form may be evaluated twice.
   """
-  defmacro ii(item, name, inspect_result \\ true) do
-    if inspect_result do
-      quote do
-        result = unquote(item)
-        Logger.info(fn -> unquote(name) <> ": " <> inspect(result) end)
-        result
-      end
-    else
-      quote do
-        result = unquote(item)
-        Logger.info(fn -> unquote(name) <> ": " <> result end)
-        result
-      end
+  defmacro ii(item, name) do
+    quote do
+      result = unquote(item)
+      Logger.info(fn -> unquote(name) <> ": " <> inspect(result) end)
+      result
     end
   end
 end

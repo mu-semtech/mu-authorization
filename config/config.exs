@@ -53,7 +53,6 @@ end
 #     config :sparqlex, key: :value
 config :"mu-authorization",
   author: :"mu-semtech",
-  delta_cache_timeout: CH.system_number("DELTA_CACHE_TIMEOUT", 500),
   log_server_configuration: CH.system_boolean("LOG_SERVER_CONFIGURATION"),
   log_outgoing_sparql_queries: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERIES"),
   log_incoming_sparql_queries: CH.system_boolean("LOG_INCOMING_SPARQL_QUERIES"),
@@ -88,15 +87,13 @@ config :"mu-authorization",
 #     config :logger, level: :info
 #
 
+# config :logger,
+#   compile_time_purge_level: :debug,
+#   level: :info
+
 config :logger,
   compile_time_purge_level: :debug,
   level: :warn
-
-  # level: :debug
-
-# config :logger,
-#   compile_time_purge_level: :debug,
-#   level: :warn
 
 if Mix.env() == :test do
   config :junit_formatter,

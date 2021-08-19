@@ -99,7 +99,7 @@ defmodule SparqlServer.Router.HandlerSupport do
 
     {parsed_form, new_template_local_store} =
       query
-      # |> ALog.di("Raw received query")
+      |> ALog.di("Raw received query")
       |> String.trim()
       # TODO: check if this is valid and/or ensure parser skips \r between words.
       |> String.replace("\r", "")
@@ -108,7 +108,7 @@ defmodule SparqlServer.Router.HandlerSupport do
     parsed_form =
       parsed_form
       |> wrap_query_in_toplevel
-      # |> ALog.di("Wrapped parsed query")
+      |> ALog.di("Wrapped parsed query")
 
     if is_select_query(parsed_form) do
       # TODO: Check where the default_graph is used where these options are passed and verify whether this is a sensible name.
@@ -133,7 +133,6 @@ defmodule SparqlServer.Router.HandlerSupport do
 
       encoded_response =
         new_parsed_forms
-        # |> ALog.di("New parsed forms")
         |> Enum.map(&SparqlClient.execute_parsed(&1, request: conn, query_type: query_type))
         |> List.first()
         |> Poison.encode!()
@@ -161,13 +160,13 @@ defmodule SparqlServer.Router.HandlerSupport do
 
       analyzed_quads =
         parsed_form
-        # |> ALog.di("Parsed query")
+        |> ALog.di("Parsed query")
         |> QueryAnalyzer.quad_changes(%{
           default_graph: Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
           authorization_groups: authorization_groups
         })
         |> Enum.reject(&match?({_, []}, &1))
-        # |> ALog.di("Non-empty operations")
+        |> ALog.di("Non-empty operations")
         |> enrich_manipulations_with_access_rights(authorization_groups)
         |> maybe_verify_all_triples_written()
 
@@ -319,7 +318,7 @@ defmodule SparqlServer.Router.HandlerSupport do
       quads
       |> Acl.process_quads_for_update(user_groups_for_update, authorization_groups)
       |> elem(1)
-      # |> ALog.di("processed quads")
+      |> ALog.di("processed quads")
 
     processed_quads
   end
