@@ -122,10 +122,13 @@ defmodule Cache.Deltas do
     end
   end
 
-  # Reduce :insert and :delete delta's into true and false delta's
+  # Reduce :insert and :delete delta's into true and all delta's
+  # All delta's have a list of indices. Only one insert can be an actual insert,
+  # but multiple delta's can insert the same quad
   #
   # An insert is a true delta if the quad is not yet present in the triplestore
-  # If a true deletion would delete this quad, the deletion is actually a false deletion
+  # If an insert would insert a triple that is marked as true deletion,
+  # this deletion and insertion are false.
   defp add_delta_to_state({:insert, quad}, state) do
     meta = List.first(state.metas)
     {true_inserts, true_deletions, all_inserts, all_deletions} = state.cache
@@ -133,19 +136,22 @@ defmodule Cache.Deltas do
     new_cache =
       if quad_in_store?(meta, quad) do
         if Map.has_key?(true_deletions, quad) do
-          # Element not in store, but would be deleted
+          # Element in store, but would be deleted
           # Remove true_deletion
-          all_inserts = Map.put_new(all_inserts, quad, state.index)
+          all_inserts = Map.update(all_inserts, quad, [state.index], &[state.index | &1])
           true_deletions = Map.delete(true_deletions, quad)
 
           {true_inserts, true_deletions, all_inserts, all_deletions}
         else
-          all_inserts = Map.put_new(all_inserts, quad, state.index)
+          all_inserts = Map.update(all_inserts, quad, [state.index], &[state.index | &1])
           {true_inserts, true_deletions, all_inserts, all_deletions}
         end
       else
-        true_inserts = Map.put_new(true_inserts, quad, state.index)
-        all_inserts = Map.put_new(all_inserts, quad, state.index)
+        # This is important, the quad might be inserted and deleted with a previous delta
+        # But that index is more correct than the new index
+        index = Enum.min(Map.get(all_inserts, quad, [state.index]))
+        true_inserts = Map.put_new(true_inserts, quad, index)
+        all_inserts = Map.update(all_inserts, quad, [state.index], &[state.index | &1])
 
         {true_inserts, true_deletions, all_inserts, all_deletions}
       end
@@ -161,20 +167,21 @@ defmodule Cache.Deltas do
 
     new_cache =
       if quad_in_store?(meta, quad) do
-        true_deletions = Map.put(true_deletions, quad, state.index)
-        all_deletions = Map.put(all_deletions, quad, state.index)
+        index = Enum.min(Map.get(all_deletions, quad, [state.index]))
+        true_deletions = Map.put_new(true_deletions, quad, index)
+        all_deletions = Map.update(all_deletions, quad, [state.index], &[state.index | &1])
 
         {true_inserts, true_deletions, all_inserts, all_deletions}
       else
         if Map.has_key?(true_inserts, quad) do
-          # Element not in store, but would be deleted
+          # Element not in store, but would be inserted and deleted
           # So both false insert and false deletion
           true_inserts = Map.delete(true_inserts, quad)
-          all_deletions = Map.put_new(all_deletions, quad, state.index)
+          all_deletions = Map.update(all_deletions, quad, [state.index], &[state.index | &1])
 
           {true_inserts, true_deletions, all_inserts, all_deletions}
         else
-          all_deletions = Map.put(all_deletions, quad, state.index)
+          all_deletions = Map.update(all_deletions, quad, [state.index], &[state.index | &1])
 
           {true_inserts, true_deletions, all_inserts, all_deletions}
         end
@@ -205,10 +212,13 @@ defmodule Cache.Deltas do
     deletions =
       Enum.group_by(true_deletions, &elem(&1, 1), &{:effective_delete, convert_quad(elem(&1, 0))})
 
-    all_inserts = Enum.group_by(all_inserts, &elem(&1, 1), &{:insert, convert_quad(elem(&1, 0))})
+    all_inserts =
+      Enum.flat_map(all_inserts, fn {quad, ids} -> Enum.map(ids, &{quad, &1}) end)
+      |> Enum.group_by(&elem(&1, 1), &{:insert, convert_quad(elem(&1, 0))})
 
     all_deletions =
-      Enum.group_by(all_deletions, &elem(&1, 1), &{:delete, convert_quad(elem(&1, 0))})
+      Enum.flat_map(all_deletions, fn {quad, ids} -> Enum.map(ids, &{quad, &1}) end)
+      |> Enum.group_by(&elem(&1, 1), &{:delete, convert_quad(elem(&1, 0))})
 
     # Combine all things
     total =
@@ -230,8 +240,6 @@ defmodule Cache.Deltas do
         Map.get(total, index, [])
         |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
         |> Enum.reduce(other_meta, &add_delta/2)
-
-        # |> Map.merge(other_meta)
       end)
 
     %{
@@ -319,20 +327,27 @@ defmodule Cache.Deltas do
   # delta_meta: mu_call_id_trail, authorization_groups, origin
   def handle_cast({:cache_w_construct, quads, delta_meta, options}, state) do
     timeout_sessions = Application.get_env(:"mu-authorization", :quad_change_cache_session)
-    current_timeout = Map.get(state, :ref, nil)
 
-    state = if is_nil(current_timeout) or timeout_sessions do
-      if not is_nil(current_timeout) do
-        Process.cancel_timer(current_timeout)
+    current_timeout =
+      Map.get(state, :ref, nil)
+      |> IO.inspect(label: "current timeout")
+
+    state =
+      if is_nil(current_timeout) or timeout_sessions do
+        if not is_nil(current_timeout) do
+          Process.cancel_timer(current_timeout)
+        end
+
+        timeout_duration =
+          Application.get_env(:"mu-authorization", :quad_change_cache_timeout)
+          |> IO.inspect(label: "timeout duration")
+
+        ref = Process.send_after(self(), {:timeout, options}, timeout_duration)
+
+        Map.put(state, :ref, ref)
+      else
+        state
       end
-
-      timeout_duration = Application.get_env(:"mu-authorization", :quad_change_cache_timeout)
-      ref = Process.send_after(self(), {:timeout, options}, timeout_duration)
-
-      Map.put(state, :ref, ref)
-    else
-      state
-    end
 
     deltas = Enum.flat_map(quads, fn {type, qs} -> Enum.map(qs, &{type, &1}) end)
     quads = Enum.map(deltas, &elem(&1, 1))
@@ -358,6 +373,7 @@ defmodule Cache.Deltas do
   end
 
   def handle_info({:timeout, options}, state) do
+    IO.puts("Timeout timeout!")
     new_state = do_flush(state, options)
 
     {:noreply, new_state}
