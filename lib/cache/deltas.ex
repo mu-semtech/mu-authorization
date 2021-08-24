@@ -80,6 +80,17 @@ defmodule Cache.Deltas do
     |> MapSet.new()
   end
 
+  defp merge_quads_in_non_overlapping_quads(quads) do
+    # Filter per graph
+    # Merge seperate graphs
+    # return quads
+  end
+
+  #  SELECT DISTINCT ?g ?s ?p ?o WHERE { VALUES (?g ?s ?p ?o) { ... } ?g ?s ?p ?o }
+  defp quads_in_store_with_select(quads) do
+    nil
+  end
+
   # From current quads, calculate frequency of _triple_
   # Equal quads have no influence, but same triples from different graphs
   # cannot be queried with the same CONSTRUCT query
