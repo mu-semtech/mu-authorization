@@ -49,52 +49,6 @@ defmodule Cache.Deltas do
     #   GenServer.cast(__MODULE__, {:cache_w_ask, quad_changes})
   end
 
-  defp quad_equal_without_graph(
-         %Quad{
-           subject: s1,
-           predicate: p1,
-           object: o1,
-           graph: _graph
-         },
-         %Quad{
-           subject: s2,
-           predicate: p2,
-           object: o2,
-           graph: _graph
-         }
-       ) do
-    s1 == s2 and p1 == p2 and o1 == o2
-  end
-
-  defp split_into_nonoverlapping(cum, []) do
-    cum
-  end
-
-  defp split_into_nonoverlapping(cum, xs) do
-    # if el can merge into acc, return {[], acc ++ el}
-    # else {[el], acc}
-    el_can_merge = fn el, acc -> Enum.any?(el, &Enum.member?(acc, &1)) end
-
-    {xs, cum} =
-      Enum.flat_map_reduce(xs, cum, fn el, acc ->
-        # TODO check syntax!
-        (el_can_merge.(el, acc) && {[], acc ++ el}) || {[el], acc}
-      end)
-
-    [cum | split_into_nonoverlapping([], xs)]
-  end
-
-  defp merge_quads_in_non_overlapping_quads(quads) do
-    # Filter per graph
-    # Merge seperate graphs
-    # return quads
-    per_graph =
-      Enum.group_by(quads, fn x -> x.graph end)
-      |> Map.values()
-
-    split_into_nonoverlapping([], per_graph)
-  end
-
   # Reduce :insert and :delete delta's into true and all delta's
   # All delta's have a list of indices. Only one insert can be an actual insert,
   # but multiple delta's can insert the same quad

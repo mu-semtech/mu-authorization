@@ -169,6 +169,9 @@ defmodule SparqlServer.Router.HandlerSupport do
         |> enrich_manipulations_with_access_rights(authorization_groups)
         |> maybe_verify_all_triples_written()
 
+      cache_type = Plug.Conn.get_req_header(conn, "cache_type")
+      |> List.first() || "construct"
+
       case analyzed_quads do
         {:fail, reason} ->
           encoded_response_string = Poison.encode!(%{errors: [%{status: "403", title: reason}]})
@@ -181,7 +184,7 @@ defmodule SparqlServer.Router.HandlerSupport do
           end)
           |> Cache.Deltas.add_deltas(
             options,
-            :construct,
+            String.to_atom(cache_type),
             origin: origin,
             mu_call_id_trail: mu_call_id_trail,
             authorization_groups: authorization_groups
