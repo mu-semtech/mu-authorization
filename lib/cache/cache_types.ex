@@ -154,6 +154,17 @@ defmodule CacheType do
   # If the calculated frequency is more, the triple might exist in more graphs
   # so the CONSTRUCT query does not uniquely represent the quad in the triplestore
   # so an ASK query is executed (this shouldn't happen too often)
+  @spec create_cache_type(:construct | :multiple_constructs | :only_asks | :select, any) :: %{
+          :__struct__ =>
+            CacheType.ConstructAndAsk
+            | CacheType.MultipleConstructs
+            | CacheType.OnlyAsk
+            | CacheType.Select,
+          optional(:non_overlapping_quads) => list,
+          optional(:quads_in_store) => MapSet.t(any),
+          optional(:triple_counts) => map,
+          optional(:triples_in_store) => MapSet.t(any)
+        }
   def create_cache_type(:construct, quads) do
     triple_counts = triple_counts_with_graph_differences(quads)
     triples_in_store = triples_in_store_with_construct(quads)
@@ -185,7 +196,6 @@ defmodule CacheType do
         object: object,
         graph: graph
       }) do
-    IO.puts("quad in store with MultipleConstructs")
     g = get_result_tuple(graph)
     value = {get_result_tuple(subject), get_result_tuple(predicate), get_result_tuple(object)}
 
@@ -200,8 +210,6 @@ defmodule CacheType do
         object: object,
         graph: graph
       }) do
-    IO.puts("quad in store with Select")
-
     value =
       {get_result_tuple(graph), get_result_tuple(subject), get_result_tuple(predicate),
        get_result_tuple(object)}
@@ -210,7 +218,6 @@ defmodule CacheType do
   end
 
   def quad_in_store?(%OnlyAsk{}, quad) do
-    IO.puts("quad in store with OnlyAsk")
     quad_in_store_with_ask?(quad)
   end
 
@@ -226,8 +233,6 @@ defmodule CacheType do
           graph: _graph
         } = quad
       ) do
-    IO.puts("quad in store with ConstructAndAsk")
-
     value = {get_result_tuple(subject), get_result_tuple(predicate), get_result_tuple(object)}
 
     if Map.get(triple_counts, value, 0) > 1 do

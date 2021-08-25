@@ -170,7 +170,7 @@ defmodule SparqlServer.Router.HandlerSupport do
         |> maybe_verify_all_triples_written()
 
       cache_type = Plug.Conn.get_req_header(conn, "cache_type")
-      |> List.first() || "construct"
+      |> List.first() || "select"
 
       case analyzed_quads do
         {:fail, reason} ->
