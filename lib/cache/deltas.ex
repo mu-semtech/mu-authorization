@@ -35,21 +35,18 @@ defmodule Cache.Deltas do
 
   # @spec add_deltas(QueryAnalyzer.quad_changes(), cache_logic_key()) :: :ok
   def add_deltas(quad_changes, options, logic, delta_meta \\ []) do
-    case logic do
-      # TODO
-      # :precache ->
-      #   GenServer.cast(__MODULE__, {:cache_w_cache, quad_changes})
+    # TODO
+    # :precache ->
+    #   GenServer.cast(__MODULE__, {:cache_w_cache, quad_changes})
 
-      :construct ->
-        GenServer.cast(
-          __MODULE__,
-          {:cache_w_construct, quad_changes, Map.new(delta_meta), options}
-        )
+    GenServer.cast(
+      __MODULE__,
+      {:cache, logic, quad_changes, Map.new(delta_meta), options}
+    )
 
-        # TODO
-        # :ask ->
-        #   GenServer.cast(__MODULE__, {:cache_w_ask, quad_changes})
-    end
+    # TODO
+    # :ask ->
+    #   GenServer.cast(__MODULE__, {:cache_w_ask, quad_changes})
   end
 
   ## Create tuple from literal {type, value}
@@ -80,15 +77,59 @@ defmodule Cache.Deltas do
     |> MapSet.new()
   end
 
+  defp quad_equal_without_graph(
+         %Quad{
+           subject: s1,
+           predicate: p1,
+           object: o1,
+           graph: _graph
+         },
+         %Quad{
+           subject: s2,
+           predicate: p2,
+           object: o2,
+           graph: _graph
+         }
+       ) do
+    s1 == s2 and p1 == p1 and o1 == o2
+  end
+
+  defp split_into_nonoverlapping(cum, []) do
+    cum
+  end
+
+  defp split_into_nonoverlapping(cum, xs) do
+    # if el can merge into acc, return {[], acc ++ el}
+    # else {[el], acc}
+    el_can_merge = fn el, acc -> Enum.any?(el, &Enum.member?(acc, &1)) end
+
+    {xs, cum} =
+      Enum.flat_map_reduce(xs, cum, fn el, acc ->
+        # TODO check syntax!
+        (el_can_merge(el, acc) && {[], acc ++ el}) || {[el], acc}
+      end)
+
+    [cum | split_into_nonoverlapping([], xs)]
+  end
+
   defp merge_quads_in_non_overlapping_quads(quads) do
     # Filter per graph
     # Merge seperate graphs
     # return quads
+    per_graph =
+      Enum.group_by(quads, fn x -> x.graph end)
+      |> Map.values()
+
+    split_into_nonoverlapping([], per_graph)
   end
 
   #  SELECT DISTINCT ?g ?s ?p ?o WHERE { VALUES (?g ?s ?p ?o) { ... } ?g ?s ?p ?o }
   defp quads_in_store_with_select(quads) do
-    nil
+    QueryAnalyzer.construct_select_distinct_matching_quads(quads)
+    |> SparqlClient.execute_parsed(query_type: :read)
+    |> IO.inspect(label: "HALLO HERE BRO")
+
+    quads
   end
 
   # From current quads, calculate frequency of _triple_
@@ -116,7 +157,10 @@ defmodule Cache.Deltas do
   # so the CONSTRUCT query does not uniquely represent the quad in the triplestore
   # so an ASK query is executed (this shouldn't happen too often)
   defp quad_in_store?(
-         %{triple_counts: triple_counts, triples_in_store: triples_in_store},
+         %CacheType.ConstructAndAsk{
+           triple_counts: triple_counts,
+           triples_in_store: triples_in_store
+         },
          %Quad{
            subject: subject,
            predicate: predicate,
@@ -133,6 +177,26 @@ defmodule Cache.Deltas do
     end
   end
 
+  defp quad_in_store?(
+         %CacheType.OnlyAsk{},
+         quad
+       ) do
+    quad_in_store_with_ask?(quad)
+  end
+
+  # TODO: Implement
+  defp quad_in_store!(
+         %CacheType.MultipleConstructs{},
+         %Quad{
+           subject: subject,
+           predicate: predicate,
+           object: object,
+           graph: _graph
+         } = quad
+       ) do
+    false
+  end
+
   # Reduce :insert and :delete delta's into true and all delta's
   # All delta's have a list of indices. Only one insert can be an actual insert,
   # but multiple delta's can insert the same quad
@@ -141,11 +205,11 @@ defmodule Cache.Deltas do
   # If an insert would insert a triple that is marked as true deletion,
   # this deletion and insertion are false.
   defp add_delta_to_state({:insert, quad}, state) do
-    meta = List.first(state.metas)
+    cache_type = List.first(state.metas).cache_type
     {true_inserts, true_deletions, all_inserts, all_deletions} = state.cache
 
     new_cache =
-      if quad_in_store?(meta, quad) do
+      if quad_in_store?(cache_type, quad) do
         if Map.has_key?(true_deletions, quad) do
           # Element in store, but would be deleted
           # Remove true_deletion
@@ -173,11 +237,11 @@ defmodule Cache.Deltas do
   # A deletion is a true deletion if the quad is present in the triplestore
   # If a true insertion would insert this quad, the insert is actually a false insert
   defp add_delta_to_state({:delete, quad}, state) do
-    meta = List.first(state.metas)
+    cache_type = List.first(state.metas).cache_type
     {true_inserts, true_deletions, all_inserts, all_deletions} = state.cache
 
     new_cache =
-      if quad_in_store?(meta, quad) do
+      if quad_in_store?(cache_type, quad) do
         index = Enum.min(Map.get(all_deletions, quad, [state.index]))
         true_deletions = Map.put_new(true_deletions, quad, index)
         all_deletions = Map.update(all_deletions, quad, [state.index], &[state.index | &1])
@@ -336,7 +400,7 @@ defmodule Cache.Deltas do
   end
 
   # delta_meta: mu_call_id_trail, authorization_groups, origin
-  def handle_cast({:cache_w_construct, quads, delta_meta, options}, state) do
+  def handle_cast({:cache, type, quads, delta_meta, options}, state) do
     timeout_sessions = Application.get_env(:"mu-authorization", :quad_change_cache_session)
 
     current_timeout =
@@ -364,13 +428,13 @@ defmodule Cache.Deltas do
     quads = Enum.map(deltas, &elem(&1, 1))
 
     # Calculate meta data
-    triple_counts = triple_counts_with_graph_differences(quads)
-    triples_in_store = quads_in_store_with_construct(quads)
+    cache_type = create_cache_type(type, quads)
+
+    quads_in_store_with_select(quads)
 
     # Add metadata to state
     meta = %{
-      triple_counts: triple_counts,
-      triples_in_store: triples_in_store,
+      cache_type: cache_type,
       delta_meta: delta_meta,
       index: state.index + 1
     }
@@ -383,6 +447,25 @@ defmodule Cache.Deltas do
     {:noreply, new_state}
   end
 
+  defp create_cache_type(:construct, quads) do
+    triple_counts = triple_counts_with_graph_differences(quads)
+    triples_in_store = quads_in_store_with_construct(quads)
+
+    %CacheType.ConstructAndAsk{triple_counts: triple_counts, triples_in_store: triples_in_store}
+  end
+
+  defp create_cache_type(:onlyask, quads) do
+    %CacheType.OnlyAsk{}
+  end
+
+  defp create_cache_type(:multiple_constructs, quads) do
+    %CacheType.MultipleConstructs{quads_in_store: nil}
+  end
+
+  defp create_cache_type(:construct_with_select, quads) do
+    %CacheType.ConstructSelect{quads_in_store: nil}
+  end
+
   def handle_info({:timeout, options}, state) do
     IO.puts("Timeout timeout!")
     new_state = do_flush(state, options)
@@ -390,3 +473,24 @@ defmodule Cache.Deltas do
     {:noreply, new_state}
   end
 end
+
+defmodule CacheType.ConstructAndAsk do
+  @enforce_keys [:triple_counts, :triples_in_store]
+  defstruct [:triple_counts, :triples_in_store]
+end
+
+defmodule CacheType.OnlyAsk do
+  defstruct
+end
+
+defmodule CacheType.MultipleConstructs do
+  @enforce_keys [:quads_in_store]
+  defstruct [:quads_in_store]
+end
+
+defmodule CacheType.ConstructSelect do
+  @enforce_keys [:quads_in_store]
+  defstruct [:quads_in_store]
+end
+
+# You like kinda want an 'instant' struct but that changes more then `quad_in_store`

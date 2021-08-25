@@ -34,12 +34,12 @@ defmodule Updates.QueryConstructors do
   Can be used as multiple ASK queries with only a little bit of suffering
   """
   def make_asks_query(quads) do
-    matches = quads |> Enum.flat_map(&map_quad_to_bracet_data_block_values/1)
-
     graph = make_var_symbol("?g")
     subject = make_var_symbol("?s")
     predicate = make_var_symbol("?p")
     object = make_var_symbol("?o")
+
+    where_clause = make_quad_match_values(graph, subject, predicate, object, quads)
 
     %Sym{
       symbol: :Sparql,
@@ -79,91 +79,7 @@ defmodule Updates.QueryConstructors do
                       symbol: :WhereClause,
                       submatches: [
                         %Word{word: "WHERE"},
-                        %Sym{
-                          symbol: :GroupGraphPattern,
-                          submatches: [
-                            %Word{word: "{"},
-                            %Sym{
-                              symbol: :GroupGraphPatternSub,
-                              submatches: [
-                                %Sym{
-                                  symbol: :GraphPatternNotTriples,
-                                  submatches: [
-                                    %Sym{
-                                      symbol: :InlineData,
-                                      submatches: [
-                                        %Word{word: "VALUES"},
-                                        %Sym{
-                                          symbol: :DataBlock,
-                                          submatches: [
-                                            %Sym{
-                                              symbol: :InlineDataFull,
-                                              submatches:
-                                                [
-                                                  %Word{word: "("},
-                                                  graph,
-                                                  subject,
-                                                  predicate,
-                                                  object,
-                                                  %Word{word: ")"},
-                                                  %Word{word: "{"}
-                                                ] ++
-                                                  matches ++
-                                                  [
-                                                    %Word{word: "}"}
-                                                  ]
-                                            }
-                                          ]
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                %Sym{
-                                  symbol: :GraphPatternNotTriples,
-                                  submatches: [
-                                    %Sym{
-                                      symbol: :GraphGraphPattern,
-                                      submatches: [
-                                        %Word{word: "GRAPH"},
-                                        %Sym{
-                                          symbol: :VarOrIri,
-                                          submatches: [
-                                            graph
-                                          ]
-                                        },
-                                        %Sym{
-                                          symbol: :GroupGraphPattern,
-                                          submatches: [
-                                            %Word{word: "{"},
-                                            %Sym{
-                                              symbol: :GroupGraphPatternSub,
-                                              submatches: [
-                                                %Sym{
-                                                  symbol: :TriplesBlock,
-                                                  submatches: [
-                                                    make_simple_triples_same_subject_path(
-                                                      subject,
-                                                      predicate,
-                                                      object
-                                                    ),
-                                                    %Word{word: "."}
-                                                  ]
-                                                }
-                                              ]
-                                            },
-                                            %Word{word: "}"}
-                                          ]
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            %Word{word: "}"}
-                          ]
-                        }
+
                       ]
                     },
                     %Sym{
@@ -180,6 +96,96 @@ defmodule Updates.QueryConstructors do
             }
           ]
         }
+      ]
+    }
+  end
+
+  def make_quad_match_values(graph, subject, predicate, object, quads) do
+    matches = quads |> Enum.flat_map(&map_quad_to_bracet_data_block_values/1)
+
+    %Sym{
+      symbol: :GroupGraphPattern,
+      submatches: [
+        %Word{word: "{"},
+        %Sym{
+          symbol: :GroupGraphPatternSub,
+          submatches: [
+            %Sym{
+              symbol: :GraphPatternNotTriples,
+              submatches: [
+                %Sym{
+                  symbol: :InlineData,
+                  submatches: [
+                    %Word{word: "VALUES"},
+                    %Sym{
+                      symbol: :DataBlock,
+                      submatches: [
+                        %Sym{
+                          symbol: :InlineDataFull,
+                          submatches:
+                            [
+                              %Word{word: "("},
+                              graph,
+                              subject,
+                              predicate,
+                              object,
+                              %Word{word: ")"},
+                              %Word{word: "{"}
+                            ] ++
+                              matches ++
+                              [
+                                %Word{word: "}"}
+                              ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            %Sym{
+              symbol: :GraphPatternNotTriples,
+              submatches: [
+                %Sym{
+                  symbol: :GraphGraphPattern,
+                  submatches: [
+                    %Word{word: "GRAPH"},
+                    %Sym{
+                      symbol: :VarOrIri,
+                      submatches: [
+                        graph
+                      ]
+                    },
+                    %Sym{
+                      symbol: :GroupGraphPattern,
+                      submatches: [
+                        %Word{word: "{"},
+                        %Sym{
+                          symbol: :GroupGraphPatternSub,
+                          submatches: [
+                            %Sym{
+                              symbol: :TriplesBlock,
+                              submatches: [
+                                make_simple_triples_same_subject_path(
+                                  subject,
+                                  predicate,
+                                  object
+                                ),
+                                %Word{word: "."}
+                              ]
+                            }
+                          ]
+                        },
+                        %Word{word: "}"}
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        %Word{word: "}"}
       ]
     }
   end
@@ -571,7 +577,7 @@ defmodule Updates.QueryConstructors do
     make_select_distinct_query(variables, group_graph_pattern_sym)
   end
 
-  defp make_var_symbol(str) do
+  def make_var_symbol(str) do
     %Sym{
       symbol: :Var,
       submatches: [%Sym{symbol: :VAR1, string: str, submatches: :none}]

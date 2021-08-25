@@ -857,6 +857,16 @@ defmodule Updates.QueryAnalyzer do
     |> Map.put(:default_graph, iri)
   end
 
+  def construct_select_distinct_matching_quads(quads) do
+    graph = QueryConstructors/make_var_symbol("?g")
+    subject = QueryConstructors.make_var_symbol("?s")
+    predicate = QueryConstructors.make_var_symbol("?p")
+    object = QueryConstructors.make_var_symbol("?o")
+    where_clause = QueryConstructors.make_quad_match_values(graph, subject, predicate, object, quads)
+
+    QueryConstructors.make_select_distinct_query([graph, subject, predicate, object], where_clause)
+  end
+
   def construct_asks_query(quads) do
     QueryConstructors.make_asks_query(quads)
   end
