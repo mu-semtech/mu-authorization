@@ -858,7 +858,7 @@ defmodule Updates.QueryAnalyzer do
   end
 
   def construct_select_distinct_matching_quads(quads) do
-    graph = QueryConstructors/make_var_symbol("?g")
+    graph = QueryConstructors.make_var_symbol("?g")
     subject = QueryConstructors.make_var_symbol("?s")
     predicate = QueryConstructors.make_var_symbol("?p")
     object = QueryConstructors.make_var_symbol("?o")

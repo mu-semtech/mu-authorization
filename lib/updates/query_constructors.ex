@@ -79,7 +79,7 @@ defmodule Updates.QueryConstructors do
                       symbol: :WhereClause,
                       submatches: [
                         %Word{word: "WHERE"},
-
+                        where_clause
                       ]
                     },
                     %Sym{
