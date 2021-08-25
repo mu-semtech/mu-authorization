@@ -1,5 +1,4 @@
-defmodule TermSelectors do
-  alias GraphReasoner.Support.TermSelectors
+defmodule GraphReasoner.Support.TermSelectors do
   alias InterpreterTerms.SymbolMatch, as: Sym
   alias InterpreterTerms.WordMatch, as: Word
 

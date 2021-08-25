@@ -374,6 +374,8 @@ Flags which can be either on or off translate the environment variable string to
 - `INSPECT_OUTGOING_SPARQL_QUERY_RESPONSES` : Inspects the responses coming back from the backing triplestore
 - `LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP` : Logs both the request and the response to/from the backing triplestore closely together in the logs
 - `LOG_WORKLOAD_INFO_REQUESTS` : Logs workload information to the console when it is requested through an http call
+- `QUAD_CHANGE_CACHE_TIMEOUT` : Specifies how long (in milliseconds) quad changes should be cached before getting applied to the triplestore.
+- `QUAD_CHANGE_CACHE_SESSION` : Specifies if the timeout should be restarted with a quad change.
 
 ### Query timeout configuration
 Complex SPARQL queries can take a long time to process and execute. The time mu-authorization is allowed to spend on this processing and execution before timing out can be configured through the following environment variables:

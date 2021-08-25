@@ -76,7 +76,9 @@ config :"mu-authorization",
   log_workload_info_requests: CH.system_boolean("LOG_WORKLOAD_INFO_REQUESTS"),
   testing_auth_query_error_rate: CH.system_float("TESTING_AUTH_QUERY_ERROR_RATE"),
   error_on_unwritten_data: CH.system_boolean("ERROR_ON_UNWRITTEN_DATA"),
-  errors: CH.system_boolean("LOG_ERRORS", true)
+  errors: CH.system_boolean("LOG_ERRORS", true),
+  quad_change_cache_timeout: CH.system_number("QUAD_CHANGE_CACHE_TIMEOUT", 500),
+  quad_change_cache_session: CH.system_boolean("QUAD_CHANGE_CACHE_SESSION", true)
 
 # and access this configuration in your application as:
 #

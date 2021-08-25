@@ -846,6 +846,7 @@ defmodule Updates.QueryAnalyzer do
     |> Enum.uniq()
   end
 
+
   @spec update_options_for_with(Sym.t(), options) :: options
   def update_options_for_with(%Sym{symbol: :iri} = sym, options) do
     # TODO double_check the use of :default_graph.  The may be used
@@ -854,6 +855,24 @@ defmodule Updates.QueryAnalyzer do
 
     options
     |> Map.put(:default_graph, iri)
+  end
+
+  def construct_select_distinct_matching_quads(quads) do
+    graph = QueryConstructors.make_var_symbol("?g")
+    subject = QueryConstructors.make_var_symbol("?s")
+    predicate = QueryConstructors.make_var_symbol("?p")
+    object = QueryConstructors.make_var_symbol("?o")
+    where_clause = QueryConstructors.make_quad_match_values(graph, subject, predicate, object, quads)
+
+    QueryConstructors.make_select_distinct_query([graph, subject, predicate, object], where_clause)
+  end
+
+  def construct_asks_query(quads) do
+    QueryConstructors.make_asks_query(quads)
+  end
+
+  def construct_ask_query(quad) do
+    QueryConstructors.make_ask_query(quad)
   end
 
   @spec construct_select_query([Var.t()], Sym.t(), options) ::
@@ -895,6 +914,7 @@ defmodule Updates.QueryAnalyzer do
     |> Enum.map(&QueryConstructors.make_quad_match_from_quad/1)
     |> QueryConstructors.make_insert_query()
 
+
     # |> TODO add prefixes
   end
 
@@ -902,7 +922,6 @@ defmodule Updates.QueryAnalyzer do
   def construct_delete_query_from_quads(quads, options) do
     # TODO: this should be clearing when the query is executed
     clear_cache_for_typed_quads(quads, options)
-
     quads
     |> Enum.map(&QueryConstructors.make_quad_match_from_quad/1)
     |> QueryConstructors.make_delete_query()
