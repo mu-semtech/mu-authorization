@@ -6,7 +6,11 @@ defmodule SparqlTest do
   alias InterpreterTerms.WordMatch, as: Word
   doctest Sparql
 
-  defp match_ignore_whitespace_and_string(%Sym{symbol: s1, submatches: m1}, %Sym{symbol: s2, submatches: m2}) when is_list(m1) and is_list(m2) do
+  defp match_ignore_whitespace_and_string(%Sym{symbol: s1, submatches: m1}, %Sym{
+         symbol: s2,
+         submatches: m2
+       })
+       when is_list(m1) and is_list(m2) do
     if s1 !== s2 do
       false
     else
@@ -18,7 +22,10 @@ defmodule SparqlTest do
     end
   end
 
-  defp match_ignore_whitespace_and_string(%Sym{symbol: s1, submatches: m1}, %Sym{symbol: s2, submatches: m2}) do
+  defp match_ignore_whitespace_and_string(%Sym{symbol: s1, submatches: m1}, %Sym{
+         symbol: s2,
+         submatches: m2
+       }) do
     s1 == s2 and m1 == m2
   end
 

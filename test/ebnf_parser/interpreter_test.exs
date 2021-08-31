@@ -54,15 +54,15 @@ defmodule InterpreterTest do
     {_, expr} = full_syntax_map[:Expression]
 
     assert expr == [
-      one_of: [
-        paren_group: [
-          single_quoted_string: "(",
-          symbol: :Expression,
-          single_quoted_string: ")"
-        ],
-        symbol: :Times
-      ]
-    ]
+             one_of: [
+               paren_group: [
+                 single_quoted_string: "(",
+                 symbol: :Expression,
+                 single_quoted_string: ")"
+               ],
+               symbol: :Times
+             ]
+           ]
   end
 
   test "simple test split_single_form" do
@@ -71,11 +71,12 @@ defmodule InterpreterTest do
 
     assert name == :TEST
     assert is_terminal == false
-    assert some == [minus: [
-      bracket_selector: [range: [character: "a", character: "z"]],
-      single_quoted_string: "b"
-    ]]
 
+    assert some == [
+             minus: [
+               bracket_selector: [range: [character: "a", character: "z"]],
+               single_quoted_string: "b"
+             ]
+           ]
   end
-
 end
