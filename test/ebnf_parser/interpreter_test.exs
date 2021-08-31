@@ -17,16 +17,6 @@ defmodule InterpreterTest do
     EbnfInterpreter.t_ep(str)
   end
 
-  def parse_and_match(rule, str, options \\ %{}) do
-    case EbnfInterpreter.first_match(rule, str, options) do
-      {left_chars, matched, match_info} ->
-        {:ok, left_chars, matched, match_info}
-
-      stuff ->
-        stuff
-    end
-  end
-
   test "test Symbols in single forms" do
     %{non_terminal: non_terminal_forms, terminal: terminal_forms} = @syntax_str
 
