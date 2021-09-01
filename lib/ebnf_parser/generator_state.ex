@@ -40,16 +40,8 @@ defmodule State do
   """
   def cut_whitespace(chars) do
     # Strip spaces from front
-    drop_count =
-      Enum.reduce_while(chars, 0, fn char, acc ->
-        if char in [" ", "\t", "\n"] do
-          {:cont, acc + 1}
-        else
-          {:halt, acc}
-        end
-      end)
-
-    {Enum.drop(chars, drop_count), Enum.take(chars, drop_count) |> List.to_string()}
+    {whitespace, rest} = Enum.split_while(chars, fn x -> x in [" ", "\t", "\n"] end)
+    {rest, whitespace |> List.to_string()}
   end
 
   @spec chars_as_string(t) :: String.t()

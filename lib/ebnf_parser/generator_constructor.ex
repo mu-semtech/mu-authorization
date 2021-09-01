@@ -38,69 +38,73 @@ defmodule EbnfParser.GeneratorConstructor do
   @type rule :: list | {ebnf_term, any}
   @spec dispatch_generation(rule, State.t()) :: GP.t()
 
-  def dispatch_generation(list, %State{} = state) when is_list(list) do
-    dispatch_generation({:paren_group, list}, state)
+  def dispatch_generation(alpha, beta) do
+    GP.make_generator(to_term(alpha, beta))
   end
 
-  def dispatch_generation([{_, _} = spec], %State{} = state) do
-    dispatch_generation(spec, state)
+  def to_term(list, %State{} = state) when is_list(list) do
+    to_term({:paren_group, list}, state)
   end
 
-  def dispatch_generation({:paren_group, items}, %State{} = state) do
-    GP.make_generator(%Array{elements: items, state: state})
+  def to_term([{_, _} = spec], %State{} = state) do
+    to_term(spec, state)
   end
 
-  def dispatch_generation({:maybe_many, [item]}, %State{} = state) do
-    GP.make_generator(%Some{element: item, state: state})
+  def to_term({:paren_group, items}, %State{} = state) do
+    %Array{elements: items, state: state}
   end
 
-  def dispatch_generation({:one_or_more, [item]}, %State{} = state) do
-    GP.make_generator(%Many{element: item, state: state})
+  def to_term({:maybe_many, [item]}, %State{} = state) do
+    %Some{element: item, state: state}
   end
 
-  def dispatch_generation({:bracket_selector, items}, %State{} = state) do
-    GP.make_generator(%Bracket{options: items, state: state})
+  def to_term({:one_or_more, [item]}, %State{} = state) do
+    %Many{element: item, state: state}
   end
 
-  def dispatch_generation({:not_bracket_selector, items}, %State{} = state) do
-    GP.make_generator(%NotBracket{options: items, state: state})
+  def to_term({:bracket_selector, items}, %State{} = state) do
+    %Bracket{options: items, state: state}
   end
 
-  def dispatch_generation({:minus, [left, right]}, %State{} = state) do
-    GP.make_generator(%Minus{left: left, right: right, state: state})
+  def to_term({:not_bracket_selector, items}, %State{} = state) do
+    %NotBracket{options: items, state: state}
   end
 
-  def dispatch_generation({:symbol, symbol}, %State{} = state) do
-    GP.make_generator(%Symbol{symbol: symbol, state: state})
+  def to_term({:minus, [left, right]}, %State{} = state) do
+    %Minus{left: left, right: right, state: state}
   end
 
-  def dispatch_generation({:maybe, [spec]}, %State{} = state) do
-    GP.make_generator(%Maybe{spec: spec, state: state})
+  def to_term({:symbol, symbol}, %State{} = state) do
+    %Symbol{symbol: symbol, state: state}
   end
 
-  def dispatch_generation({:hex_character, number}, %State{} = state) do
-    GP.make_generator(%HexCharacter{number: number, state: state})
+  def to_term({:maybe, [spec]}, %State{} = state) do
+    %Maybe{spec: spec, state: state}
+  end
+
+  def to_term({:hex_character, number}, %State{} = state) do
+    %HexCharacter{number: number, state: state}
   end
 
   # def dispatch_generation( items, %State{} = state ) when is_list( items ) do
   #   make_generator( %Array{ spec: items, state: state } )
   # end
 
-  def dispatch_generation({:one_of, elements}, %State{} = state) do
-    GP.make_generator(%Choice{options: elements, state: state})
+  def to_term({:one_of, elements}, %State{} = state) do
+    %Choice{options: elements, state: state}
   end
 
-  def dispatch_generation({:regex, regex}, %State{} = state) do
-    GP.make_generator(%RegexTerm{regex: regex, state: state})
+  def to_term({:regex, regex}, %State{} = state) do
+    %RegexTerm{regex: regex, state: state}
   end
 
-  def dispatch_generation({string_type, string}, %State{} = state)
+  def to_term({string_type, string}, %State{} = state)
       when string_type in [:single_quoted_string, :double_quoted_string] do
-    GP.make_generator(%Word{word: string, state: state})
+    %Word{word: string, state: state}
   end
 
-  def dispatch_generation(a, b) do
-    Logger.warn("falling back to failed dispatch generation")
+  def to_term(a, b) do
+    Logger.warn("falling back to create Term")
     ALog.di(a, "failed dispatch type")
     ALog.di(b, "failed dispatch state")
     %InterpreterTerms.Nothing{}
