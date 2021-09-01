@@ -2,6 +2,7 @@ defmodule InterpreterTest do
   use ExUnit.Case
   alias EbnfParser.Sparql
 
+  # Yes wrong ebnf, doens't matter
   @syntax_str %{
     non_terminal: [
       "Expression ::= '(' Expression ')' | Times",

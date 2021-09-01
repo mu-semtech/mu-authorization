@@ -1,41 +1,7 @@
 defmodule SparqlTest do
   use ExUnit.Case
   alias EbnfParser.Sparql
-
-  alias InterpreterTerms.SymbolMatch, as: Sym
-  alias InterpreterTerms.WordMatch, as: Word
   doctest Sparql
-
-  defp match_ignore_whitespace_and_string(%Sym{symbol: s1, submatches: m1}, %Sym{
-         symbol: s2,
-         submatches: m2
-       })
-       when is_list(m1) and is_list(m2) do
-    if s1 !== s2 do
-      false
-    else
-      if length(m1) !== length(m2) do
-        false
-      else
-        Enum.zip(m1, m2) |> Enum.all?(fn {x, y} -> match_ignore_whitespace_and_string(x, y) end)
-      end
-    end
-  end
-
-  defp match_ignore_whitespace_and_string(%Sym{symbol: s1, submatches: m1}, %Sym{
-         symbol: s2,
-         submatches: m2
-       }) do
-    s1 == s2 and m1 == m2
-  end
-
-  defp match_ignore_whitespace_and_string(%Word{word: w1}, %Word{word: w2}) do
-    w1 |> String.downcase() == w2 |> String.downcase()
-  end
-
-  defp match_ignore_whitespace_and_string(_x, _y) do
-    false
-  end
 
   test "parse the simplest SPARQL query" do
     simple_query = "SELECT * WHERE { ?s ?p ?o }"
@@ -218,7 +184,7 @@ defmodule SparqlTest do
 
     parsed_simple_query = simple_query |> Parser.parse_query_full()
 
-    assert match_ignore_whitespace_and_string(parsed_simple_query, standard_simple_query)
+    assert TestHelper.match_ignore_whitespace_and_string(parsed_simple_query, standard_simple_query)
   end
 
   test "parse a wrong SPARQL query" do
