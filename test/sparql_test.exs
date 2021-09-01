@@ -192,4 +192,21 @@ defmodule SparqlTest do
     res = simple_query |> Parser.parse_query_full()
     assert is_nil(res)
   end
+
+  test "parse SPARQL query bench thing" do
+    simple_query = "SELECT * WHERE { ?s ?p ?o }"
+
+
+
+    times = Stream.repeatedly(fn -> {} end) |> Enum.take(50) |> Enum.map(fn _ ->
+      start_time = :os.system_time(:microsecond)
+      parsed_simple_query = simple_query |> Parser.parse_query_full()
+      end_time = :os.system_time(:microsecond)
+      end_time - start_time
+    end)
+
+    IO.inspect({TestHelper.median(times), TestHelper.mean(times), TestHelper.standard_deviation(times)}, label: "Took {mid, mean, std} μs")
+
+    assert true
+  end
 end
