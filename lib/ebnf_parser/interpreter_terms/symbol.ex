@@ -35,8 +35,14 @@ defmodule InterpreterTerms.Symbol.Impl do
       %{result | match_construct: [match_construct], matched_string: whitespace <> str}
     end
 
-    defp cont_parse({:failed, reason}, symbol, _whitespace) do
-      {:failed, {:symbol, symbol, reason}}
+    defp cont_parse(
+           %Generator.Error{
+             errors: errors
+           } = res,
+           symbol,
+           _whitespace
+         ) do
+      %{res | errors: [{:symbol, symbol} | errors]}
     end
   end
 end

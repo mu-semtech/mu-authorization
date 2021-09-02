@@ -7,21 +7,15 @@ defmodule InterpreterTerms.Choice.Impl do
       Enum.flat_map(options, &EbnfParser.ParseProtocol.parse(&1, parsers, chars)) |> post
     end
 
-    defp is_error?({:failed, _}) do
-      true
-    end
-
-    defp is_error?(_) do
-      false
-    end
-
     def post(results) do
-      good = results |> Enum.reject(&is_error?/1)
+      if Enum.all?(results, &Generator.Result.is_error?/1) do
+        base = %Generator.Error{
+          errors: [:choice]
+        }
 
-      if Enum.empty?(good) do
-        [{:failed, {:choice, results}}]
+        Enum.map(results, &Generator.Result.combine_results(base, &1))
       else
-        good |> sort_solutions()
+        results |> sort_solutions()
       end
     end
 

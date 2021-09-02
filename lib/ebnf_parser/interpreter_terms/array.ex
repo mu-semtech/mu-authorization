@@ -27,25 +27,11 @@ defmodule InterpreterTerms.Array.Impl do
   end
 
   defp cont_parse(%Generator.Result{leftover: leftover} = res, parsers, xs) do
-    parse_things(xs, parsers, leftover) |> Enum.map(&try_combine(res, &1))
+    parse_things(xs, parsers, leftover) |> Enum.map(&Generator.Result.combine_results(res, &1))
   end
 
-  defp cont_parse({:failed, reason}, _parsers, _xs) do
-    [{:failed, reason}]
-  end
-
-  defp try_combine(_res, {:failed, reason}) do
-    {:failed, reason}
-  end
-
-  defp try_combine(res, res2) do
-    combine_results(res, res2)
-  end
-
-  defp combine_results(base_result, new_result) do
-    # Combines two results for a list match.  The first supplied
-    # result is the one that was generated earlier.
-    Generator.Result.combine_results(base_result, new_result)
+  defp cont_parse(%Generator.Error{errors: errors} = res, _parsers, _xs) do
+    [%{res | errors: [{:array}|errors]}]
   end
 end
 

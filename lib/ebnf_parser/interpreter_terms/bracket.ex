@@ -29,9 +29,9 @@ defmodule Bracket do
     def make_parser(%Bracket{options: options}) do
       parse_f = fn x -> options |> Enum.any?(&match_option(&1, x)) end
 
-      error_f = fn x ->
+      error_f = fn x, chars ->
         opts = options |> Enum.map(&error_options/1) |> List.to_string()
-        {:failed, "'" <> x <> "' not in [" <> opts <> "]"}
+        %Generator.Error{errors: ["'" <> x <> "' not in [" <> opts <> "]"], leftover: chars}
       end
 
       InterpreterTerms.Function.single_char_match(parse_f, error_f)

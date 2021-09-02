@@ -38,7 +38,7 @@ defmodule InterpreterTerms.Word.Impl do
 
         [result]
       else
-        [{:failed, {:Word, "Could not match '" <> word <> "' with '" <> test_str <> "'"}}]
+        [%Generator.Error{errors: ["Could not match '" <> word <> "' with '" <> test_str <> "'"], leftover: chars}]
       end
     end
   end

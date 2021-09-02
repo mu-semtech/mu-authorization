@@ -10,7 +10,15 @@ defmodule InterpreterTerms.Maybe.Impl do
 
       this_res = %Result{leftover: chars}
 
-      [this_res | children]
+      [this_res | children] |> Enum.map(&extend_with_error/1)
+    end
+
+    defp extend_with_error(%Generator.Error{errors: errors} = res) do
+      %{res | errors: [{:maybe} | errors]}
+    end
+
+    defp extend_with_error(%Generator.Result{} = res) do
+      res
     end
   end
 end

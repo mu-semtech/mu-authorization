@@ -11,31 +11,42 @@ defmodule InterpreterTerms.Function do
     end
   end
 
-  defp empty_fail(char) do
-    {:failed, {:function, "'" <> char <> "' did not match function"}}
+  defp empty_fail(char, chars) do
+    %Generator.Error{
+      errors: [{:function, "'" <> char <> "' did not match function"}],
+      leftover: chars
+    }
   end
 
   @spec single_char_match(
           (String.grapheme() -> boolean()),
-          (String.grapheme() -> {:failed, any()})
+          (String.grapheme(), [String.grapheme()] -> Generator.Error.t())
         ) :: InterpreterTerms.Function.t()
-  def single_char_match(match_f, fail_f \\ &empty_fail/1) do
-    inner = fn [char | chars] ->
-      if match_f.(char) do
-        [
-          %Result{
-            leftover: chars,
-            matched_string: char,
-            match_construct: [%InterpreterTerms.BracketResult{character: char}]
-          }
-        ]
-      else
-        [fail_f.(char)]
-      end
-    end
-
+  def single_char_match(match_f, fail_f \\ &empty_fail/2) do
     %InterpreterTerms.Function{
-      parse_f: inner
+      parse_f: &do_single_char_match(&1, match_f, fail_f)
     }
+  end
+
+  defp do_single_char_match(chars, match_f, fail_f) do
+    {new_chars, whitespace} = Generator.State.cut_whitespace(chars)
+
+    case new_chars do
+      [char | chars] ->
+        if match_f.(char) do
+          [
+            %Result{
+              leftover: chars,
+              matched_string: whitespace <> char,
+              match_construct: [%InterpreterTerms.BracketResult{character: char}]
+            }
+          ]
+        else
+          [fail_f.(char, chars)]
+        end
+
+      [] ->
+        [fail_f.("", chars)]
+    end
   end
 end
