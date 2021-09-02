@@ -1,3 +1,37 @@
+defmodule InterpreterTerms.Choice.Impl do
+  alias Generator.State, as: State
+  defstruct [:parsers]
+
+  defimpl EbnfParser.ParseProtocol do
+    def parse(%InterpreterTerms.Choice.Impl{parsers: options}, parsers, chars) do
+      Enum.flat_map(options, &EbnfParser.ParseProtocol.parse(&1, parsers, chars)) |> post
+    end
+
+    defp is_error?({:failed, _}) do
+      true
+    end
+
+    defp is_error?(_) do
+      false
+    end
+
+    def post(results) do
+      good = results |> Enum.reject(&is_error?/1)
+
+      if Enum.empty?(good) do
+        [{:failed, {:choice, results}}]
+      else
+        good |> sort_solutions()
+      end
+    end
+
+    defp sort_solutions(solutions) do
+      solutions
+      |> Enum.sort_by(&Generator.Result.length/1, &>=/2)
+    end
+  end
+end
+
 defmodule InterpreterTerms.Choice do
   alias Generator.State, as: State
   # import EbnfParser.GeneratorConstructor, only: [ {:dispatch_generation, 2} ]
@@ -13,6 +47,19 @@ defmodule InterpreterTerms.Choice do
 
     defp dispatch_generation(alpha, beta) do
       EbnfParser.GeneratorConstructor.dispatch_generation(alpha, beta)
+    end
+  end
+
+  defimpl EbnfParser.ParserProtocol do
+    def make_parser(%InterpreterTerms.Choice{options: options}) do
+      parser_options =
+        options
+        |> Enum.map(&EbnfParser.GeneratorConstructor.to_term/1)
+        |> Enum.map(&EbnfParser.ParserProtocol.make_parser/1)
+
+      %InterpreterTerms.Choice.Impl{
+        parsers: parser_options
+      }
     end
   end
 end

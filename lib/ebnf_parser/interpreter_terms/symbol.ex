@@ -2,36 +2,41 @@ defmodule InterpreterTerms.Symbol.Impl do
   alias Generator.Result, as: Result
   alias Generator.State, as: State
 
-  defstruct [:symbol, :child]
+  defstruct [:symbol]
 
   defimpl EbnfParser.ParseProtocol do
     def parse(
           %InterpreterTerms.Symbol.Impl{
-            symbol: symbol,
-            child: child_parser
+            symbol: symbol
           },
+          parsers,
           chars
         ) do
       {new_chars, whitespace} = State.cut_whitespace(chars)
 
-      case EbnfParser.ParseProtocol.parse(child_parser, new_chars) do
-        {:fail} ->
-          {:fail}
+      child_parser = Map.get(parsers, symbol)
 
-        parsed ->
-          parsed
-          |> Enum.map(fn %Generator.Result{match_construct: construct, matched_string: str} =
-                           result ->
-            match_construct = %InterpreterTerms.SymbolMatch{
-              symbol: symbol,
-              whitespace: whitespace,
-              string: whitespace <> str,
-              submatches: construct
-            }
+      EbnfParser.ParseProtocol.parse(child_parser, parsers, new_chars)
+      |> Enum.map(&cont_parse(&1, symbol, whitespace))
+    end
 
-            %{result | match_construct: [match_construct], matched_string: whitespace <> str}
-          end)
-      end
+    defp cont_parse(
+           %Generator.Result{match_construct: construct, matched_string: str} = result,
+           symbol,
+           whitespace
+         ) do
+      match_construct = %InterpreterTerms.SymbolMatch{
+        symbol: symbol,
+        whitespace: whitespace,
+        string: whitespace <> str,
+        submatches: construct
+      }
+
+      %{result | match_construct: [match_construct], matched_string: whitespace <> str}
+    end
+
+    defp cont_parse({:failed, reason}, symbol, _whitespace) do
+      {:failed, {:symbol, symbol, reason}}
     end
   end
 end
@@ -39,7 +44,7 @@ end
 defmodule InterpreterTerms.Symbol do
   alias Generator.State, as: State
 
-  defstruct [:symbol, {:state, %State{}}, {:child, nil}]
+  defstruct [:symbol, {:state, %State{}}]
 
   defimpl EbnfParser.GeneratorProtocol do
     def make_generator(%InterpreterTerms.Symbol{
@@ -85,21 +90,11 @@ defmodule InterpreterTerms.Symbol do
   end
 
   defimpl EbnfParser.ParserProtocol do
-    def make_parser(
-          %InterpreterTerms.Symbol{
-            symbol: name
-          },
-          syntax
-        ) do
-      # TODO check if ebnf is correct, without cycles
-      {_terminal, rule} = Map.get(syntax, name)
-
-      child_parser = EbnfParser.GeneratorConstructor.to_term(rule, %State{})
-      |> EbnfParser.ParserProtocol.make_parser(syntax)
-
+    def make_parser(%InterpreterTerms.Symbol{
+          symbol: name
+        }) do
       %InterpreterTerms.Symbol.Impl{
-        symbol: name,
-        child: child_parser
+        symbol: name
       }
     end
   end

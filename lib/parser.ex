@@ -1,5 +1,6 @@
 defmodule Parser do
   alias Interpreter.Diff.Store, as: DiffStore
+
   @moduledoc """
   Entrypoint to parse SPARQL queries and the W3C EBNF syntax.
   """
@@ -128,5 +129,14 @@ defmodule Parser do
   """
   def full_parse(string) do
     EbnfParser.Parser.tokenize_and_parse(string)
+  end
+
+  defp parser_from_rule({k, {_terminal, v}}) do
+    parser = v |> EbnfParser.GeneratorConstructor.to_term() |> EbnfParser.ParserProtocol.make_parser()
+    {k, parser}
+  end
+
+  def make_parsers(syntax) do
+    Map.new(syntax, &parser_from_rule/1)
   end
 end

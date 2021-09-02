@@ -131,7 +131,7 @@ defmodule SomeEmitter do
         # if locked_state?(some, base_result) do
         #   {:fail}
         # else
-          {:ok, %InterpreterTerms.Nothing{}, base_result}
+        {:ok, %InterpreterTerms.Nothing{}, base_result}
         # end
     end
   end

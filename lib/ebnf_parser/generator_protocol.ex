@@ -10,15 +10,19 @@ defprotocol EbnfParser.ParserProtocol do
   @type t :: any
   @type parser :: struct()
 
-  @spec make_parser(EbnfParser.ParserProtocol.t(), EbnfParser.Sparql.syntax()) ::
-          EbnfParser.ParserProtocol.parser()
-  def make_parser(interpreter_terms, syntax)
+  @spec make_parser(EbnfParser.ParserProtocol.t()) :: EbnfParser.ParserProtocol.parser()
+  def make_parser(interpreter_terms)
 end
 
 defprotocol EbnfParser.ParseProtocol do
-  @spec parse(EbnfParser.ParserProtocol.parser(), [String.grapheme()]) ::
-          [Generator.Result.t()] | {:fail}
-  def parse(parser, chars)
+  @type parsers :: %{required(atom()) => EbnfParser.ParserProtocol.parser()}
+  @type success :: Generator.Result.t()
+  @type failure :: {:failed, any()}
+  @type response :: [success | failure]
+
+  @spec parse(EbnfParser.ParserProtocol.parser(), parsers(), [String.grapheme()]) ::
+          EbnfParser.ParseProtocol.response()
+  def parse(parser, parsers, chars)
 end
 
 defprotocol EbnfParser.Generator do

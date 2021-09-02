@@ -4,33 +4,42 @@ defmodule InterpreterTerms.Array.Impl do
   defimpl EbnfParser.ParseProtocol do
     def parse(
           %InterpreterTerms.Array.Impl{
-            elements: parsers
+            elements: items
           },
+          parsers,
           chars
         ) do
-      InterpreterTerms.Array.Impl.parse_things(parsers, chars)
+      InterpreterTerms.Array.Impl.parse_things(items, parsers, chars)
     end
   end
 
-  def parse_things([], chars) do
+  def parse_things([], _parsers, chars) do
     [%Generator.Result{leftover: chars}]
   end
 
-  def parse_things([x], chars) do
-    EbnfParser.ParseProtocol.parse(x, chars)
+  def parse_things([x], parsers, chars) do
+    EbnfParser.ParseProtocol.parse(x, parsers, chars)
   end
 
-  def parse_things([x | xs], chars) do
-    case EbnfParser.ParseProtocol.parse(x, chars) do
-      {:fail} ->
-        {:fail}
+  def parse_things([x | xs], parsers, chars) do
+    EbnfParser.ParseProtocol.parse(x, parsers, chars)
+    |> Enum.flat_map(&cont_parse(&1, parsers, xs))
+  end
 
-      parsed ->
-        parsed
-        |> Enum.flat_map(fn %Generator.Result{leftover: leftover} = res ->
-          parse_things(xs, leftover) |> Enum.map(&combine_results(res, &1))
-        end)
-    end
+  defp cont_parse(%Generator.Result{leftover: leftover} = res, parsers, xs) do
+    parse_things(xs, parsers, leftover) |> Enum.map(&try_combine(res, &1))
+  end
+
+  defp cont_parse({:failed, reason}, _parsers, _xs) do
+    [{:failed, reason}]
+  end
+
+  defp try_combine(_res, {:failed, reason}) do
+    {:failed, reason}
+  end
+
+  defp try_combine(res, res2) do
+    combine_results(res, res2)
   end
 
   defp combine_results(base_result, new_result) do
@@ -65,11 +74,11 @@ defmodule InterpreterTerms.Array do
 
   # ----------------------------------------------------------------------------------------------------
   defimpl EbnfParser.ParserProtocol do
-    def make_parser(%InterpreterTerms.Array{elements: items}, syntax) do
+    def make_parser(%InterpreterTerms.Array{elements: items}) do
       parsers =
         items
         |> Enum.map(&EbnfParser.GeneratorConstructor.to_term(&1, %State{}))
-        |> Enum.map(&EbnfParser.ParserProtocol.make_parser(&1, syntax))
+        |> Enum.map(&EbnfParser.ParserProtocol.make_parser/1)
 
       %InterpreterTerms.Array.Impl{
         elements: parsers

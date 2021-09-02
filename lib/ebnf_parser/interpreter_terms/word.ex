@@ -22,11 +22,12 @@ defmodule InterpreterTerms.Word.Impl do
   defstruct word: ""
 
   defimpl EbnfParser.ParseProtocol do
-    def parse(%InterpreterTerms.Word.Impl{word: word}, chars) do
+    def parse(%InterpreterTerms.Word.Impl{word: word}, _parsers, chars) do
       {new_chars, whitespace} = State.cut_whitespace(chars)
 
-      if String.upcase(word) ==
-           new_chars |> Enum.take(String.length(word)) |> to_string |> String.upcase() do
+      test_str = new_chars |> Enum.take(String.length(word)) |> to_string
+
+      if word |> String.upcase() == test_str |> String.upcase() do
         result = %Result{
           # We don't drop whitespace, split_off_whitespace has done
           # this for us.
@@ -37,7 +38,7 @@ defmodule InterpreterTerms.Word.Impl do
 
         [result]
       else
-        {:fail}
+        [{:failed, {:Word, "Could not match '" <> word <> "' with '" <> test_str <> "'"}}]
       end
     end
   end
@@ -97,7 +98,7 @@ defmodule InterpreterTerms.Word do
   end
 
   defimpl EbnfParser.ParserProtocol do
-    def make_parser(%InterpreterTerms.Word{word: word}, _syntax) do
+    def make_parser(%InterpreterTerms.Word{word: word}) do
       %InterpreterTerms.Word.Impl{word: word}
     end
   end

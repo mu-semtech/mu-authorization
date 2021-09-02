@@ -42,6 +42,10 @@ defmodule EbnfParser.GeneratorConstructor do
     GP.make_generator(to_term(alpha, beta))
   end
 
+  def to_term(x) do
+    to_term(x, %State{})
+  end
+
   def to_term(list, %State{} = state) when is_list(list) do
     to_term({:paren_group, list}, state)
   end
