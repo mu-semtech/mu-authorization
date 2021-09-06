@@ -14,23 +14,31 @@ defmodule InterpreterTerms.Symbol.Impl do
         ) do
       {new_chars, whitespace} = State.cut_whitespace(chars)
 
-      child_parser = Map.get(parsers, symbol)
+      {child_parser, is_term} = Map.get(parsers, symbol)
 
       EbnfParser.ParseProtocol.parse(child_parser, parsers, new_chars)
-      |> Enum.map(&cont_parse(&1, symbol, whitespace))
+      |> Enum.map(&cont_parse(&1, symbol, whitespace, is_term))
     end
 
     defp cont_parse(
            %Generator.Result{match_construct: construct, matched_string: str} = result,
            symbol,
-           whitespace
+           whitespace,
+           is_term
          ) do
       match_construct = %InterpreterTerms.SymbolMatch{
         symbol: symbol,
         whitespace: whitespace,
-        string: whitespace <> str,
-        submatches: construct
+        # TODO don't add whitespace for terminal symbols
+        string: whitespace <> str
       }
+
+      match_construct =
+        if is_term do
+          match_construct
+        else
+          %{match_construct | submatches: construct}
+        end
 
       %{result | match_construct: [match_construct], matched_string: whitespace <> str}
     end
@@ -40,7 +48,8 @@ defmodule InterpreterTerms.Symbol.Impl do
              errors: errors
            } = res,
            symbol,
-           _whitespace
+           _whitespace,
+           _is_term
          ) do
       %{res | errors: [{:symbol, symbol} | errors]}
     end

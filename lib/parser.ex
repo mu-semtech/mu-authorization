@@ -136,9 +136,9 @@ defmodule Parser do
     EbnfParser.Parser.tokenize_and_parse(string)
   end
 
-  defp parser_from_rule({k, {_terminal, v}}) do
+  defp parser_from_rule({k, {terminal, v}}) do
     parser = v |> EbnfParser.GeneratorConstructor.to_term() |> EbnfParser.ParserProtocol.make_parser()
-    {k, parser}
+    {k, {parser, terminal}}
   end
 
   def make_parsers(syntax) do

@@ -15,7 +15,7 @@ defprotocol EbnfParser.ParserProtocol do
 end
 
 defprotocol EbnfParser.ParseProtocol do
-  @type parsers :: %{required(atom()) => EbnfParser.ParserProtocol.parser()}
+  @type parsers :: %{required(atom()) => {EbnfParser.ParserProtocol.parser(), boolean}}
   @type success :: Generator.Result.t()
   @type failure :: Generator.Error.t()
   @type response :: [success | failure]
