@@ -184,7 +184,10 @@ defmodule SparqlTest do
 
     parsed_simple_query = simple_query |> Parser.parse_query_full()
 
-    assert TestHelper.match_ignore_whitespace_and_string(parsed_simple_query, standard_simple_query)
+    assert TestHelper.match_ignore_whitespace_and_string(
+             parsed_simple_query,
+             standard_simple_query
+           )
   end
 
   test "parse a wrong SPARQL query" do
@@ -193,19 +196,52 @@ defmodule SparqlTest do
     assert is_nil(res)
   end
 
+  defp benchmark(f, name, times \\ 50, warmup \\ true) do
+    if warmup do
+      Stream.repeatedly(fn -> {} end)
+      |> Enum.take(10)
+      |> Enum.each(fn _x -> f.() end)
+    end
+
+    times =
+      Stream.repeatedly(fn -> {} end)
+      |> Enum.take(times)
+      |> Enum.map(fn _ ->
+        start_time = :os.system_time(:microsecond)
+        _returned = f.()
+        end_time = :os.system_time(:microsecond)
+        end_time - start_time
+      end)
+
+    IO.inspect(
+      {TestHelper.median(times), TestHelper.mean(times), TestHelper.standard_deviation(times)},
+      label: name <> "Took {mid, mean, std} μs"
+    )
+  end
+
+  defp parse_query(query, true) do
+    rule_name = :Sparql
+    parsers = Parser.parsers_sparql()
+    parser = Map.get(parsers, rule_name)
+
+    EbnfParser.ParseProtocol.parse(parser, parsers, query |> String.graphemes())
+    |> Enum.take(1)
+  end
+
+  defp parse_query(query, false) do
+    query |> Parser.parse_query_full()
+  end
+
+  # equivalent to setting @tag key: true
+  @tag :bench
   test "parse SPARQL query bench thing" do
     simple_query = "SELECT * WHERE { ?s ?p ?o }"
 
+    bench1 = fn -> parse_query(simple_query, false) end
+    bench2 = fn -> parse_query(simple_query, true) end
 
-
-    times = Stream.repeatedly(fn -> {} end) |> Enum.take(50) |> Enum.map(fn _ ->
-      start_time = :os.system_time(:microsecond)
-      parsed_simple_query = simple_query |> Parser.parse_query_full()
-      end_time = :os.system_time(:microsecond)
-      end_time - start_time
-    end)
-
-    IO.inspect({TestHelper.median(times), TestHelper.mean(times), TestHelper.standard_deviation(times)}, label: "Took {mid, mean, std} μs")
+    benchmark(bench1, "Old Parser")
+    benchmark(bench2, "New Parser")
 
     assert true
   end

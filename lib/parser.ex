@@ -9,8 +9,13 @@ defmodule Parser do
   @type query :: %InterpreterTerms.SymbolMatch{} | %InterpreterTerms.WordMatch{}
 
   @spec parse_sparql() :: syntax
-  def parse_sparql() do
+  def parse_sparql do
     EbnfParser.Sparql.syntax()
+  end
+
+  @spec parsers_sparql() :: [EbnfParser.ParserProtocol.t()]
+  def parsers_sparql do
+    EbnfParser.Sparql.parsers()
   end
 
   @spec parse_query(unparsed_query, atom) :: query() | {:fail}

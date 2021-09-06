@@ -16,14 +16,21 @@ defmodule EbnfParser.Sparql do
     GenServer.init/1 callback
   """
   def init(_) do
-    {:ok, EbnfParser.Sparql.parse_sparql()}
+    syntax = EbnfParser.Sparql.parse_sparql()
+    parsers = Parser.make_parsers(syntax)
+
+    {:ok, {syntax, parsers}}
   end
 
   @doc """
     GenServer.handle_call/3 callback
   """
-  def handle_call(:get, _from, syntax) do
-    {:reply, syntax, syntax}
+  def handle_call(:get_syntax, _from, {syntax, parsers}) do
+    {:reply, syntax, {syntax, parsers}}
+  end
+
+  def handle_call(:get_parsers, _from, {syntax, parsers}) do
+    {:reply, parsers, {syntax, parsers}}
   end
 
   ### Client API / Helper functions
@@ -32,7 +39,11 @@ defmodule EbnfParser.Sparql do
   end
 
   def syntax do
-    GenServer.call(__MODULE__, :get)
+    GenServer.call(__MODULE__, :get_syntax)
+  end
+
+  def parsers do
+    GenServer.call(__MODULE__, :get_parsers)
   end
 
   def split_single_form(string, terminal \\ false) do
