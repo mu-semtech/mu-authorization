@@ -14,6 +14,28 @@ defmodule InterpreterTerms.RegexMatch do
   end
 end
 
+defmodule InterpreterTerms.Regex.Impl do
+  defstruct [:regex]
+
+  defimpl EbnfParser.ParseProtocol do
+    def parse(%InterpreterTerms.Regex.Impl{regex: regex}, _parsers, chars) do
+      [Regex.run(regex, to_string(chars)) |> generate_result(chars, regex)]
+    end
+
+    defp generate_result(nil, chars, regex) do
+      %Generator.Error{errors: ["Did not match regex " <> regex.source], leftover: chars}
+    end
+
+    defp generate_result([string | _matches], chars, _regex) do
+      %Result{
+        leftover: Enum.drop(chars, String.length(string)),
+        matched_string: string,
+        match_construct: [%InterpreterTerms.RegexMatch{match: string}]
+      }
+    end
+  end
+end
+
 defmodule RegexEmitter do
   defstruct [:state, :known_matches]
 
@@ -44,6 +66,14 @@ end
 
 defmodule InterpreterTerms.Regex do
   defstruct regex: "", state: %State{}, known_matches: []
+
+  defimpl EbnfParser.ParserProtocol do
+    def make_parser(%InterpreterTerms.Regex{regex: regex}) do
+      %InterpreterTerms.Regex.Impl{
+        regex: regex
+      }
+    end
+  end
 
   defimpl EbnfParser.GeneratorProtocol do
     def make_generator(%RegexTerm{regex: regex, state: state} = _regex_term) do

@@ -21,6 +21,46 @@ defmodule NotBracket do
 
   defstruct [:options, {:state, %State{}}]
 
+  defimpl EbnfParser.ParserProtocol do
+    def make_parser(%NotBracket{options: options}) do
+      parse_f = fn x -> options |> Enum.any?(&match_option(&1, x)) |> Kernel.not end
+
+      error_f = fn x, chars ->
+        opts = options |> Enum.map(&error_options/1) |> List.to_string()
+        %Generator.Error{errors: ["'" <> x <> "' not in [" <> opts <> "]"], leftover: chars}
+      end
+
+      InterpreterTerms.Function.single_char_match(parse_f, error_f)
+    end
+
+    # TODO: remove duplicate code from bracket!
+
+    defp match_option({:range, [start_char, end_char]}, char) do
+      char_for_code(start_char) <= char && char <= char_for_code(end_char)
+    end
+
+    defp match_option(char_obj, char) do
+      char_for_code(char_obj) == char
+    end
+
+    defp error_options({:range, [start_char, end_char]}) do
+      char_for_code(start_char) <> "-" <> char_for_code(end_char)
+    end
+
+    defp error_options(char_obj) do
+      char_for_code(char_obj)
+    end
+
+    # TODO remove duplicate code
+    defp char_for_code({:character, char}) do
+      char
+    end
+
+    defp char_for_code({:hex_character, codepoint}) do
+      <<codepoint::utf8>>
+    end
+  end
+
   defimpl EbnfParser.GeneratorProtocol do
     def make_generator(%NotBracket{} = bracket) do
       bracket
