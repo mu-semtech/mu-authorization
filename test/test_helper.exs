@@ -39,6 +39,8 @@ defmodule TestHelper do
     {parser, _} = Map.get(parsers, rule_name)
 
     EbnfParser.ParseProtocol.parse(parser, parsers, query |> String.graphemes())
+    |> Enum.sort_by(&Generator.Result.length/1, &>=/2)
+    |> List.first()
   end
 
   def parse(query) do

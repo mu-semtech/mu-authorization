@@ -6,22 +6,17 @@ defmodule InterpreterTerms.Maybe.Impl do
 
   defimpl EbnfParser.ParseProtocol do
     def parse(%InterpreterTerms.Maybe.Impl{parser: parser}, parsers, chars) do
-      child = EbnfParser.ParseProtocol.parse(parser, parsers, chars)
+      xs = EbnfParser.ParseProtocol.parse(parser, parsers, chars)
 
-      if Generator.Result.is_error?(child) do
-        %Result{leftover: chars}
-      else
-        child
-      end
+      [%Result{leftover: chars} | xs]
+      |> Enum.reject(&Generator.Result.is_error?/1)
+      |> sort_solutions()
     end
 
-    # defp extend_with_error(%Generator.Error{errors: errors} = res) do
-    #   %{res | errors: [{:maybe} | errors]}
-    # end
-
-    # defp extend_with_error(%Generator.Result{} = res) do
-    #   res
-    # end
+    defp sort_solutions(solutions) do
+      solutions
+      |> Enum.sort_by(&Generator.Result.length/1, &>=/2)
+    end
   end
 end
 

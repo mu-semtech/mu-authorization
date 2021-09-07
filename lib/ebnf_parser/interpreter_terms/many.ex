@@ -6,20 +6,20 @@ defmodule InterpreterTerms.Many.Impl do
   defimpl EbnfParser.ParseProtocol do
     def parse(%InterpreterTerms.Many.Impl{parser: parser}, parsers, chars) do
       EbnfParser.ParseProtocol.parse(parser, parsers, chars)
-      |> cont_parse(parser, parsers)
+      |> Enum.flat_map(&cont_parse(&1, parser, parsers))
     end
 
     defp cont_parse(%Generator.Result{leftover: leftover} = res, parser, parsers) do
-      result = EbnfParser.ParseProtocol.parse(
+      EbnfParser.ParseProtocol.parse(
         %InterpreterTerms.Some.Impl{parser: parser},
         parsers,
         leftover
       )
-      Generator.Result.combine_results(res, result)
+      |> Enum.map(&Generator.Result.combine_results(res, &1))
     end
 
     defp cont_parse(%Generator.Error{errors: errors} = res, _parsers, _xs) do
-      %{res | errors: [{:array} | errors]}
+      [%{res | errors: [{:array} | errors]}]
     end
   end
 end

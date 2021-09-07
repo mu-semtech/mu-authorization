@@ -6,12 +6,14 @@ defmodule InterpreterTerms.Some.Impl do
   defimpl EbnfParser.ParseProtocol do
     def parse(%InterpreterTerms.Some.Impl{parser: parser}, parsers, chars) do
       do_parse(
+        # Actual base solution, parse zero times
         %Generator.Result{
           leftover: chars
         },
         parser,
         parsers
       )
+      |> sort_solutions()
     end
 
     defp do_parse(
@@ -21,14 +23,22 @@ defmodule InterpreterTerms.Some.Impl do
            parser,
            parsers
          ) do
-      result = EbnfParser.ParseProtocol.parse(parser, parsers, chars)
+      results = EbnfParser.ParseProtocol.parse(parser, parsers, chars)
 
-      if Generator.Result.is_error?(result) do
+      # Keep base to assure some solutions are valid
+      # Also keep all parse paths open
+      [
         base
-      else
-        Generator.Result.combine_results(base, result)
-        |> do_parse(parser, parsers)
-      end
+        | results
+          |> Enum.reject(&Generator.Result.is_error?/1)
+          |> Enum.map(&Generator.Result.combine_results(base, &1))
+          |> Enum.flat_map(&do_parse(&1, parser, parsers))
+      ]
+    end
+
+    defp sort_solutions(solutions) do
+      solutions
+      |> Enum.sort_by(&Generator.Result.length/1, &>=/2)
     end
   end
 end

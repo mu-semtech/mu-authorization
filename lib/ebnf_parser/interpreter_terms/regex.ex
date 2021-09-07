@@ -23,15 +23,17 @@ defmodule InterpreterTerms.Regex.Impl do
     end
 
     defp generate_result(nil, chars, regex) do
-      %Generator.Error{errors: ["Did not match regex " <> regex.source], leftover: chars}
+      [%Generator.Error{errors: ["Did not match regex " <> regex.source], leftover: chars}]
     end
 
     defp generate_result([string | _matches], chars, _regex) do
-      %Result{
-        leftover: Enum.drop(chars, String.length(string)),
-        matched_string: string,
-        match_construct: [%InterpreterTerms.RegexMatch{match: string}]
-      }
+      [
+        %Result{
+          leftover: Enum.drop(chars, String.length(string)),
+          matched_string: string,
+          match_construct: [%InterpreterTerms.RegexMatch{match: string}]
+        }
+      ]
     end
   end
 end

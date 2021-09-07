@@ -34,17 +34,17 @@ defmodule InterpreterTerms.Function do
     case new_chars do
       [char | chars] ->
         if match_f.(char) do
-          %Result{
+          [%Result{
             leftover: chars,
             matched_string: whitespace <> char,
             match_construct: [%InterpreterTerms.BracketResult{character: char}]
-          }
+          }]
         else
-          fail_f.(char, chars)
+          [fail_f.(char, chars)]
         end
 
       [] ->
-        fail_f.("", chars)
+        [fail_f.("", chars)]
     end
   end
 end

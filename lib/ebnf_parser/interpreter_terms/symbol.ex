@@ -17,7 +17,7 @@ defmodule InterpreterTerms.Symbol.Impl do
       {child_parser, is_term} = Map.get(parsers, symbol)
 
       EbnfParser.ParseProtocol.parse(child_parser, parsers, new_chars)
-      |> cont_parse(symbol, whitespace, is_term)
+      |> Enum.map(&cont_parse(&1, symbol, whitespace, is_term))
     end
 
     defp cont_parse(

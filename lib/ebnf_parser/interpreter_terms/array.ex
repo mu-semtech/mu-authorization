@@ -13,21 +13,21 @@ defmodule InterpreterTerms.Array.Impl do
     end
 
     defp parse_things([], _parsers, chars) do
-      %Generator.Result{leftover: chars}
+      [%Generator.Result{leftover: chars}]
     end
 
     defp parse_things([x | xs], parsers, chars) do
       EbnfParser.ParseProtocol.parse(x, parsers, chars)
-      |> cont_parse(parsers, xs)
+      |> Enum.flat_map(&cont_parse(&1, parsers, xs))
     end
 
     defp cont_parse(%Generator.Result{leftover: leftover} = res, parsers, xs) do
-      next = parse_things(xs, parsers, leftover)
-      Generator.Result.combine_results(res, next)
+      parse_things(xs, parsers, leftover)
+      |> Enum.map(&Generator.Result.combine_results(res, &1))
     end
 
     defp cont_parse(%Generator.Error{} = res, _parsers, _xs) do
-      res
+      [res]
     end
   end
 end

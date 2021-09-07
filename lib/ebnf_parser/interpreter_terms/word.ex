@@ -36,12 +36,14 @@ defmodule InterpreterTerms.Word.Impl do
           match_construct: [%InterpreterTerms.WordMatch{word: word, whitespace: whitespace}]
         }
 
-        result
+        [result]
       else
-        %Generator.Error{
-          errors: ["Could not match '" <> word <> "' with '" <> test_str <> "'"],
-          leftover: chars
-        }
+        [
+          %Generator.Error{
+            errors: ["Could not match '" <> word <> "' with '" <> test_str <> "'"],
+            leftover: chars
+          }
+        ]
       end
     end
   end

@@ -6,12 +6,18 @@ defmodule InterpreterTerms.Minus.Impl do
       left_res = EbnfParser.ParseProtocol.parse(left, parsers, chars) |> MapSet.new()
       right_res = EbnfParser.ParseProtocol.parse(right, parsers, chars) |> MapSet.new()
 
-      MapSet.difference(left_res, right_res)
+      results = MapSet.difference(left_res, right_res)
       |> Enum.into([])
-      |> sort_solutions()
-      |> List.first(%Generator.Error{
-        errors: [:no_minus]
-      })
+      #
+      # |> List.first(%Generator.Error{
+      #   errors: [:no_minus]
+      # })
+
+      if Enum.all?(results, &Generator.Result.is_error?/1) do
+        results |> sort_solutions() |> Enum.take(1) # Only best error could be useful
+      else
+        results |> sort_solutions()
+      end
     end
 
     defp sort_solutions(solutions) do
