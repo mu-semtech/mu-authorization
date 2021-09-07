@@ -8,6 +8,15 @@ defmodule InterpreterTerms.Minus.Impl do
 
       MapSet.difference(left_res, right_res)
       |> Enum.into([])
+      |> sort_solutions()
+      |> List.first(%Generator.Error{
+        errors: [:no_minus]
+      })
+    end
+
+    defp sort_solutions(solutions) do
+      solutions
+      |> Enum.sort_by(&Generator.Result.length/1, &>=/2)
     end
   end
 end

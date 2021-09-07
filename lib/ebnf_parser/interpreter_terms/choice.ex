@@ -4,24 +4,38 @@ defmodule InterpreterTerms.Choice.Impl do
 
   defimpl EbnfParser.ParseProtocol do
     def parse(%InterpreterTerms.Choice.Impl{parsers: options}, parsers, chars) do
-      Enum.flat_map(options, &EbnfParser.ParseProtocol.parse(&1, parsers, chars)) |> post
+      options
+      |> Enum.map(&EbnfParser.ParseProtocol.parse(&1, parsers, chars))
+      |> post
     end
 
-    def post(results) do
-      if Enum.all?(results, &Generator.Result.is_error?/1) do
-        base = %Generator.Error{
-          errors: [:choice]
-        }
+    defp post(results) do
+      {[x | xs], _} =
+        results
+        |> Enum.reduce({[], -1_000_000}, &max_and_sim_reduce/2)
 
-        Enum.map(results, &Generator.Result.combine_results(base, &1))
+      if Generator.Result.is_error?(x) do
+        errors = Enum.flat_map([x | xs], fn x -> x.errors end)
+        %{x | errors: errors}
       else
-        results |> sort_solutions()
+        if length(xs) > 0 do
+          IO.puts("HELP HELP HELP")
+        end
+        IO.puts("----------------------------------------")
+        IO.inspect(results)
+        IO.inspect(results |> Enum.map(& Generator.Result.length/1))
+        x
       end
     end
 
-    defp sort_solutions(solutions) do
-      solutions
-      |> Enum.sort_by(&Generator.Result.length/1, &>=/2)
+    defp max_and_sim_reduce(el, {acc, value}) do
+      new_value = Generator.Result.length(el)
+
+      cond do
+        new_value > value -> {[el], new_value}
+        new_value == value -> {[el | acc], value}
+        true -> {acc, value}
+      end
     end
   end
 end

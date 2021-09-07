@@ -17,7 +17,7 @@ defmodule InterpreterTerms.Symbol.Impl do
       {child_parser, is_term} = Map.get(parsers, symbol)
 
       EbnfParser.ParseProtocol.parse(child_parser, parsers, new_chars)
-      |> Enum.map(&cont_parse(&1, symbol, whitespace, is_term))
+      |> cont_parse(symbol, whitespace, is_term)
     end
 
     defp cont_parse(
@@ -45,13 +45,14 @@ defmodule InterpreterTerms.Symbol.Impl do
 
     defp cont_parse(
            %Generator.Error{
+             matched_string: matched_string,
              errors: errors
            } = res,
            symbol,
-           _whitespace,
+           whitespace,
            _is_term
          ) do
-      %{res | errors: [{:symbol, symbol} | errors]}
+      %{res | errors: [symbol | errors], matched_string: whitespace <> matched_string}
     end
   end
 end

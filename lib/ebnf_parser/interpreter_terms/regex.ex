@@ -19,7 +19,7 @@ defmodule InterpreterTerms.Regex.Impl do
 
   defimpl EbnfParser.ParseProtocol do
     def parse(%InterpreterTerms.Regex.Impl{regex: regex}, _parsers, chars) do
-      [Regex.run(regex, to_string(chars)) |> generate_result(chars, regex)]
+      Regex.run(regex, to_string(chars)) |> generate_result(chars, regex)
     end
 
     defp generate_result(nil, chars, regex) do

@@ -6,20 +6,22 @@ defmodule InterpreterTerms.Maybe.Impl do
 
   defimpl EbnfParser.ParseProtocol do
     def parse(%InterpreterTerms.Maybe.Impl{parser: parser}, parsers, chars) do
-      children = EbnfParser.ParseProtocol.parse(parser, parsers, chars)
+      child = EbnfParser.ParseProtocol.parse(parser, parsers, chars)
 
-      this_res = %Result{leftover: chars}
-
-      [this_res | children] |> Enum.map(&extend_with_error/1)
+      if Generator.Result.is_error?(child) do
+        %Result{leftover: chars}
+      else
+        child
+      end
     end
 
-    defp extend_with_error(%Generator.Error{errors: errors} = res) do
-      %{res | errors: [{:maybe} | errors]}
-    end
+    # defp extend_with_error(%Generator.Error{errors: errors} = res) do
+    #   %{res | errors: [{:maybe} | errors]}
+    # end
 
-    defp extend_with_error(%Generator.Result{} = res) do
-      res
-    end
+    # defp extend_with_error(%Generator.Result{} = res) do
+    #   res
+    # end
   end
 end
 

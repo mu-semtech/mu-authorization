@@ -51,13 +51,11 @@ defmodule HexCharacter do
       test = <<number::utf8>>
 
       if char == test do
-        [
-          %Result{
-            leftover: chars,
-            matched_string: char,
-            match_construct: [%InterpreterTerms.HexCharacterResult{character: char}]
-          }
-        ]
+        %Result{
+          leftover: chars,
+          matched_string: char,
+          match_construct: [%InterpreterTerms.HexCharacterResult{character: char}]
+        }
       else
         %Generator.Error{
           errors: [{:Hex, "Could not match '" <> test <> "' with '" <> char <> "'"}],

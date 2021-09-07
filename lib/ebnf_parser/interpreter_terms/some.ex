@@ -21,15 +21,13 @@ defmodule InterpreterTerms.Some.Impl do
            parser,
            parsers
          ) do
-      results = EbnfParser.ParseProtocol.parse(parser, parsers, chars)
-      good = results |> Enum.reject(&Generator.Result.is_error?/1)
+      result = EbnfParser.ParseProtocol.parse(parser, parsers, chars)
 
-      if Enum.empty?(good) do
-        [base]
+      if Generator.Result.is_error?(result) do
+        base
       else
-        good
-        |> Enum.map(&Generator.Result.combine_results(base, &1))
-        |> Enum.flat_map(&do_parse(&1, parser, parsers))
+        Generator.Result.combine_results(base, result)
+        |> do_parse(parser, parsers)
       end
     end
   end
