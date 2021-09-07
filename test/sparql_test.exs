@@ -196,7 +196,7 @@ defmodule SparqlTest do
     assert is_nil(res)
   end
 
-  defp benchmark(f, name, times \\ 50, warmup \\ true) do
+  defp benchmark(f, name, times \\ 100, warmup \\ true) do
     if warmup do
       Stream.repeatedly(fn -> {} end)
       |> Enum.take(10)
@@ -215,33 +215,61 @@ defmodule SparqlTest do
 
     IO.inspect(
       {TestHelper.median(times), TestHelper.mean(times), TestHelper.standard_deviation(times)},
-      label: name <> "Took {mid, mean, std} μs"
+      label: name <> " Took {mid, mean, std} μs"
     )
   end
 
-  defp parse_query(query, true) do
+  def new_parse_query(query, parsers) do
     rule_name = :Sparql
-    parsers = Parser.parsers_sparql()
-    parser = Map.get(parsers, rule_name)
+    {parser, _} = Map.get(parsers, rule_name)
 
     EbnfParser.ParseProtocol.parse(parser, parsers, query |> String.graphemes())
-    |> Enum.take(1)
   end
 
-  defp parse_query(query, false) do
+  defp new_parse_query_like_old(query, parsers) do
+    [sub|_x] = new_parse_query(query, parsers).match_construct
+    %InterpreterTerms.SymbolMatch{symbol: :Sparql, submatches: [sub], string: sub.string}
+  end
+
+  defp old_parse_query_with_diff(query) do
     query |> Parser.parse_query_full()
+  end
+
+  defp old_parse_query(query) do
+    {_matched, out} = query |> Parser.parse_query_first()
+    out
   end
 
   # equivalent to setting @tag key: true
   @tag :bench
   test "parse SPARQL query bench thing" do
     simple_query = "SELECT * WHERE { ?s ?p ?o }"
+    parsers = Parser.parsers_sparql()
 
-    bench1 = fn -> parse_query(simple_query, false) end
-    bench2 = fn -> parse_query(simple_query, true) end
+    bench1 = fn -> old_parse_query(simple_query) end
+    bench2 = fn -> old_parse_query_with_diff(simple_query) end
 
-    benchmark(bench1, "Old Parser")
-    benchmark(bench2, "New Parser")
+    bench3 = fn -> new_parse_query_like_old(simple_query, parsers) end
+
+    IO.puts("\nparse SPARQL query bench thing")
+    benchmark(bench1, "Old Parser", 100, false)
+    benchmark(bench2, "Old Parser with diff", 100, false)
+    benchmark(bench2, "New Parser", 100, false)
+
+    assert bench1.() === bench2.()
+  end
+
+  @tag :bench
+  test "parse SPARQL invalid query bench thing" do
+    simple_query = "SELECT WHERE { ?s ?p ?o }"
+    parsers = Parser.parsers_sparql()
+
+    bench1 = fn -> old_parse_query(simple_query) end
+    bench2 = fn -> new_parse_query(simple_query, parsers) end
+
+    IO.puts("\nparse SPARQL invalid query bench thing")
+    benchmark(bench1, "Old Parser", 100, false)
+    benchmark(bench2, "New Parser", 100, false)
 
     assert true
   end
