@@ -3,6 +3,7 @@ ExUnit.configure(formatters: [JUnitFormatter, ExUnit.CLIFormatter])
 ExUnit.start()
 
 defmodule TestHelper do
+  use EbnfParser.Sparql
   alias InterpreterTerms.SymbolMatch, as: Sym
   alias InterpreterTerms.WordMatch, as: Word
 
@@ -17,8 +18,8 @@ defmodule TestHelper do
   end
 
   def parse(query) do
-    parsers = Parser.parsers_sparql()
-    [sub|_x] = new_parse_query(query, parsers).match_construct
+    # parsers = parsers
+    [sub|_x] = new_parse_query(query, parsers()).match_construct
     %InterpreterTerms.SymbolMatch{symbol: :Sparql, submatches: [sub], string: sub.string}
   end
 

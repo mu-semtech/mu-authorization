@@ -14,7 +14,7 @@ defmodule InterpreterTerms.Choice.Impl do
         # Only best error could be useful
         results |> sort_solutions() |> Enum.take(1)
       else
-        results |> Enum.reject(&Generator.Result.is_error?/1) |> sort_solutions()
+        results |> Enum.reject(&Generator.Result.is_error?/1)
       end
     end
 

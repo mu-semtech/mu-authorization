@@ -16,7 +16,7 @@ defmodule InterpreterTerms.Minus.Impl do
       if Enum.all?(results, &Generator.Result.is_error?/1) do
         results |> sort_solutions() |> Enum.take(1) # Only best error could be useful
       else
-        results |> sort_solutions()
+        results
       end
     end
 

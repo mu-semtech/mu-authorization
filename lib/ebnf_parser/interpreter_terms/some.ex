@@ -13,7 +13,6 @@ defmodule InterpreterTerms.Some.Impl do
         parser,
         parsers
       )
-      |> sort_solutions()
     end
 
     defp do_parse(
@@ -25,15 +24,14 @@ defmodule InterpreterTerms.Some.Impl do
          ) do
       results = EbnfParser.ParseProtocol.parse(parser, parsers, chars)
 
-      # Keep base to assure some solutions are valid
-      # Also keep all parse paths open
-      [
-        base
-        | results
+      if Enum.all?(results, &Generator.Result.is_error?/1) do
+        [base]
+      else
+        results
           |> Enum.reject(&Generator.Result.is_error?/1)
           |> Enum.map(&Generator.Result.combine_results(base, &1))
           |> Enum.flat_map(&do_parse(&1, parser, parsers))
-      ]
+      end
     end
 
     defp sort_solutions(solutions) do

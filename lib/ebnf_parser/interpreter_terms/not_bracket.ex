@@ -14,26 +14,45 @@ defmodule InterpreterTerms.NotBracketResult do
   end
 end
 
-defmodule NotBracket do
-  alias Generator.State, as: State
-  alias Generator.Result, as: Result
-  alias InterpreterTerms.Bracket, as: Bracket
+defmodule InterpreterTerms.NotBracket.Impl do
+  defstruct [:options]
 
-  defstruct [:options, {:state, %State{}}]
+  defimpl EbnfParser.ParseProtocol do
+    def parse(%InterpreterTerms.NotBracket.Impl{options: options}, _parsers, chars) do
+      {new_chars, whitespace} = Generator.State.cut_whitespace(chars)
 
-  defimpl EbnfParser.ParserProtocol do
-    def make_parser(%NotBracket{options: options}) do
-      parse_f = fn x -> options |> Enum.any?(&match_option(&1, x)) |> Kernel.not end
+      case new_chars do
+        [char | chars] ->
+          if options |> Enum.any?(&match_option(&1, char)) |> Kernel.not() do
+            [
+              %Generator.Result{
+                leftover: chars,
+                matched_string: whitespace <> char,
+                match_construct: [%InterpreterTerms.NotBracketResult{character: char}]
+              }
+            ]
+          else
+            opts = options |> Enum.map(&error_options/1) |> List.to_string()
 
-      error_f = fn x, chars ->
-        opts = options |> Enum.map(&error_options/1) |> List.to_string()
-        %Generator.Error{errors: ["'" <> x <> "' not in [" <> opts <> "]"], leftover: chars}
+            [
+              %Generator.Error{
+                errors: ["'" <> char <> "' not in [" <> opts <> "]"],
+                leftover: chars
+              }
+            ]
+          end
+
+        [] ->
+          opts = options |> Enum.map(&error_options/1) |> List.to_string()
+
+          [
+            %Generator.Error{
+              errors: ["Can't match empty string with [" <> opts <> "]"],
+              leftover: chars
+            }
+          ]
       end
-
-      InterpreterTerms.Function.single_char_match(parse_f, error_f)
     end
-
-    # TODO: remove duplicate code from bracket!
 
     defp match_option({:range, [start_char, end_char]}, char) do
       char_for_code(start_char) <= char && char <= char_for_code(end_char)
@@ -58,6 +77,20 @@ defmodule NotBracket do
 
     defp char_for_code({:hex_character, codepoint}) do
       <<codepoint::utf8>>
+    end
+  end
+end
+
+defmodule NotBracket do
+  alias Generator.State, as: State
+  alias Generator.Result, as: Result
+  alias InterpreterTerms.Bracket, as: Bracket
+
+  defstruct [:options, {:state, %State{}}]
+
+  defimpl EbnfParser.ParserProtocol do
+    def make_parser(%NotBracket{options: options}) do
+      %InterpreterTerms.NotBracket.Impl{options: options}
     end
   end
 

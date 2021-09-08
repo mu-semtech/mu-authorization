@@ -10,7 +10,6 @@ defmodule InterpreterTerms.Maybe.Impl do
 
       [%Result{leftover: chars} | xs]
       |> Enum.reject(&Generator.Result.is_error?/1)
-      |> sort_solutions()
     end
 
     defp sort_solutions(solutions) do

@@ -13,28 +13,32 @@ defmodule InterpreterTerms.BracketResult do
   end
 end
 
-defmodule Bracket do
-  alias Generator.State, as: State
-  alias Generator.Result, as: Result
+defmodule InterpreterTerms.Bracket.Impl do
+  defstruct [:options]
 
-  defstruct [:options, {:state, %State{}}]
+  defimpl EbnfParser.ParseProtocol do
+    def parse(%InterpreterTerms.Bracket.Impl{options: options}, _parsers, chars) do
+      {new_chars, whitespace} = Generator.State.cut_whitespace(chars)
 
-  defimpl EbnfParser.GeneratorProtocol do
-    def make_generator(%Bracket{} = bracket) do
-      bracket
-    end
-  end
+      case new_chars do
+        [char | chars] ->
+          if options |> Enum.any?(&match_option(&1, char)) do
+            [
+              %Generator.Result{
+                leftover: chars,
+                matched_string: whitespace <> char,
+                match_construct: [%InterpreterTerms.BracketResult{character: char}]
+              }
+            ]
+          else
+            opts = options |> Enum.map(&error_options/1) |> List.to_string()
+            [%Generator.Error{errors: ["'" <> char <> "' not in [" <> opts <> "]"], leftover: chars}]
+          end
 
-  defimpl EbnfParser.ParserProtocol do
-    def make_parser(%Bracket{options: options}) do
-      parse_f = fn x -> options |> Enum.any?(&match_option(&1, x)) end
-
-      error_f = fn x, chars ->
-        opts = options |> Enum.map(&error_options/1) |> List.to_string()
-        %Generator.Error{errors: ["'" <> x <> "' not in [" <> opts <> "]"], leftover: chars}
+        [] ->
+          opts = options |> Enum.map(&error_options/1) |> List.to_string()
+          [%Generator.Error{errors: ["Can't match empty string with [" <> opts <> "]"], leftover: chars}]
       end
-
-      InterpreterTerms.Function.single_char_match(parse_f, error_f)
     end
 
     defp match_option({:range, [start_char, end_char]}, char) do
@@ -60,6 +64,25 @@ defmodule Bracket do
 
     defp char_for_code({:hex_character, codepoint}) do
       <<codepoint::utf8>>
+    end
+  end
+end
+
+defmodule Bracket do
+  alias Generator.State, as: State
+  alias Generator.Result, as: Result
+
+  defstruct [:options, {:state, %State{}}]
+
+  defimpl EbnfParser.GeneratorProtocol do
+    def make_generator(%Bracket{} = bracket) do
+      bracket
+    end
+  end
+
+  defimpl EbnfParser.ParserProtocol do
+    def make_parser(%Bracket{options: options}) do
+      %InterpreterTerms.Bracket.Impl{options: options}
     end
   end
 

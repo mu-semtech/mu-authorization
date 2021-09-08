@@ -112,6 +112,7 @@ defmodule Tester.Generator do
     IO.write(file, ~s(#{indent}#{indent}bench = fn -> query |> TestHelper.parse end\n))
     IO.write(file, ~s[#{indent}#{indent}bench_times = Tester.Generator.benchmark(bench, 100, false)\n])
     IO.write(file, ~s(\n))
+    IO.write(file, ~s[#{indent}#{indent}IO.puts("\n------------------")\n])
     IO.write(file, ~s[#{indent}#{indent}IO.puts(#{inspect(test_name)})\n])
     IO.write(file, ~s[#{indent}#{indent}IO.inspect(#{inspect(bench_times)}, label: "was")\n])
     IO.write(file, ~s[#{indent}#{indent}IO.inspect(#{inspect(bench_times_warmed_up)}, label: "was with warmup")\n])

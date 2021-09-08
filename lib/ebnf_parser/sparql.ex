@@ -3,6 +3,15 @@ defmodule EbnfParser.Sparql do
   require ALog
   use GenServer
 
+  defmacro __using__(_opts) do
+    syntax = EbnfParser.Sparql.parse_sparql()
+    parsers = Parser.make_parsers(syntax) |> Macro.escape
+
+    quote do
+      def parsers(), do: unquote(parsers)
+    end
+  end
+
   @moduledoc """
   Parser which allows you to efficiently fetch the parsed spraql
   syntax.
