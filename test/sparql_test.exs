@@ -207,14 +207,13 @@ defmodule SparqlTest do
       Stream.repeatedly(fn -> {} end)
       |> Enum.take(times)
       |> Enum.map(fn _ ->
-        start_time = :os.system_time(:microsecond)
-        _returned = f.()
-        end_time = :os.system_time(:microsecond)
-        end_time - start_time
+        f
+        |> :timer.tc()
+        |> elem(0)
       end)
 
     IO.inspect(
-      {TestHelper.median(times), TestHelper.mean(times), TestHelper.standard_deviation(times)},
+      {Tester.Generator.median(times), Tester.Generator.mean(times), Tester.Generator.standard_deviation(times)},
       label: name <> " Took {mid, mean, std} μs"
     )
   end
@@ -227,7 +226,7 @@ defmodule SparqlTest do
   end
 
   defp new_parse_query_like_old(query, parsers) do
-    [sub|_x] = new_parse_query(query, parsers).match_construct
+    [sub | _x] = new_parse_query(query, parsers).match_construct
     %InterpreterTerms.SymbolMatch{symbol: :Sparql, submatches: [sub], string: sub.string}
   end
 
