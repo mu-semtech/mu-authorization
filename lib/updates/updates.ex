@@ -27,9 +27,11 @@ defmodule Updates do
         Iri.from_iri_string("<http://mu.semte.ch/application>", %{})
     }
 
+    process_quads_for_update_id = Profiler.start("process_quads_for_update")
     result =
       insert_quads
       |> Acl.process_quads_for_update(Acl.UserGroups.for_use(:write), %{})
+      |> Profiler.stop(process_quads_for_update_id)
       |> ALog.di("processed_quads")
       |> (fn {_, quads} -> quads end).()
       |> Updates.QueryAnalyzer.construct_insert_query_from_quads(options)

@@ -38,6 +38,7 @@ defmodule SparqlServer.Router do
         render_default_page(conn)
 
       query_string ->
+        request_id = Profiler.start("request")
         params = URI.decode_query(query_string)
 
         ALog.di(conn, "Received GET connection")
@@ -46,7 +47,7 @@ defmodule SparqlServer.Router do
 
         query = params["query"]
 
-        handle_query_processing_and_response(query, :query, conn)
+        handle_query_processing_and_response(query, :query, conn) |> Profiler.stop(request_id)
     end
   end
 
@@ -131,8 +132,12 @@ defmodule SparqlServer.Router do
     qi = InfoEndpoint.start_processing_query(query)
 
     try do
+      id = Profiler.start("handle_query")
+      id2 = Profiler.start("handle_query and response")
       Support.handle_query(query, method, conn)
+      |> Profiler.stop(id)
       |> send_sparql_response
+      |> Profiler.stop(id2)
     catch
       :exit, {:timeout, call_info} ->
         Logging.EnvLog.inspect(call_info, :errors, label: "Server overload, failed call")

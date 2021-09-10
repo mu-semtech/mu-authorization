@@ -25,11 +25,10 @@ defmodule Profiler do
 
   @impl true
   def init(_) do
-    IO.puts("HERE BOYYYYY")
-
     if Application.get_env(:"mu-authorization", :profile) do
-      {:ok, file} = File.open("prof.csv", [:write])
-      IO.write(file, ~s"name,start,end\n")
+      {:ok, file} = File.open("/tmp/prof.json", [:write])
+
+      IO.write(file, "{\"otherData\": {},\"traceEvents\":[\n")
 
       {:ok, %Profiler{running: %{}, file: file, first: true}}
     else
@@ -41,6 +40,7 @@ defmodule Profiler do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
+  # TODO: make macro
   def start(name) do
     if Application.get_env(:"mu-authorization", :profile) do
       GenServer.call(__MODULE__, {:start, name, self()})
@@ -49,9 +49,23 @@ defmodule Profiler do
     end
   end
 
+  def stop(x, id) do
+    stop(id)
+    x
+  end
+
+  # TODO: make macro
   def stop(id) do
     if Application.get_env(:"mu-authorization", :profile) do
-      GenServer.call(__MODULE__, {:stop, id})
+      GenServer.cast(__MODULE__, {:stop, id})
+    else
+      nil
+    end
+  end
+
+  def restart() do
+    if Application.get_env(:"mu-authorization", :profile) do
+      GenServer.cast(__MODULE__, {:restart})
     else
       nil
     end
@@ -69,9 +83,8 @@ defmodule Profiler do
   end
 
   @impl true
-  def handle_call(
+  def handle_cast(
         {:stop, id},
-        _from,
         %Profiler{running: running, file: file, first: first} = state
       ) do
     time = :os.system_time(:microsecond)
@@ -81,18 +94,36 @@ defmodule Profiler do
     event = Profiler.Event.new(name, pid, start_time, time)
 
     if not first do
-      IO.write(file, ",")
+      IO.write(file, ",\n")
     end
 
     IO.write(file, Poison.encode!(event))
 
     new_state = %{state | running: new_running, first: false}
 
-    {:reply, id, new_state}
+    {:noreply, new_state}
+  end
+
+  @impl true
+  def handle_cast(
+        {:restart},
+        %Profiler{file: file}
+      ) do
+    File.close(file)
+
+    case File.read("/tmp/prof.json") do
+      {:ok, contents} -> IO.puts(contents <> "]}")
+      _ -> nil
+    end
+
+    {:ok, new_state} = init(nil)
+
+    {:noreply, new_state}
   end
 
   @impl true
   def terminate(_, %Profiler{file: file}) do
+    IO.write(file, "\n]}")
     File.close(file)
     :normal
   end
