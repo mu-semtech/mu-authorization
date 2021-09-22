@@ -72,7 +72,7 @@ defmodule SparqlServer.Router.HandlerSupport do
     if Map.has_key?(template_local_store, :sparql_syntax) do
       template_local_store
     else
-      Map.put(template_local_store, :sparql_syntax, Parser.parse_sparql())
+      Map.put(template_local_store, :sparql_syntax, Parser.sparql_syntax())
     end
   end
 
@@ -88,13 +88,6 @@ defmodule SparqlServer.Router.HandlerSupport do
   def handle_query_with_template_local_store(query, kind, conn, template_local_store) do
     maybe_cancel_job_for_testing()
 
-    top_level_key =
-      case kind do
-        :query -> :QueryUnit
-        :update -> :UpdateUnit
-        :any -> :Sparql
-      end
-
     ensure_syntax_id = Profiler.start("ensure_syntax")
     new_template_local_store = ensure_syntax_in_store(template_local_store)
     Profiler.stop(ensure_syntax_id)
@@ -107,7 +100,7 @@ defmodule SparqlServer.Router.HandlerSupport do
       |> String.trim()
       # TODO: check if this is valid and/or ensure parser skips \r between words.
       |> String.replace("\r", "")
-      |> Parser.parse_query_full_local(top_level_key, new_template_local_store)
+      |> Parser.parse()
       |> Profiler.stop(parse_query_id)
 
     parsed_form =

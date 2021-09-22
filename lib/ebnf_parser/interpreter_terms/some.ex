@@ -28,15 +28,10 @@ defmodule InterpreterTerms.Some.Impl do
         [base]
       else
         results
-          |> Enum.reject(&Generator.Result.is_error?/1)
-          |> Enum.map(&Generator.Result.combine_results(base, &1))
-          |> Enum.flat_map(&do_parse(&1, parser, parsers))
+        |> Enum.reject(&Generator.Result.is_error?/1)
+        |> Enum.map(&Generator.Result.combine_results(base, &1))
+        |> Enum.flat_map(&do_parse(&1, parser, parsers))
       end
-    end
-
-    defp sort_solutions(solutions) do
-      solutions
-      |> Enum.sort_by(&Generator.Result.length/1, &>=/2)
     end
   end
 end
@@ -44,16 +39,7 @@ end
 defmodule InterpreterTerms.Some do
   alias Generator.State, as: State
 
-  defstruct [:element, {:state, %State{}}]
-
-  defimpl EbnfParser.GeneratorProtocol do
-    def make_generator(%InterpreterTerms.Some{element: element, state: state}) do
-      %InterpreterTerms.Some.Interpreter{
-        element: element,
-        state: state
-      }
-    end
-  end
+  defstruct [:element]
 
   defimpl EbnfParser.ParserProtocol do
     def make_parser(%InterpreterTerms.Some{element: element}) do

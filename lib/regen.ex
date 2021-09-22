@@ -8,7 +8,7 @@ defmodule Regen do
   def make_generator(element, symbol \\ :Sparql) do
     Regen.Constructor.make({:symbol, symbol}, %Regen.Status{
       elements: [element],
-      syntax: Parser.parse_sparql()
+      syntax: Parser.sparql_syntax()
     })
   end
 

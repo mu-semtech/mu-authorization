@@ -87,14 +87,6 @@ defmodule Symbol do
     false
   end
 
-  # defp ensure_syntax_in_state( %Symbol{ state: %State{ syntax: :none } = state } = symbol ) do
-  #   %{ symbol |
-  #      state: %{ state | syntax: Parser.parse_sparql } }
-  # end
-  # defp ensure_syntax_in_state( symbol ) do
-  #   symbol
-  # end
-
   defp ensure_sub_generator(
          %Symbol{
            sub_generator: :none,

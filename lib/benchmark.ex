@@ -132,7 +132,7 @@ defmodule Benchmark do
     }"
 
     query
-    |> Parser.parse_query_full()
+    |> Parser.parse()
     |> Updates.QueryAnalyzer.quad_changes(%{
       default_graph:
         Updates.QueryAnalyzer.Iri.from_iri_string("<http://mu.semte.ch/application>", %{})

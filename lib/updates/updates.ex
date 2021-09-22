@@ -5,7 +5,7 @@ defmodule Updates do
 
   @spec quads_for_query(Parser.unparsed_query()) :: Updates.QueryAnalyzer.quad_changes
   def quads_for_query(query) do
-    Parser.parse_query_all(query)
+    Parser.parse(query)
     |> Enum.filter(&Generator.Result.full_match?/1)
     |> List.first()
     |> Map.get(:match_construct)

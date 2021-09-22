@@ -22,7 +22,7 @@ defmodule EbnfParser.Visualizer do
   of the SPARQL EBNF.
   """
   def nodes_for_sparql_visjs_in_poison do
-    sparql_statements = EbnfParser.Sparql.parse_sparql_as_ordered_array()
+    sparql_statements = EbnfParser.Sparql.sparql_syntax_as_ordered_array()
     amount_of_sparql_statements = Enum.count(sparql_statements)
 
     sparql_statements

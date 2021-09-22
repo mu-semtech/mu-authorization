@@ -13,8 +13,6 @@ defmodule EbnfParser.GeneratorConstructor do
   alias InterpreterTerms.HexCharacter, as: HexCharacter
   alias InterpreterTerms.Regex, as: RegexTerm
 
-  alias EbnfParser.GeneratorProtocol, as: GP
-
   require Logger
   require ALog
 
@@ -43,74 +41,74 @@ defmodule EbnfParser.GeneratorConstructor do
   end
 
   def to_term(x) do
-    to_term(x, %State{})
+    to_term(x)
   end
 
-  def to_term(list, %State{} = state) when is_list(list) do
-    to_term({:paren_group, list}, state)
+  def to_term(list) when is_list(list) do
+    to_term({:paren_group, list})
   end
 
-  def to_term([{_, _} = spec], %State{} = state) do
-    to_term(spec, state)
+  def to_term([{_, _} = spec]) do
+    to_term(spec)
   end
 
-  def to_term({:paren_group, items}, %State{} = state) do
-    %Array{elements: items, state: state}
+  def to_term({:paren_group, items}) do
+    %Array{elements: items}
   end
 
-  def to_term({:maybe_many, [item]}, %State{} = state) do
-    %Some{element: item, state: state}
+  def to_term({:maybe_many, [item]}) do
+    %Some{element: item}
   end
 
-  def to_term({:one_or_more, [item]}, %State{} = state) do
-    %Many{element: item, state: state}
+  def to_term({:one_or_more, [item]}) do
+    %Many{element: item}
   end
 
-  def to_term({:bracket_selector, items}, %State{} = state) do
-    %Bracket{options: items, state: state}
+  def to_term({:bracket_selector, items}) do
+    %Bracket{options: items}
   end
 
-  def to_term({:not_bracket_selector, items}, %State{} = state) do
-    %NotBracket{options: items, state: state}
+  def to_term({:not_bracket_selector, items}) do
+    %NotBracket{options: items}
   end
 
-  def to_term({:minus, [left, right]}, %State{} = state) do
-    %Minus{left: left, right: right, state: state}
+  def to_term({:minus, [left, right]}) do
+    %Minus{left: left, right: right}
   end
 
-  def to_term({:symbol, symbol}, %State{} = state) do
-    %Symbol{symbol: symbol, state: state}
+  def to_term({:symbol, symbol}) do
+    %Symbol{symbol: symbol}
   end
 
-  def to_term({:maybe, [spec]}, %State{} = state) do
-    %Maybe{spec: spec, state: state}
+  def to_term({:maybe, [spec]}) do
+    %Maybe{spec: spec}
   end
 
-  def to_term({:hex_character, number}, %State{} = state) do
-    %HexCharacter{number: number, state: state}
+  def to_term({:hex_character, number}) do
+    %HexCharacter{number: number}
   end
 
-  # def dispatch_generation( items, %State{} = state ) when is_list( items ) do
-  #   make_generator( %Array{ spec: items, state: state } )
+  # def dispatch_generation( items ) when is_list( items ) do
+  #   make_generator( %Array{ spec: items } )
   # end
 
-  def to_term({:one_of, elements}, %State{} = state) do
-    %Choice{options: elements, state: state}
+  def to_term({:one_of, elements}) do
+    %Choice{options: elements}
   end
 
-  def to_term({:regex, regex}, %State{} = state) do
-    %RegexTerm{regex: regex, state: state}
+  def to_term({:regex, regex}) do
+    %RegexTerm{regex: regex}
   end
 
-  def to_term({string_type, string}, %State{} = state)
+  def to_term({string_type, string})
       when string_type in [:single_quoted_string, :double_quoted_string] do
-    %Word{word: string, state: state}
+    %Word{word: string}
   end
 
   def to_term(a, b) do
     Logger.warn("falling back to create Term")
     ALog.di(a, "failed dispatch type")
     ALog.di(b, "failed dispatch state")
-    %InterpreterTerms.Nothing{}
+    nil
   end
 end

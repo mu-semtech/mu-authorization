@@ -3,7 +3,7 @@ defmodule Manipulators do
 
   @spec apply_manipulators(Parser.unparsed_query(), any) :: any
   def apply_manipulators(query, manipulators) do
-    {_, element} = Parser.parse_query_first(query)
+    element = Parser.parse(query)
 
     Enum.reduce(manipulators, element, fn manipulator, elt -> manipulator.(elt) end)
     |> Regen.make_generator()

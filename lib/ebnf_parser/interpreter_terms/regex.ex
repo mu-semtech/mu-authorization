@@ -38,59 +38,14 @@ defmodule InterpreterTerms.Regex.Impl do
   end
 end
 
-defmodule RegexEmitter do
-  defstruct [:state, :known_matches]
-
-  defimpl EbnfParser.Generator do
-    def emit(%RegexEmitter{known_matches: []}) do
-      {:fail}
-    end
-
-    def emit(%RegexEmitter{state: state, known_matches: [string]}) do
-      {:ok, %Nothing{}, RegexEmitter.generate_result(state, string)}
-    end
-
-    def emit(%RegexEmitter{state: state, known_matches: [match | rest]} = emitter) do
-      {:ok, %{emitter | known_matches: rest}, RegexEmitter.generate_result(state, match)}
-    end
-  end
-
-  def generate_result(state, string) do
-    %State{chars: chars} = state
-
-    %Result{
-      leftover: Enum.drop(chars, String.length(string)),
-      matched_string: string,
-      match_construct: [%InterpreterTerms.RegexMatch{match: string}]
-    }
-  end
-end
-
 defmodule InterpreterTerms.Regex do
-  defstruct regex: "", state: %State{}, known_matches: []
+  defstruct regex: ""
 
   defimpl EbnfParser.ParserProtocol do
     def make_parser(%InterpreterTerms.Regex{regex: regex}) do
       %InterpreterTerms.Regex.Impl{
         regex: regex
       }
-    end
-  end
-
-  defimpl EbnfParser.GeneratorProtocol do
-    def make_generator(%RegexTerm{regex: regex, state: state} = _regex_term) do
-      # Get the characters from our state
-      char_string =
-        state
-        |> Generator.State.chars_as_string()
-
-      # TODO be smart and use Regex.run instead
-      matching_strings =
-        regex
-        |> Regex.scan(char_string, capture: :first)
-        |> Enum.map(&Enum.at(&1, 0))
-
-      %RegexEmitter{state: state, known_matches: matching_strings}
     end
   end
 end

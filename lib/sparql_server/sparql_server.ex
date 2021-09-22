@@ -56,11 +56,11 @@ defmodule SparqlServer do
       label: "server setup, log database recovery mode tick"
     )
 
-
     Logging.EnvLog.inspect(
       Application.get_env(:"mu-authorization", :testing_auth_query_error_rate),
       :testing_auth_query_error_rate,
-      label: "server setup, testing auth query error rate amount of queries authorization makes fail"
+      label:
+        "server setup, testing auth query error rate amount of queries authorization makes fail"
     )
 
     children = [
@@ -73,8 +73,7 @@ defmodule SparqlServer do
       {Interpreter.CachedInterpreter, nil},
       {Interpreter.Diff.Store.Storage, nil},
       {Interpreter.Diff.Store.Manipulator, nil},
-      {Plug.Adapters.Cowboy2,
-       scheme: :http, plug: SparqlServer.Router, options: [port: port]},
+      {Plug.Cowboy, scheme: :http, plug: SparqlServer.Router, options: [port: port]},
       :poolboy.child_spec(:worker, [
         {:name, {:local, :query_worker}},
         {:worker_module, SparqlServer.Router.Handler.Worker},

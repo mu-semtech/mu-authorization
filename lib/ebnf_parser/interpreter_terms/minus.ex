@@ -6,15 +6,18 @@ defmodule InterpreterTerms.Minus.Impl do
       left_res = EbnfParser.ParseProtocol.parse(left, parsers, chars) |> MapSet.new()
       right_res = EbnfParser.ParseProtocol.parse(right, parsers, chars) |> MapSet.new()
 
-      results = MapSet.difference(left_res, right_res)
-      |> Enum.into([])
+      results =
+        MapSet.difference(left_res, right_res)
+        |> Enum.into([])
+
       #
       # |> List.first(%Generator.Error{
       #   errors: [:no_minus]
       # })
 
       if Enum.all?(results, &Generator.Result.is_error?/1) do
-        results |> sort_solutions() |> Enum.take(1) # Only best error could be useful
+        # Only best error could be useful
+        results |> sort_solutions() |> Enum.take(1)
       else
         results
       end
@@ -28,19 +31,7 @@ defmodule InterpreterTerms.Minus.Impl do
 end
 
 defmodule InterpreterTerms.Minus do
-  alias Generator.State, as: State
-
-  defstruct [:left, :right, {:state, %State{}}]
-
-  defimpl EbnfParser.GeneratorProtocol do
-    def make_generator(%InterpreterTerms.Minus{left: left, right: right, state: state}) do
-      %InterpreterTerms.Minus.Interpreter{
-        state: state,
-        left_generator: EbnfParser.GeneratorConstructor.dispatch_generation(left, state),
-        right_generator: EbnfParser.GeneratorConstructor.dispatch_generation(right, state)
-      }
-    end
-  end
+  defstruct [:left, :right]
 
   defimpl EbnfParser.ParserProtocol do
     def make_parser(%InterpreterTerms.Minus{left: left, right: right}) do
