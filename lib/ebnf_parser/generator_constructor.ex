@@ -13,8 +13,6 @@ defmodule EbnfParser.GeneratorConstructor do
   alias InterpreterTerms.HexCharacter, as: HexCharacter
   alias InterpreterTerms.Regex, as: RegexTerm
 
-  alias EbnfParser.GeneratorProtocol, as: GP
-
   require Logger
   require ALog
 
@@ -38,71 +36,79 @@ defmodule EbnfParser.GeneratorConstructor do
   @type rule :: list | {ebnf_term, any}
   @spec dispatch_generation(rule, State.t()) :: GP.t()
 
-  def dispatch_generation(list, %State{} = state) when is_list(list) do
-    dispatch_generation({:paren_group, list}, state)
+  def dispatch_generation(alpha, beta) do
+    GP.make_generator(to_term(alpha, beta))
   end
 
-  def dispatch_generation([{_, _} = spec], %State{} = state) do
-    dispatch_generation(spec, state)
+  def to_term(x) do
+    to_term(x)
   end
 
-  def dispatch_generation({:paren_group, items}, %State{} = state) do
-    GP.make_generator(%Array{elements: items, state: state})
+  def to_term(list) when is_list(list) do
+    to_term({:paren_group, list})
   end
 
-  def dispatch_generation({:maybe_many, [item]}, %State{} = state) do
-    GP.make_generator(%Some{element: item, state: state})
+  def to_term([{_, _} = spec]) do
+    to_term(spec)
   end
 
-  def dispatch_generation({:one_or_more, [item]}, %State{} = state) do
-    GP.make_generator(%Many{element: item, state: state})
+  def to_term({:paren_group, items}) do
+    %Array{elements: items}
   end
 
-  def dispatch_generation({:bracket_selector, items}, %State{} = state) do
-    GP.make_generator(%Bracket{options: items, state: state})
+  def to_term({:maybe_many, [item]}) do
+    %Some{element: item}
   end
 
-  def dispatch_generation({:not_bracket_selector, items}, %State{} = state) do
-    GP.make_generator(%NotBracket{options: items, state: state})
+  def to_term({:one_or_more, [item]}) do
+    %Many{element: item}
   end
 
-  def dispatch_generation({:minus, [left, right]}, %State{} = state) do
-    GP.make_generator(%Minus{left: left, right: right, state: state})
+  def to_term({:bracket_selector, items}) do
+    %Bracket{options: items}
   end
 
-  def dispatch_generation({:symbol, symbol}, %State{} = state) do
-    GP.make_generator(%Symbol{symbol: symbol, state: state})
+  def to_term({:not_bracket_selector, items}) do
+    %NotBracket{options: items}
   end
 
-  def dispatch_generation({:maybe, [spec]}, %State{} = state) do
-    GP.make_generator(%Maybe{spec: spec, state: state})
+  def to_term({:minus, [left, right]}) do
+    %Minus{left: left, right: right}
   end
 
-  def dispatch_generation({:hex_character, number}, %State{} = state) do
-    GP.make_generator(%HexCharacter{number: number, state: state})
+  def to_term({:symbol, symbol}) do
+    %Symbol{symbol: symbol}
   end
 
-  # def dispatch_generation( items, %State{} = state ) when is_list( items ) do
-  #   make_generator( %Array{ spec: items, state: state } )
+  def to_term({:maybe, [spec]}) do
+    %Maybe{spec: spec}
+  end
+
+  def to_term({:hex_character, number}) do
+    %HexCharacter{number: number}
+  end
+
+  # def dispatch_generation( items ) when is_list( items ) do
+  #   make_generator( %Array{ spec: items } )
   # end
 
-  def dispatch_generation({:one_of, elements}, %State{} = state) do
-    GP.make_generator(%Choice{options: elements, state: state})
+  def to_term({:one_of, elements}) do
+    %Choice{options: elements}
   end
 
-  def dispatch_generation({:regex, regex}, %State{} = state) do
-    GP.make_generator(%RegexTerm{regex: regex, state: state})
+  def to_term({:regex, regex}) do
+    %RegexTerm{regex: regex}
   end
 
-  def dispatch_generation({string_type, string}, %State{} = state)
+  def to_term({string_type, string})
       when string_type in [:single_quoted_string, :double_quoted_string] do
-    GP.make_generator(%Word{word: string, state: state})
+    %Word{word: string}
   end
 
-  def dispatch_generation(a, b) do
-    Logger.warn("falling back to failed dispatch generation")
+  def to_term(a, b) do
+    Logger.warn("falling back to create Term")
     ALog.di(a, "failed dispatch type")
     ALog.di(b, "failed dispatch state")
-    %InterpreterTerms.Nothing{}
+    nil
   end
 end

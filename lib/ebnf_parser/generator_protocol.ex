@@ -1,16 +1,18 @@
-defprotocol EbnfParser.GeneratorProtocol do
-  @type t :: struct()
+defprotocol EbnfParser.ParserProtocol do
+  @type t :: any
+  @type parser :: struct()
 
-  @doc "Constructs a new generator"
-  @spec make_generator(EbnfParser.GeneratorProtocol.t()) :: EbnfParser.Generator.t()
-  def make_generator(generator)
+  @spec make_parser(EbnfParser.ParserProtocol.t()) :: EbnfParser.ParserProtocol.parser()
+  def make_parser(interpreter_terms)
 end
 
-defprotocol EbnfParser.Generator do
-  @type t :: struct()
-  @type response :: {:ok, EbnfParser.Generator.t(), Generator.Result.t()} | {:fail}
+defprotocol EbnfParser.ParseProtocol do
+  @type parsers :: %{required(atom()) => {EbnfParser.ParserProtocol.parser(), boolean}}
+  @type success :: Generator.Result.t()
+  @type failure :: Generator.Error.t()
+  @type response :: [success | failure]
 
-  @doc "Emits a new result"
-  @spec emit(EbnfParser.Generator.t()) :: EbnfParser.Generator.response()
-  def emit(generator)
+  @spec parse(EbnfParser.ParserProtocol.parser(), parsers(), [String.grapheme()]) ::
+          EbnfParser.ParseProtocol.response()
+  def parse(parser, parsers, chars)
 end

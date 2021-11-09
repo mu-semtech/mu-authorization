@@ -52,7 +52,7 @@ defmodule Acl do
     quads_moved_to_application =
       quads
       |> Enum.map(&Map.put(&1, :graph, @default_graph_iri))
-      |> Enum.uniq
+      |> Enum.uniq()
 
     resulting_quads =
       active_groups_info
@@ -83,7 +83,11 @@ defmodule Acl do
   end
 
   def process_query(query, user_groups, authorization_groups) do
+    process_query_id = Profiler.start("ACL process_query")
+
+    clean_query_id = Profiler.start("SparqlQuery.remove_graph_statements")
     clean_query = Manipulators.SparqlQuery.remove_graph_statements(query)
+    Profiler.stop(clean_query_id)
 
     active_groups_info =
       active_user_groups_info(user_groups, authorization_groups)
@@ -98,6 +102,8 @@ defmodule Acl do
         active_groups_info
         |> Enum.reduce({clean_query, []}, fn {user_group, ug_access_infos},
                                              {query, access_infos} ->
+          part_id = Profiler.start("active_groups_info_part")
+
           {new_query, new_access_info} =
             Enum.reduce(ug_access_infos, {query, access_infos}, fn access_info,
                                                                    {query, access_infos} ->
@@ -107,9 +113,11 @@ defmodule Acl do
               {new_query, new_access_info ++ access_infos}
             end)
 
+          Profiler.stop(part_id)
           {new_query, new_access_info ++ access_infos}
         end)
     end
+    |> Profiler.stop(process_query_id)
   end
 
   @spec active_user_groups_info(Acl.UserGroups.Config.t(), allowed_groups) :: [

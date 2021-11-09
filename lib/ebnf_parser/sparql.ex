@@ -3,6 +3,64 @@ defmodule EbnfParser.Sparql do
   require ALog
   use GenServer
 
+  defmacro __using__(opts) do
+    rule_name = opts[:rule_name] || :Sparql
+    syntax = EbnfParser.Sparql.sparql_syntax()
+    parsers = EbnfParser.Sparql.make_parsers(syntax)
+
+    escaped_parsers = Macro.escape(parsers)
+
+    {symbol_parser, _} = Map.get(parsers, rule_name)
+    escaped_parser = Macro.escape(symbol_parser)
+
+    quote do
+      def get_parsers(), do: unquote(escaped_parsers)
+
+      defp parse_and_sort(parser, parsers, str) do
+        EbnfParser.ParseProtocol.parse(parser, parsers, str |> String.graphemes())
+        |> Enum.max_by(&Generator.Result.length/1, &>=/2)
+      end
+
+      def parse(str) do
+        parser = unquote(escaped_parser)
+        parsers = unquote(escaped_parsers)
+
+        case parse_and_sort(parser, parsers, str) do
+          %Generator.Result{matched_string: matched_string, match_construct: [sub | _]} ->
+            {matched_string,
+             %InterpreterTerms.SymbolMatch{
+               symbol: unquote(rule_name),
+               submatches: [sub],
+               string: sub.string
+             }}
+
+          xs ->
+            {:fail, xs}
+        end
+      end
+
+      def parse(str, rule_name) do
+        parsers = unquote(escaped_parsers)
+        parser = parsers[rule_name]
+
+        case parse_and_sort(parser, parsers, str) do
+          [%Generator.Result{} = x | _] ->
+            # Is this necessary
+            [sub | _x] = x.match_construct
+
+            %InterpreterTerms.SymbolMatch{
+              symbol: rule_name,
+              submatches: [sub],
+              string: sub.string
+            }
+
+          xs ->
+            xs
+        end
+      end
+    end
+  end
+
   @moduledoc """
   Parser which allows you to efficiently fetch the parsed spraql
   syntax.
@@ -16,14 +74,21 @@ defmodule EbnfParser.Sparql do
     GenServer.init/1 callback
   """
   def init(_) do
-    {:ok, EbnfParser.Sparql.parse_sparql()}
+    syntax = EbnfParser.Sparql.sparql_syntax()
+    parsers = EbnfParser.Sparql.make_parsers(syntax)
+
+    {:ok, {syntax, parsers}}
   end
 
   @doc """
     GenServer.handle_call/3 callback
   """
-  def handle_call(:get, _from, syntax) do
-    {:reply, syntax, syntax}
+  def handle_call(:get_syntax, _from, {syntax, parsers}) do
+    {:reply, syntax, {syntax, parsers}}
+  end
+
+  def handle_call(:get_parsers, _from, {syntax, parsers}) do
+    {:reply, parsers, {syntax, parsers}}
   end
 
   ### Client API / Helper functions
@@ -32,40 +97,57 @@ defmodule EbnfParser.Sparql do
   end
 
   def syntax do
-    GenServer.call(__MODULE__, :get)
+    GenServer.call(__MODULE__, :get_syntax)
+  end
+
+  def parsers do
+    GenServer.call(__MODULE__, :get_parsers)
   end
 
   def split_single_form(string, terminal \\ false) do
     split_string = String.split(string, "::=", parts: 2)
     [name, clause] = Enum.map(split_string, &String.trim/1)
-    {String.to_atom(name), {terminal, full_parse(clause)}}
+
+    parsed_clause = EbnfParser.Parser.tokenize_and_parse(clause)
+    {String.to_atom(name), {terminal, parsed_clause}}
   end
 
-  def full_parse(string) do
-    EbnfParser.Parser.tokenize_and_parse(string)
-  end
-
-  def split_forms(forms) do
-    Enum.map(forms, &split_single_form/1)
-  end
-
-  @spec parse_sparql() :: syntax
-  def parse_sparql() do
+  defp sparql_syntax_ebnf() do
     %{non_terminal: non_terminal_forms, terminal: terminal_forms} = EbnfParser.Forms.sparql()
 
-    non_terminal_map =
+    non_terminals =
       non_terminal_forms
       |> Enum.map(fn x -> split_single_form(x, false) end)
-      |> Enum.into(%{})
 
-    full_syntax_map =
+    terminals =
       terminal_forms
       |> Enum.map(fn x -> split_single_form(x, true) end)
-      |> Enum.into(non_terminal_map)
+
+    {non_terminals, terminals}
+  end
+
+  @spec sparql_syntax() :: syntax
+  def sparql_syntax() do
+    {non_terminals, terminals} = sparql_syntax_ebnf()
+
+    full_syntax_map =
+      Enum.concat(non_terminals, terminals)
+      |> Map.new()
 
     _regexp_empowered_map =
       full_syntax_map
       |> augment_with_regexp_terminators
+  end
+
+  defp parser_from_rule({k, {terminal, v}}) do
+    parser =
+      v |> EbnfParser.GeneratorConstructor.to_term() |> EbnfParser.ParserProtocol.make_parser()
+
+    {k, {parser, terminal}}
+  end
+
+  def make_parsers(syntax) do
+    Map.new(syntax, &parser_from_rule/1)
   end
 
   def augment_with_regexp_terminators(map) do
@@ -114,7 +196,7 @@ defmodule EbnfParser.Sparql do
     |> Map.put(:IRIREF, {true, [regex: ~r/^<([^<>\\"{}|^`\x{00}-\x{20}])*>/u]})
   end
 
-  def parse_sparql_as_ordered_array do
+  def sparql_syntax_as_ordered_array do
     %{non_terminal: non_terminal_forms, terminal: terminal_forms} = EbnfParser.Forms.sparql()
 
     parsed_non_terminal_forms =

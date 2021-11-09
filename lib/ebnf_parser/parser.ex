@@ -30,12 +30,6 @@ defmodule EbnfParser.Parser do
     # |> ( Enum.map &EbnfParser.Parser.ebnf_parser_reverse_order/1 )
   end
 
-  def by_protocol(ebnf_string, match_string) do
-    ebnf = tokenize_and_parse(ebnf_string)
-    state = %Generator.State{chars: String.graphemes(match_string)}
-    EbnfParser.GeneratorConstructor.dispatch_generation(ebnf, state)
-  end
-
   def all_results(generator, prev_results \\ []) do
     case EbnfParser.Generator.emit(generator) do
       {:ok, gen, res} -> all_results(gen, [res | prev_results])
@@ -77,38 +71,6 @@ defmodule EbnfParser.Parser do
     |> smart_parse_parens([])
     |> smart_parse_counts
     |> smart_parse_infixes
-  end
-
-  @doc """
-  Reverses the list, and the lists inside of the list recursively.
-
-  ## Examples
-      iex> EbnfParser.Parser.smart_reverse_inside( [:foo] )
-      [:foo]
-
-      iex> EbnfParser.Parser.smart_reverse_inside( [:foo, :bar] )
-      [:bar, :foo]
-
-      iex> EbnfParser.Parser.smart_reverse_inside( [{:foo, :bar}, {:baz}] )
-      [{:baz}, {:foo, :bar}]
-
-      iex> EbnfParser.Parser.smart_reverse_inside( [{:two, [:five, :four, [:three]]}, {:one}] )
-      [{:one}, {:two, [[:three], :four, :five]}]
-  """
-  def smart_reverse_inside(list) when is_list(list) do
-    smart_reverse_inside(list, [])
-  end
-
-  def smart_reverse_inside([], processed) do
-    processed
-  end
-
-  def smart_reverse_inside([{name, list} | rest], processed) when is_list(list) do
-    smart_reverse_inside(rest, [{name, smart_reverse_inside(list)} | processed])
-  end
-
-  def smart_reverse_inside([token | rest], processed) do
-    smart_reverse_inside(rest, [token | processed])
   end
 
   @doc """

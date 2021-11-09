@@ -3,7 +3,7 @@ alias InterpreterTerms.HexCharacter, as: HexCharacter
 defmodule InterpreterTerms.HexCharacterResult do
   defstruct [:character, {:external, %{}}]
 
-  defimpl String.Chars do
+  defimpl String.Chars, for: InterpreterTerms.HexCharacterResult do
     def to_string(%InterpreterTerms.HexCharacterResult{character: char}) do
       String.Chars.to_string({:"#", char})
     end
@@ -11,31 +11,34 @@ defmodule InterpreterTerms.HexCharacterResult do
 end
 
 defmodule HexCharacter do
-  alias Generator.State, as: State
   alias Generator.Result, as: Result
-  defstruct [:number, {:state, %State{}}]
+  defstruct [:number]
 
-  defimpl EbnfParser.GeneratorProtocol do
-    def make_generator(%HexCharacter{} = hex_char) do
-      hex_char
+  defimpl EbnfParser.ParserProtocol do
+    def make_parser(%HexCharacter{} = hex) do
+      hex
     end
   end
 
-  defimpl EbnfParser.Generator do
-    def emit(%HexCharacter{state: %State{chars: []}}) do
-      {:fail}
-    end
+  defimpl EbnfParser.ParseProtocol do
+    def parse(%HexCharacter{number: number}, _parsers, [char | chars]) do
+      test = <<number::utf8>>
 
-    def emit(%HexCharacter{number: number, state: %State{chars: [char | chars]}}) do
-      if char == <<number::utf8>> do
-        {:ok, %InterpreterTerms.Nothing{},
-         %Result{
-           leftover: chars,
-           matched_string: char,
-           match_construct: [%InterpreterTerms.HexCharacterResult{character: char}]
-         }}
+      if char == test do
+        [
+          %Result{
+            leftover: chars,
+            matched_string: char,
+            match_construct: [%InterpreterTerms.HexCharacterResult{character: char}]
+          }
+        ]
       else
-        {:fail}
+        [
+          %Generator.Error{
+            errors: [{:Hex, "Could not match '" <> test <> "' with '" <> char <> "'"}],
+            leftover: chars
+          }
+        ]
       end
     end
   end

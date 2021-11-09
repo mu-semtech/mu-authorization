@@ -72,7 +72,7 @@ defmodule SparqlServer.Router.HandlerSupport do
     if Map.has_key?(template_local_store, :sparql_syntax) do
       template_local_store
     else
-      Map.put(template_local_store, :sparql_syntax, Parser.parse_sparql())
+      Map.put(template_local_store, :sparql_syntax, Parser.sparql_syntax())
     end
   end
 
@@ -88,14 +88,11 @@ defmodule SparqlServer.Router.HandlerSupport do
   def handle_query_with_template_local_store(query, kind, conn, template_local_store) do
     maybe_cancel_job_for_testing()
 
-    top_level_key =
-      case kind do
-        :query -> :QueryUnit
-        :update -> :UpdateUnit
-        :any -> :Sparql
-      end
-
+    ensure_syntax_id = Profiler.start("ensure_syntax")
     new_template_local_store = ensure_syntax_in_store(template_local_store)
+    Profiler.stop(ensure_syntax_id)
+
+    parse_query_id = Profiler.start("parse_query")
 
     {parsed_form, new_template_local_store} =
       query
@@ -103,7 +100,8 @@ defmodule SparqlServer.Router.HandlerSupport do
       |> String.trim()
       # TODO: check if this is valid and/or ensure parser skips \r between words.
       |> String.replace("\r", "")
-      |> Parser.parse_query_full_local(top_level_key, new_template_local_store)
+      |> Parser.parse()
+      |> Profiler.stop(parse_query_id)
 
     parsed_form =
       parsed_form
@@ -126,14 +124,19 @@ defmodule SparqlServer.Router.HandlerSupport do
             :write
           end
 
+        sparql_execute_id = Profiler.start("sparql_execute")
+
         encoded_response =
           new_parsed_forms
           |> ALog.di("New parsed forms")
           |> Enum.map(&SparqlClient.execute_parsed(&1, request: conn, query_type: query_type))
           |> List.first()
           |> Poison.encode!()
+          |> Profiler.stop(sparql_execute_id)
 
+        post_process_id = Profiler.start("post_process")
         post_processing.()
+        Profiler.stop(post_process_id)
 
         {conn, {200, encoded_response}, new_template_local_store}
 
@@ -214,7 +217,9 @@ defmodule SparqlServer.Router.HandlerSupport do
   defp manipulate_update_query(query, conn) do
     Logger.debug("This is an update query")
 
+    calculate_access_groups_id = Profiler.start("calculate_access_groups")
     {conn, authorization_groups} = AccessGroupSupport.calculate_access_groups(conn)
+    Profiler.stop(calculate_access_groups_id)
 
     # TODO: DRY into/from QueryAnalyzer.insert_quads
 
@@ -227,6 +232,7 @@ defmodule SparqlServer.Router.HandlerSupport do
       }
     }
 
+    quad_changes_id = Profiler.start("QueryAnalyzer.quad_changes")
     analyzed_quads =
       query
       |> ALog.di("Parsed query")
@@ -234,6 +240,7 @@ defmodule SparqlServer.Router.HandlerSupport do
         default_graph: Iri.from_iri_string("<http://mu.semte.ch/application>", %{}),
         authorization_groups: authorization_groups
       })
+      |> Profiler.stop(quad_changes_id)
       |> Enum.reject(&match?({_, []}, &1))
       |> ALog.di("Non-empty operations")
       |> enrich_manipulations_with_access_rights(authorization_groups)
@@ -250,6 +257,8 @@ defmodule SparqlServer.Router.HandlerSupport do
             {manipulation, effective_quads}
           end)
 
+        calculate_executable_queries_id = Profiler.start("calculate_executable_queries")
+
         executable_queries =
           processed_manipulations
           |> join_quad_updates
@@ -263,6 +272,8 @@ defmodule SparqlServer.Router.HandlerSupport do
             end
           end)
 
+        Profiler.stop(calculate_executable_queries_id)
+
         delta_updater = fn ->
           Delta.publish_updates(processed_manipulations, authorization_groups, conn)
         end
@@ -274,11 +285,15 @@ defmodule SparqlServer.Router.HandlerSupport do
   end
 
   defp enrich_manipulations_with_access_rights(manipulations, authorization_groups) do
+    enrich_manipulations_with_access_rights_id =
+      Profiler.start("enrich_manipulations_with_access_rights")
+
     manipulations
     |> Enum.map(fn {kind, quads} ->
       processed_quads = enforce_write_rights(quads, authorization_groups)
       {kind, quads, processed_quads}
     end)
+    |> Profiler.stop(enrich_manipulations_with_access_rights_id)
   end
 
   # If requested by configuration, this code will verify all triples
