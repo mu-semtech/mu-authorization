@@ -72,7 +72,9 @@ defmodule SparqlClient.WorkloadInfo do
   queries in separate processes which then in turn have separate PIDs.
   """
 
-  @query_types [:read, :write, :read_for_write]
+  # NOTE: the order of @query_types is the order in which we will
+  # execute the queries when reaching the @non_recovery_max_running
+  @query_types [:write, :read_for_write, :read]
   @type t :: %Workload{
           running_pid_map: %{read: [pid], write: [pid], read_for_write: [pid]},
           waiting_from_map: %{read: [pid], read_for_write: [pid], write: [pid]},
@@ -139,9 +141,17 @@ defmodule SparqlClient.WorkloadInfo do
   Executes a timeout in case of read requests.
   """
   @spec timeout(query_types, integer) :: :ok
-  def timeout(query_type, max_timeout \\ 60000) do
+  def timeout(query_type, max_timeout \\ 60_000) do
+    # TODO: allow a waiting mechanism, similar to timeout for partially
+    # executed queries like DELETE INSERT
     if enabled?() do
-      GenServer.call(__MODULE__, {:timeout, query_type}, max_timeout)
+      try do
+        GenServer.call(__MODULE__, {:timeout, query_type}, max_timeout)
+      catch
+        :exit, {:timeout, call_info} ->
+          report_cancellation(query_type)
+          exit({:timeout, call_info})
+      end
     else
       :ok
     end
@@ -191,24 +201,21 @@ defmodule SparqlClient.WorkloadInfo do
     old_failure_factor = workload.database_failure_load * @previous_interval_keep_factor
 
     new_failure_factor =
-      if workload.last_interval_success_count == 0 do
-        0
-      else
-        workload.last_interval_failure_count / workload.last_interval_success_count
-      end
+      workload.last_interval_failure_count /
+        (workload.last_interval_success_count + workload.last_interval_failure_count)
 
     new_failure_load =
       if workload.last_interval_failure_count == 0 do
         # lower hard when no failures are detected
+        # TODO: with the new watermark numbers, the max should be 1 so .... this has no value
         min(1, 0.2 * old_failure_factor)
       else
         @previous_interval_keep_factor * old_failure_factor +
           (1 - @previous_interval_keep_factor) * new_failure_factor
       end
 
-    # This is similar to 
     new_recovery_mode =
-      if workload.database_failure_load do
+      if workload.recovery_mode do
         if workload.last_interval_failure_count <= @failure_load_min_failures &&
              Enum.empty?(workload.waiting_from_map[:write]) &&
              Enum.empty?(workload.waiting_from_map[:read_for_write]) &&
@@ -218,6 +225,8 @@ defmodule SparqlClient.WorkloadInfo do
           true
         end
       else
+        # Note: you can reach recovery_mode faster if many failing
+        # requests arrive within one clocktick_interval
         new_failure_load > @failure_load_recovery_score &&
           workload.last_interval_failure_count >= @failure_load_min_failures
       end
@@ -303,41 +312,37 @@ defmodule SparqlClient.WorkloadInfo do
   def handle_info(
         {:DOWN, _reference, _process, pid, _error},
         %Workload{
-          running_pid_map: pid_map
+          running_pid_map: pid_map,
+          waiting_from_map: from_map
         } = workload
       ) do
-    {read_map, read_count} = count_and_remove(pid_map[:read], pid)
-    {write_map, write_count} = count_and_remove(pid_map[:write], pid)
-    {read_for_write_map, read_for_write_count} = count_and_remove(pid_map[:read_for_write], pid)
+    pid_match = &(&1 == pid)
+    from_match = fn {pid, _} -> pid_match.(pid) end
+
+    running_read_map = Enum.reject(pid_map[:read], pid_match)
+    running_write_map = Enum.reject(pid_map[:write], pid_match)
+    running_read_for_write_map = Enum.reject(pid_map[:read_for_write], pid_match)
+
+    waiting_read_map = Enum.reject(from_map[:read], from_match)
+    waiting_write_map = Enum.reject(from_map[:write], from_match)
+    waiting_read_for_write_map = Enum.reject(from_map[:read_for_write], from_match)
 
     workload
-    |> update_in([:running_count], fn count ->
-      count - (read_count + write_count + read_for_write_count)
-    end)
-    |> put_in([:running_pid_map, :read], read_map)
-    |> put_in([:running_pid_map, :write], write_map)
-    |> put_in([:running_pid_map, :read_for_write], read_for_write_map)
+    # update running counts and maps
+    |> put_in(
+      [:running_count],
+      Enum.count(running_read_map) + Enum.count(running_write_map) +
+        Enum.count(running_read_for_write_map)
+    )
+    |> put_in([:running_pid_map, :read], running_read_map)
+    |> put_in([:running_pid_map, :write], running_write_map)
+    |> put_in([:running_pid_map, :read_for_write], running_read_for_write_map)
+    # update waiting counts and maps
+    |> put_in([:waiting_pid_map, :read], waiting_read_map)
+    |> put_in([:waiting_pid_map, :write], waiting_write_map)
+    |> put_in([:waiting_pid_map, :read_for_write], waiting_read_for_write_map)
     |> trigger_new_queries
     |> wrap_in_noreply
-  end
-
-  @spec count_and_remove(Enum.t(), any | (any -> boolean)) :: {Enum.t(), number}
-  defp count_and_remove(enum, matcher) when is_function(matcher) do
-    {reversed_enum, number} =
-      enum
-      |> Enum.reduce({[], 0}, fn elem, {items, removal_count} ->
-        if matcher.(elem) do
-          {items, removal_count + 1}
-        else
-          {[elem | items], removal_count}
-        end
-      end)
-
-    {Enum.reverse(reversed_enum), number}
-  end
-
-  defp count_and_remove(enum, pid) do
-    count_and_remove(enum, &(&1 == pid))
   end
 
   @spec remove_running_pid(t, query_types, pid) :: t
@@ -362,7 +367,8 @@ defmodule SparqlClient.WorkloadInfo do
     |> update_in([:waiting_from_map, query_type], &List.delete(&1, from))
     |> update_in([:running_pid_map, query_type], fn x -> [from_pid | x] end)
 
-    # TODO: set up monitor __when PID is added to from__
+    # We already have a monitor from the :timeout and don't need to set
+    # up a new one
   end
 
   @spec queue_from(t, query_types, GenServer.from()) :: t
@@ -382,33 +388,20 @@ defmodule SparqlClient.WorkloadInfo do
         %Workload{recovery_mode: false, running_count: running_count} = workload
       )
       when running_count < @non_recovery_max_running do
-    to_launch = @non_recovery_max_running - running_count
+    queries_to_launch = @non_recovery_max_running - running_count
 
-    {_to_launch, new_workload} =
+    # We take the first queries_to_launch options and launch them
+    new_workload =
       @query_types
-      |> Enum.reduce_while(
-        {to_launch, workload},
-        fn
-          _method, {0, workload} ->
-            {:halt, {to_launch, workload}}
-
-          method, {to_launch, workload} ->
-            froms_to_start = workload.waiting_from_map[method]
-
-            {to_launch, workload} =
-              froms_to_start
-              |> Enum.reduce_while({to_launch, workload}, fn
-                _from, {0, workload} ->
-                  {:halt, {0, workload}}
-
-                from, {to_launch, workload} ->
-                  new_workload = launch_client(workload, method, from)
-                  {:cont, {to_launch - 1, new_workload}}
-              end)
-
-            {:cont, {to_launch, workload}}
-        end
-      )
+      |> Enum.map(fn query_type ->
+        workload.waiting_from_map[query_type]
+        |> Enum.map(fn from -> {query_type, from} end)
+      end)
+      |> Enum.concat()
+      |> Enum.take(queries_to_launch)
+      |> Enum.reduce(workload, fn {query_type, from}, workload ->
+        launch_client(workload, query_type, from)
+      end)
 
     new_workload
   end
@@ -418,23 +411,26 @@ defmodule SparqlClient.WorkloadInfo do
     running_type = recovery_running_type(workload)
     max_of_type = @recovery_max[running_type]
 
-    queries_to_run = max_of_type - workload.running_count
+    # We only count the queries of the current type, rather than all
+    # queries, for reaching our max running count as during error
+    # recovery there could be some long-running queries in the other
+    # types that hose the repair otherwise.
+    running_count = Enum.count(workload.running_pid_map[running_type])
+    queries_to_launch = max_of_type - running_count
 
-    {workload, _} =
-      if queries_to_run > 0 do
-        # start as many queries of running type as we can
-        Enum.reduce_while(workload.waiting_from_map[running_type], {workload, queries_to_run}, fn
-          _from, {workload, 0} ->
-            {:halt, {workload, 0}}
+    if queries_to_launch > 0 do
+      workload.waiting_from_map[running_type]
+      |> Enum.take(queries_to_launch)
+      |> Enum.reduce(workload, fn from, workload ->
+        launch_client(workload, running_type, from)
+      end)
+    else
+      workload
+    end
+  end
 
-          from, {workload, queries_to_run} ->
-            new_workload = launch_client(workload, running_type, from)
-            {:cont, {new_workload, queries_to_run - 1}}
-        end)
-      else
-        {workload, nil}
-      end
-
+  def trigger_new_queries(%Workload{} = workload) do
+    # Do nothing, we just have to wait
     workload
   end
 
