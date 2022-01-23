@@ -3,12 +3,13 @@
 use Mix.Config
 
 defmodule CH do
-  def system_boolean(name) do
+  def system_boolean(name, default \\ false) do
     case String.downcase(System.get_env(name) || "") do
       "true" -> true
       "yes" -> true
       "1" -> true
       "on" -> true
+      "" -> default
       _ -> false
     end
   end
@@ -67,13 +68,15 @@ config :"mu-authorization",
   inspect_outgoing_sparql_query_responses:
     CH.system_boolean("INSPECT_OUTGOING_SPARQL_QUERY_RESPONSES"),
   log_outgoing_sparql_query_roundtrip: CH.system_boolean("LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP"),
-  default_sparql_endpoint: (System.get_env("MU_SPARQL_ENDPOINT") || "http://localhost:8890/sparql"),
+  default_sparql_endpoint: System.get_env("MU_SPARQL_ENDPOINT") || "http://localhost:8890/sparql",
   query_max_processing_time: CH.system_number("QUERY_MAX_PROCESSING_TIME", 120_000),
   query_max_execution_time: CH.system_number("QUERY_MAX_EXECUTION_TIME", 60_000),
   database_recovery_mode_enabled: CH.system_boolean("DATABASE_OVERLOAD_RECOVERY"),
   log_database_recovery_mode_tick: CH.system_boolean("LOG_DATABASE_OVERLOAD_TICK"),
+  log_workload_info_requests: CH.system_boolean("LOG_WORKLOAD_INFO_REQUESTS"),
   testing_auth_query_error_rate: CH.system_float("TESTING_AUTH_QUERY_ERROR_RATE"),
-  error_on_unwritten_data: CH.system_boolean("ERROR_ON_UNWRITTEN_DATA")
+  error_on_unwritten_data: CH.system_boolean("ERROR_ON_UNWRITTEN_DATA"),
+  errors: CH.system_boolean("LOG_ERRORS", true)
 
 # and access this configuration in your application as:
 #

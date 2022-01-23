@@ -119,7 +119,7 @@ defmodule SparqlClient do
           rescue
             exception ->
               Logger.warn("Failed to decode response from database")
-              IO.inspect(response, label: "Response which could not be decoded")
+              Logging.EnvLog.inspect(response, :error, label: "Response which could not be decoded")
               # TODO when upgrading elixir, change to reraise
               raise exception
           end
@@ -130,7 +130,7 @@ defmodule SparqlClient do
           "Failed to execute query #{query} on database (try #{@max_retries - retries})"
         )
 
-        IO.inspect(exception, label: "Exception thrown when executing query")
+        Logging.EnvLog.inspect(exception, :error, label: "Exception thrown when executing query")
         query_info = InfoEndpoint.retry_query(query_info)
         # TODO: in the future, we may detect that a failure was
         # actually a timeout, in which case this report needs to be

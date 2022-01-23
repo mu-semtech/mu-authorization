@@ -40,7 +40,7 @@ defmodule Delta.Messenger do
     ]
 
     # we expect clients to respond to our request
-    options = [recv_timeout: 50000]
+    options = [recv_timeout: 50_000]
 
     Logging.EnvLog.log(
       :log_delta_client_communication,

@@ -33,18 +33,20 @@ defmodule SparqlServer.Router do
   end
 
   get "/sparql" do
-    if conn.query_string do
-      params = conn.query_string |> URI.decode_query()
+    case conn.query_string do
+      "" ->
+        render_default_page(conn)
 
-      ALog.di(conn, "Received GET connection")
-      conn = downcase_request_headers(conn)
-      debug_log_request_id(conn)
+      query_string ->
+        params = URI.decode_query(query_string)
 
-      query = params["query"]
+        ALog.di(conn, "Received GET connection")
+        conn = downcase_request_headers(conn)
+        debug_log_request_id(conn)
 
-      handle_query_processing_and_response(query, :query, conn)
-    else
-      render_default_page
+        query = params["query"]
+
+        handle_query_processing_and_response(query, :query, conn)
     end
   end
 
@@ -52,26 +54,34 @@ defmodule SparqlServer.Router do
     running_queries = InfoEndpoint.get_running_queries()
     inspect_options = [limit: 100_000, pretty: true, width: 180]
 
-    IO.inspect(running_queries, [{:label, "Currently running queries"} | inspect_options])
+    Logging.EnvLog.inspect(
+      running_queries,
+      :log_workload_info_requests,
+      [{:label, "Currently running queries"} | inspect_options]
+    )
 
-    json = running_queries |> Enum.map(fn (q) -> %{ type: "queries", id: q.id, attributes: q } end)
+    json = running_queries |> Enum.map(fn q -> %{type: "queries", id: q.id, attributes: q} end)
 
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(200, Poison.encode!(%{ data: json }))
+    |> send_resp(200, Poison.encode!(%{data: json}))
   end
 
   get "/processing-queries" do
     processing_queries = InfoEndpoint.get_processing_queries()
     inspect_options = [limit: 100_000, pretty: true, width: 180]
 
-    IO.inspect(processing_queries, [{:label, "Currently processing queries"} | inspect_options])
+    Logging.EnvLog.inspect(
+      processing_queries,
+      :log_workload_info_requests,
+      [{:label, "Currently processing queries"} | inspect_options]
+    )
 
-    json = processing_queries |> Enum.map(fn (q) -> %{ type: "queries", id: q.id, attributes: q } end)
+    json = processing_queries |> Enum.map(fn q -> %{type: "queries", id: q.id, attributes: q} end)
 
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(200, Poison.encode!(%{ data: json }))
+    |> send_resp(200, Poison.encode!(%{data: json}))
   end
 
   get "/recovery-status" do
@@ -82,7 +92,11 @@ defmodule SparqlServer.Router do
 
     inspect_options = [limit: 100_000, pretty: true, width: 180]
 
-    IO.inspect(last_completed_workload_info, [{:label, "Current recovery status"} | inspect_options])
+    Logging.EnvLog.inspect(
+      last_completed_workload_info,
+      :log_workload_info_requests,
+      [{:label, "Current recovery status"} | inspect_options]
+    )
 
     conn
     |> put_resp_content_type("application/json")
@@ -94,7 +108,7 @@ defmodule SparqlServer.Router do
   ################
   ### Internal logic
 
-  defp render_default_page do
+  defp render_default_page(conn) do
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/ld+json")
     |> send_resp(200, "{
@@ -121,13 +135,13 @@ defmodule SparqlServer.Router do
       |> send_sparql_response
     catch
       :exit, {:timeout, call_info} ->
-        IO.puts("Server overload, could not answer request within allocated time")
-        IO.inspect(call_info, label: "Failed call")
-
+        Logging.EnvLog.inspect(call_info, :errors, label: "Server overload, failed call")
         send_resp(conn, 503, "Processing request took too long")
 
       :exit, info ->
-        IO.inspect(info, label: "Unknown exit message received when processing query")
+        Logging.EnvLog.inspect(info, :errors,
+          label: "Unknown exit message received when processing query"
+        )
 
         send_resp(conn, 500, "Unknown error occurred when processing query")
     after
