@@ -121,9 +121,9 @@ defmodule SparqlServer.Router.HandlerSupport do
       {conn, new_parsed_forms, post_processing} ->
         query_type =
           if Enum.any?(new_parsed_forms, fn q -> !is_select_query(q) end) do
-            :read
-          else
             :write
+          else
+            :read
           end
 
         encoded_response =
