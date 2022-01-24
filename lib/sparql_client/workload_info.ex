@@ -338,9 +338,9 @@ defmodule SparqlClient.WorkloadInfo do
     |> put_in([:running_pid_map, :write], running_write_map)
     |> put_in([:running_pid_map, :read_for_write], running_read_for_write_map)
     # update waiting counts and maps
-    |> put_in([:waiting_pid_map, :read], waiting_read_map)
-    |> put_in([:waiting_pid_map, :write], waiting_write_map)
-    |> put_in([:waiting_pid_map, :read_for_write], waiting_read_for_write_map)
+    |> put_in([:waiting_from_map, :read], waiting_read_map)
+    |> put_in([:waiting_from_map, :write], waiting_write_map)
+    |> put_in([:waiting_from_map, :read_for_write], waiting_read_for_write_map)
     |> trigger_new_queries
     |> wrap_in_noreply
   end
