@@ -201,8 +201,12 @@ defmodule SparqlClient.WorkloadInfo do
     old_failure_factor = workload.database_failure_load * @previous_interval_keep_factor
 
     new_failure_factor =
-      workload.last_interval_failure_count /
+      if workload.last_interval_success_count == 0 and workload.last_interval_failure_count == 0 do
+        0
+      else
+        workload.last_interval_failure_count /
         (workload.last_interval_success_count + workload.last_interval_failure_count)
+      end
 
     new_failure_load =
       if workload.last_interval_failure_count == 0 do
