@@ -2,7 +2,7 @@ defmodule Delta.Messenger do
   require Logger
   require ALog
 
-  @type call_options :: [mu_call_id_trail: String.t()]
+  @type call_options :: [mu_call_id_trail: String.t(), mu_session_id: String.t()]
 
   @moduledoc """
   Sends constructed messages to all interested clients.
@@ -36,7 +36,8 @@ defmodule Delta.Messenger do
     headers = [
       {"Content-Type", "application/json"},
       {"mu-call-id", Integer.to_string(Enum.random(0..1_000_000_000_000))},
-      {"mu-call-id-trail", options[:mu_call_id_trail]}
+      {"mu-call-id-trail", options[:mu_call_id_trail]},
+      {"mu-session-id", options[:mu_session_id]}
     ]
 
     # we expect clients to respond to our request
