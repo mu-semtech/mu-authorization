@@ -981,7 +981,7 @@ defmodule Updates.QueryAnalyzer do
         # We supply an empty options object, it will not be used
         Iri.from_iri_string("<" <> value <> ">", %{})
 
-      %{"type" => "literal", "xml:lang" => lang, value: value} ->
+      %{"type" => "literal", "xml:lang" => lang, "value" => value} ->
         value
         |> perform_string_escaping.()
         |> wrap_in_triple_quotes.()
