@@ -44,7 +44,7 @@ defmodule SparqlServer.Router do
 
       handle_query_processing_and_response(query, :query, conn)
     else
-      render_default_page
+      render_default_page conn
     end
   end
 
@@ -94,7 +94,7 @@ defmodule SparqlServer.Router do
   ################
   ### Internal logic
 
-  defp render_default_page do
+  defp render_default_page(conn) do
     conn
     |> Plug.Conn.put_resp_header("content-type", "application/ld+json")
     |> send_resp(200, "{
