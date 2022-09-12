@@ -6,22 +6,22 @@
 # as there are results, we emit one of the results.  As long as there
 # are generators, we keep generating results.
 
-alias Regen.Processors.Choice, as: Choice
-
-defmodule Choice do
+defmodule Regen.Processors.Choice do
+  alias __MODULE__, as: ChoiceProcessor
+  alias InterpreterTerms.Choice.Interpreter, as: ChoiceInterpreter
   alias Regen.Status, as: State
 
   defstruct options: [], state: %State{}, option_generators: :none, generated_options: []
 
-  @type t :: %Choice{}
+  @type t :: %ChoiceProcessor{}
 
   defimpl Regen.Protocol do
-    def emit(%Choice{} = choice) do
-      Choice.walk_choice(choice)
+    def emit(%ChoiceProcessor{} = choice) do
+      ChoiceProcessor.walk_choice(choice)
     end
   end
 
-  def walk_choice(%Choice{} = choice) do
+  def walk_choice(%ChoiceProcessor{} = choice) do
     choice
     |> ensure_generators
     |> ensure_generated_options
@@ -37,37 +37,37 @@ defmodule Choice do
   end
 
   defp ensure_generators(
-         %Choice{option_generators: :none, options: options, state: state} = choice
+         %ChoiceProcessor{option_generators: :none, options: options, state: state} = choice
        ) do
     %{choice | option_generators: Enum.map(options, fn o -> dispatch_generation(o, state) end)}
   end
 
-  defp ensure_generators(%Choice{} = choice) do
+  defp ensure_generators(%ChoiceProcessor{} = choice) do
     choice
   end
 
   defp ensure_generated_options(
-         %Choice{option_generators: generators, generated_options: []} = choice
+         %ChoiceProcessor{option_generators: generators, generated_options: []} = choice
        ) do
     {new_solutions, new_generators} =
       generators
       |> Enum.map(&emit/1)
-      |> InterpreterTerms.Choice.Interpreter.remove_empty_solutions()
+      |> ChoiceInterpreter.remove_empty_solutions()
       |> sort_solutions
-      |> InterpreterTerms.Choice.Interpreter.split_solutions_and_generators()
+      |> ChoiceInterpreter.split_solutions_and_generators()
 
     %{choice | generated_options: new_solutions, option_generators: new_generators}
   end
 
-  defp ensure_generated_options(%Choice{} = choice) do
+  defp ensure_generated_options(%ChoiceProcessor{} = choice) do
     choice
   end
 
-  defp emit_result(%Choice{generated_options: [option | rest]} = choice) do
+  defp emit_result(%ChoiceProcessor{generated_options: [option | rest]} = choice) do
     {:ok, %{choice | generated_options: rest}, option}
   end
 
-  defp emit_result(%Choice{generated_options: [], option_generators: []}) do
+  defp emit_result(%ChoiceProcessor{generated_options: [], option_generators: []}) do
     {:fail}
   end
 

@@ -1,4 +1,6 @@
 defmodule Updates.QueryAnalyzer do
+  alias Updates.QueryConstructors
+  alias Updates.QueryAnalyzer.P, as: QueryAnalyzerProtocol
   alias InterpreterTerms.SymbolMatch, as: Sym
   alias InterpreterTerms.WordMatch, as: Word
   alias Updates.QueryAnalyzer.Iri, as: Iri
@@ -222,7 +224,7 @@ defmodule Updates.QueryAnalyzer do
         # Select all quads from from_graph and convert them to to_graph
         quads =
           from_graph
-          |> Updates.QueryConstructors.make_select_triples_from_graph_query()
+          |> QueryConstructors.make_select_triples_from_graph_query()
           |> SparqlServer.Router.HandlerSupport.manipulate_select_query(
             authorization_groups,
             :read_for_write
@@ -384,7 +386,7 @@ defmodule Updates.QueryAnalyzer do
       [%Sym{symbol: :iri} = iri] -> iri
     end
     |> primitive_value(options)
-    |> Updates.QueryAnalyzer.P.to_solution_sym()
+    |> QueryAnalyzerProtocol.to_solution_sym()
   end
 
   def quads(%Sym{symbol: :QuadData, submatches: matches}, options) do
@@ -873,7 +875,7 @@ defmodule Updates.QueryAnalyzer do
       variables
       |> Enum.map(&Var.to_solution_sym/1)
 
-    Updates.QueryConstructors.make_select_distinct_query(
+    QueryConstructors.make_select_distinct_query(
       select_variables,
       group_graph_pattern_sym
     )
@@ -890,8 +892,8 @@ defmodule Updates.QueryAnalyzer do
     clear_cache_for_typed_quads(quads, options)
 
     quads
-    |> Enum.map(&Updates.QueryConstructors.make_quad_match_from_quad/1)
-    |> Updates.QueryConstructors.make_insert_query()
+    |> Enum.map(&QueryConstructors.make_quad_match_from_quad/1)
+    |> QueryConstructors.make_insert_query()
 
     # |> TODO add prefixes
   end
@@ -902,8 +904,8 @@ defmodule Updates.QueryAnalyzer do
     clear_cache_for_typed_quads(quads, options)
 
     quads
-    |> Enum.map(&Updates.QueryConstructors.make_quad_match_from_quad/1)
-    |> Updates.QueryConstructors.make_delete_query()
+    |> Enum.map(&QueryConstructors.make_quad_match_from_quad/1)
+    |> QueryConstructors.make_delete_query()
 
     # |> TODO add prefixes
   end

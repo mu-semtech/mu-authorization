@@ -159,15 +159,11 @@ defmodule Resource do
     resources_with_types(quads, extra_quads, options)
     |> ALog.di("Resources with types")
     |> Enum.filter(fn {_, %Iri{iri: type_iri}} ->
-      IO.inspect(type_iri, label: "Type iri to match")
+      # IO.inspect(type_iri, label: "Type iri to match")
 
       # TODO: clean up this logic.  It is sound but it is also rather complex
-      matches? =
-        (types == :any || Enum.member?(wrapped_types, type_iri)) &&
-          (inverse_types == :none || not Enum.member?(wrapped_inverse_types, type_iri))
-
-      matches?
-      |> IO.inspect(label: "Type iri match value for filter")
+      (types == :any || Enum.member?(wrapped_types, type_iri)) &&
+        (inverse_types == :none || not Enum.member?(wrapped_inverse_types, type_iri))
     end)
     |> Enum.map(fn {%Iri{iri: iri}, _} -> iri end)
     |> ALog.di("matching resources")

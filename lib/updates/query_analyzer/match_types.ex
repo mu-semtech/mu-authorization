@@ -3,6 +3,7 @@ alias Updates.QueryAnalyzer.String, as: Str
 alias Updates.QueryAnalyzer.Boolean, as: Bool
 alias Updates.QueryAnalyzer.NumericLiteral, as: Number
 alias Updates.QueryAnalyzer.Variable, as: Var
+alias Updates.QueryAnalyzer.P, as: QueryAnalyzerProtocol
 
 alias InterpreterTerms.SymbolMatch, as: Sym
 alias InterpreterTerms.WordMatch, as: Word
@@ -121,13 +122,13 @@ defmodule Iri do
     String.slice(string, 1, String.length(string) - 2)
   end
 
-  defimpl Updates.QueryAnalyzer.P do
+  defimpl QueryAnalyzerProtocol do
     def to_solution_sym(%Iri{iri: full_name}) do
       # TODO: Emit values the way we received them
-      %InterpreterTerms.SymbolMatch{
+      %Sym{
         symbol: :iri,
         submatches: [
-          %InterpreterTerms.SymbolMatch{symbol: :IRIREF, string: full_name, submatches: :none}
+          %Sym{symbol: :IRIREF, string: full_name, submatches: :none}
         ]
       }
     end
@@ -166,7 +167,7 @@ defmodule Var do
     pure_name
   end
 
-  defimpl Updates.QueryAnalyzer.P do
+  defimpl QueryAnalyzerProtocol do
     def to_solution_sym(%Var{} = var) do
       Var.to_solution_sym(var)
     end
@@ -183,10 +184,10 @@ defmodule Var do
         <<"$", _::binary>> -> :VAR2
       end
 
-    %InterpreterTerms.SymbolMatch{
+    %Sym{
       symbol: :Var,
       submatches: [
-        %InterpreterTerms.SymbolMatch{
+        %Sym{
           symbol: symbol,
           string: full_name,
           submatches: :none
@@ -215,7 +216,7 @@ defmodule Bool do
     %Bool{value: boolean}
   end
 
-  defimpl Updates.QueryAnalyzer.P do
+  defimpl QueryAnalyzerProtocol do
     def to_solution_sym(%Bool{value: value}) do
       word =
         if value do
@@ -224,12 +225,12 @@ defmodule Bool do
           "false"
         end
 
-      %InterpreterTerms.SymbolMatch{
+      %Sym{
         symbol: :RDFLiteral,
         submatches: [
-          %InterpreterTerms.SymbolMatch{
+          %Sym{
             symbol: :BooleanLiteral,
-            submatches: [%InterpreterTerms.WordMatch{word: word}]
+            submatches: [%Word{word: word}]
           }
         ]
       }
@@ -271,7 +272,7 @@ defmodule Str do
     %Str{str: string, type: type}
   end
 
-  defimpl Updates.QueryAnalyzer.P do
+  defimpl QueryAnalyzerProtocol do
     def to_solution_sym(%Str{str: string, lang: lang, type: type} = str) do
       # TODO: handle escaping of strings correctly, depending where
       # they came from.  This requires changes in from_string
@@ -283,13 +284,13 @@ defmodule Str do
       case str do
         %Str{lang: false, type: false} ->
           # it is a simple string
-          %InterpreterTerms.SymbolMatch{
+          %Sym{
             symbol: :RDFLiteral,
             submatches: [
-              %InterpreterTerms.SymbolMatch{
+              %Sym{
                 symbol: :String,
                 submatches: [
-                  %InterpreterTerms.SymbolMatch{
+                  %Sym{
                     symbol: :STRING_LITERAL_LONG_2,
                     string: triple_escaped_string,
                     submatches: :none
@@ -301,40 +302,40 @@ defmodule Str do
 
         %Str{lang: false} ->
           # it is a typed string
-          %InterpreterTerms.SymbolMatch{
+          %Sym{
             symbol: :RDFLiteral,
             submatches: [
-              %InterpreterTerms.SymbolMatch{
+              %Sym{
                 symbol: :String,
                 submatches: [
-                  %InterpreterTerms.SymbolMatch{
+                  %Sym{
                     symbol: :STRING_LITERAL_LONG_2,
                     string: triple_escaped_string,
                     submatches: :none
                   }
                 ]
               },
-              %InterpreterTerms.WordMatch{word: "^^"},
-              Updates.QueryAnalyzer.P.to_solution_sym(type)
+              %Word{word: "^^"},
+              QueryAnalyzerProtocol.to_solution_sym(type)
             ]
           }
 
         %Str{type: false} ->
           # it is a language typed string
-          %InterpreterTerms.SymbolMatch{
+          %Sym{
             symbol: :RDFLiteral,
             submatches: [
-              %InterpreterTerms.SymbolMatch{
+              %Sym{
                 symbol: :String,
                 submatches: [
-                  %InterpreterTerms.SymbolMatch{
+                  %Sym{
                     symbol: :STRING_LITERAL_LONG_2,
                     string: triple_escaped_string,
                     submatches: :none
                   }
                 ]
               },
-              %InterpreterTerms.SymbolMatch{
+              %Sym{
                 symbol: :LANGTAG,
                 string: "@" <> lang,
                 submatches: :none
@@ -382,21 +383,21 @@ defmodule Number do
     %Str{str: string}
   end
 
-  defimpl Updates.QueryAnalyzer.P do
+  defimpl QueryAnalyzerProtocol do
     def to_solution_sym(%Number{str: str}) do
       # TODO this does not necessarily emit the correct structure, yet
       # it will yield the correct SPARQL query.
 
-      %InterpreterTerms.SymbolMatch{
+      %Sym{
         symbol: :RDFLiteral,
         submatches: [
-          %InterpreterTerms.SymbolMatch{
+          %Sym{
             symbol: :NumericLiteral,
             submatches: [
-              %InterpreterTerms.SymbolMatch{
+              %Sym{
                 symbol: :NumericLiteralUnsigned,
                 submatches: [
-                  %InterpreterTerms.SymbolMatch{symbol: :DECIMAL, string: str, submatches: :none}
+                  %Sym{symbol: :DECIMAL, string: str, submatches: :none}
                 ]
               }
             ]

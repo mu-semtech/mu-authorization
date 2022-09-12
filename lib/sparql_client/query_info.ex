@@ -23,12 +23,12 @@ defmodule SparqlClient.QueryInfo do
   end
 
   @spec increase_retry_count(t()) :: t()
-  def increase_retry_count(qi = %__MODULE__{}) do
+  def increase_retry_count(%__MODULE__{} = qi) do
     %{qi | retries: qi.retries + 1}
   end
 
   @spec launched_at(t()) :: DateTime.t()
-  def launched_at(qi = %__MODULE__{}) do
+  def launched_at(%__MODULE__{} = qi) do
     qi.launched_at
   end
 end

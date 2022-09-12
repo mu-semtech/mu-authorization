@@ -1,4 +1,6 @@
 defmodule GraphReasoner do
+  alias Updates.QueryAnalyzer.Iri
+  alias Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol
   alias GraphReasoner.QueryInfo, as: QueryInfo
   alias GraphReasoner.QueryMatching, as: QueryMatching
   alias InterpreterTerms.WordMatch, as: Word
@@ -166,28 +168,29 @@ defmodule GraphReasoner do
     # :: Walk the tree of results
     discovery_result =
       Manipulators.Basics.map_matches(match, fn item ->
-        unless match?(%Sym{symbol: _symbol}, item) do
-          # :: ignore the item if it is not a SymbolMatch
-          {:continue}
-        else
-          %Sym{symbol: symbol} = item
+        case item do
+          %Sym{symbol: symbol} ->
+            # :: if the item is a symbol
+            cond do
+              Enum.find(@accepted_symbols, &match?({^symbol, :deep}, &1)) ->
+                # :: deeply accepted symbols can just be accepted
+                # IO.inspect( symbol, label: "This symbol is allowed without walking children" )
+                {:skip}
 
-          cond do
-            Enum.find(@accepted_symbols, &match?({^symbol, :deep}, &1)) ->
-              # :: deeply accepted symbols can just be accepted
-              # IO.inspect( symbol, label: "This symbol is allowed without walking children" )
-              {:skip}
+              Enum.find(@accepted_symbols, &match?(^symbol, &1)) ->
+                # :: accepted symbols are allowed, but their children have to be checked
+                # IO.inspect( symbol, label: "This symbol is allowed if children are allowed" )
+                {:continue}
 
-            Enum.find(@accepted_symbols, &match?(^symbol, &1)) ->
-              # :: accepted symbols are allowed, but their children have to be checked
-              # IO.inspect( symbol, label: "This symbol is allowed if children are allowed" )
-              {:continue}
+              true ->
+                # :: no match was found for this symbol, the query cannot be accepted
+                # IO.inspect( symbol, label: "This symbol is not allowed" )
+                {:exit, false}
+            end
 
-            true ->
-              # :: no match was found for this symbol, the query cannot be accepted
-              # IO.inspect( symbol, label: "This symbol is not allowed" )
-              {:exit, false}
-          end
+          _ ->
+            # :: ignore the item if it is not a SymbolMatch
+            {:continue}
         end
       end)
 
@@ -226,12 +229,12 @@ defmodule GraphReasoner do
     initialize_iri_from_symbol = fn iri_symbol, query_info ->
       iri =
         iri_symbol
-        |> Updates.QueryAnalyzer.Iri.from_symbol(prologue)
+        |> Iri.from_symbol(prologue)
 
       iri_string =
         iri
         |> Map.get(:iri)
-        |> Updates.QueryAnalyzer.Iri.unwrap_iri_string()
+        |> Iri.unwrap_iri_string()
 
       QueryInfo.init_term(query_info, iri_symbol, %{iri: iri, iri_string: iri_string})
     end
@@ -389,13 +392,13 @@ defmodule GraphReasoner do
             {:term, QueryMatching.VarOrTerm.term!(item)}
 
           match?(%Word{word: "a"}, item) ->
-            {:iri, Updates.QueryAnalyzer.Iri.make_a()}
+            {:iri, Iri.make_a()}
 
           match?(%Sym{symbol: :iri}, item) ->
-            {:iri, Updates.QueryAnalyzer.Iri.from_symbol(item, prologue_map)}
+            {:iri, Iri.from_symbol(item, prologue_map)}
 
           true ->
-            IO.inspect(item, label: "Could not process item")
+            Logging.EnvLog.inspect(item, :error, label: "Could not process item")
         end
       end
 
@@ -620,7 +623,7 @@ defmodule GraphReasoner do
           matching_graph_specs =
             group_spec.graphs
             |> Enum.filter(fn graph_spec ->
-              Acl.GraphSpec.Constraint.Resource.PredicateMatchProtocol.member?(
+              PredicateMatchProtocol.member?(
                 graph_spec.constraint.predicates,
                 pathIri
               )

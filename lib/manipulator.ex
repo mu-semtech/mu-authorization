@@ -1,9 +1,9 @@
 defmodule Manipulators do
   require Logger
 
-  @spec apply_manipulators(Parser.unparsed_query, any) :: any
+  @spec apply_manipulators(Parser.unparsed_query(), any) :: any
   def apply_manipulators(query, manipulators) do
-    { _, element } = Parser.parse_query_first(query)
+    {_, element} = Parser.parse_query_first(query)
 
     Enum.reduce(manipulators, element, fn manipulator, elt -> manipulator.(elt) end)
     |> Regen.make_generator()

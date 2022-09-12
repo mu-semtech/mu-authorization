@@ -359,6 +359,7 @@ Logging can be configured using environment variables. These properties can be s
 
 Flags which can be either on or off translate the environment variable string to an understood configuration.  Following are considered true: [`"true"`, `"yes"`, `"1"`, `"on"`], all other strings are considered to be false.
 
+- `LOG_ERRORS` : Logs the errors, turned on by default
 - `LOG_OUTGOING_SPARQL_QUERIES` : Logs outgoing SPARQL queries by printing them on the console
 - `INSPECT_OUTGOING_SPARQL_QUERIES`: Logs outgoing SPARQL queries by inspecting them (native string format)
 - `LOG_INCOMING_SPARQL_QUERIES`: Logs incoming SPARQL queries by printing them on the console
@@ -372,6 +373,7 @@ Flags which can be either on or off translate the environment variable string to
 - `LOG_OUTGOING_SPARQL_QUERY_RESPONSES` : Logs the responses coming back from the backing triplestore
 - `INSPECT_OUTGOING_SPARQL_QUERY_RESPONSES` : Inspects the responses coming back from the backing triplestore
 - `LOG_OUTGOING_SPARQL_QUERY_ROUNDTRIP` : Logs both the request and the response to/from the backing triplestore closely together in the logs
+- `LOG_WORKLOAD_INFO_REQUESTS` : Logs workload information to the console when it is requested through an http call
 
 ### Query timeout configuration
 Complex SPARQL queries can take a long time to process and execute. The time mu-authorization is allowed to spend on this processing and execution before timing out can be configured through the following environment variables:

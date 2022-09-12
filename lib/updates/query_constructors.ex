@@ -1,4 +1,5 @@
 defmodule Updates.QueryConstructors do
+  alias Updates.QueryAnalyzer.P, as: QueryAnalyzerProtocol
   alias InterpreterTerms.SymbolMatch, as: Sym
   alias InterpreterTerms.WordMatch, as: Word
   alias Updates.QueryAnalyzer.Types.Quad, as: Quad
@@ -197,7 +198,7 @@ defmodule Updates.QueryConstructors do
         %Sym{
           symbol: :VarOrIri,
           submatches: [
-            Updates.QueryAnalyzer.P.to_solution_sym(graph)
+            QueryAnalyzerProtocol.to_solution_sym(graph)
           ]
         },
         %Word{word: "{"},
@@ -212,7 +213,7 @@ defmodule Updates.QueryConstructors do
                   submatches: [
                     %Sym{
                       symbol: :GraphTerm,
-                      submatches: [Updates.QueryAnalyzer.P.to_solution_sym(subject)]
+                      submatches: [QueryAnalyzerProtocol.to_solution_sym(subject)]
                     }
                   ]
                 },
@@ -224,7 +225,7 @@ defmodule Updates.QueryConstructors do
                       submatches: [
                         %Sym{
                           symbol: :VarOrIri,
-                          submatches: [Updates.QueryAnalyzer.P.to_solution_sym(predicate)]
+                          submatches: [QueryAnalyzerProtocol.to_solution_sym(predicate)]
                         }
                       ]
                     },
@@ -243,7 +244,7 @@ defmodule Updates.QueryConstructors do
                                     %Sym{
                                       symbol: :GraphTerm,
                                       submatches: [
-                                        Updates.QueryAnalyzer.P.to_solution_sym(object)
+                                        QueryAnalyzerProtocol.to_solution_sym(object)
                                       ]
                                     }
                                   ]
