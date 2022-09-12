@@ -54,7 +54,7 @@ defmodule MuAuthorization.MixProject do
       {:ex_doc, "~> 0.18", only: :dev, runtime: false},
       {:exprof, "~> 0.2.0"},
       {:junit_formatter, "~> 2.1", only: :test},
-      {:credo, "~> 1.4", only: [:dev, :test]},
+      {:credo, "~> 1.6.7", only: [:dev, :test]},
       {:excoveralls, "~> 0.8", only: :test},
       {:dialyxir, "~> 1.0.0-rc.6", only: [:dev], runtime: false},
       {:httpoison, "~> 1.1"},
