@@ -1,4 +1,5 @@
 defmodule Updates do
+  alias Updates.QueryAnalyzer.Iri
   require Logger
   require ALog
 
@@ -11,7 +12,7 @@ defmodule Updates do
     |> List.first()
     |> Updates.QueryAnalyzer.quad_changes(%{
       default_graph:
-        Updates.QueryAnalyzer.Iri.from_iri_string("<http://mu.semte.ch/application>", %{})
+        Iri.from_iri_string("<http://mu.semte.ch/application>", %{})
     })
   end
 
@@ -23,7 +24,7 @@ defmodule Updates do
     # TODO DRY into/from Updates.QueryAnalyzer.insert_quads
     options = %{
       default_graph:
-        Updates.QueryAnalyzer.Iri.from_iri_string("<http://mu.semte.ch/application>", %{})
+        Iri.from_iri_string("<http://mu.semte.ch/application>", %{})
     }
 
     result =
@@ -41,7 +42,7 @@ defmodule Updates do
     # See Updates.QueryAnalyzer.insert_quads
     options = %{
       default_graph:
-        Updates.QueryAnalyzer.Iri.from_iri_string("<http://mu.semte.ch/application>", %{})
+        Iri.from_iri_string("<http://mu.semte.ch/application>", %{})
     }
 
     quads
@@ -57,7 +58,7 @@ defmodule Updates do
       quads,
       %{
         default_graph:
-          Updates.QueryAnalyzer.Iri.from_iri_string("<http://mu.semte.ch/application>", %{})
+          Iri.from_iri_string("<http://mu.semte.ch/application>", %{})
       }
     )
   end

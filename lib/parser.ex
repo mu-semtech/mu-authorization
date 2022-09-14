@@ -1,4 +1,5 @@
 defmodule Parser do
+  alias Interpreter.Diff.Store, as: DiffStore
   @moduledoc """
   Entrypoint to parse SPARQL queries and the W3C EBNF syntax.
   """
@@ -25,10 +26,10 @@ defmodule Parser do
   end
 
   def parse_query_full(query, rule_name \\ :Sparql, syntax \\ Parser.parse_sparql()) do
-    case Interpreter.Diff.Store.parse(query, rule_name) do
+    case DiffStore.parse(query, rule_name) do
       {:fail} ->
         Interpreter.CachedInterpreter.parse_query_full(query, rule_name, syntax)
-        |> Interpreter.Diff.Store.maybe_push_solution(0.2)
+        |> DiffStore.maybe_push_solution(0.2)
 
       result ->
         result
@@ -38,14 +39,14 @@ defmodule Parser do
   def parse_query_full_local(query, rule_name, template_local_store) do
     %{sparql_syntax: sparql_syntax} = template_local_store
 
-    case Interpreter.Diff.Store.parse_with_local_store(query, rule_name, template_local_store) do
+    case DiffStore.parse_with_local_store(query, rule_name, template_local_store) do
       {:fail} ->
         Logging.EnvLog.log(:log_template_matcher_performance, "Template: no")
 
         result = Interpreter.CachedInterpreter.parse_query_full(query, rule_name, sparql_syntax)
 
         new_template_local_store =
-          Interpreter.Diff.Store.maybe_push_solution_sync(
+          DiffStore.maybe_push_solution_sync(
             result,
             0.2,
             rule_name,

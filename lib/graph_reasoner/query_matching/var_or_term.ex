@@ -1,4 +1,5 @@
 defmodule GraphReasoner.QueryMatching.VarOrTerm do
+  alias Updates.QueryAnalyzer.Iri
   alias InterpreterTerms.SymbolMatch, as: Sym
 
   @moduledoc """
@@ -61,6 +62,6 @@ defmodule GraphReasoner.QueryMatching.VarOrTerm do
   def iri!(symbol, prologue_info) do
     %Sym{symbol: :GraphTerm, submatches: [%Sym{symbol: :iri} = iri]} = term!(symbol)
 
-    Updates.QueryAnalyzer.Iri.from_symbol(iri, prologue_info)
+    Iri.from_symbol(iri, prologue_info)
   end
 end

@@ -155,6 +155,7 @@ defmodule Acl do
     end)
     |> ALog.di("Accessible Group Specs")
     |> Enum.flat_map(fn {_, {_, group_infos}} -> group_infos end)
+    |> Enum.dedup()
     |> ALog.di("User Authorization Groups")
   end
 end

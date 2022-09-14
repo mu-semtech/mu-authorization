@@ -1,4 +1,5 @@
 defmodule TypeReasoner do
+  alias Updates.QueryAnalyzer.Iri
   alias GraphReasoner.{TypeReasoner, ModelInfo, QueryInfo}
 
   @moduledoc """
@@ -72,11 +73,11 @@ defmodule TypeReasoner do
             Map.has_key?(path, :predicate) && Map.has_key?(path, :object)
           end)
           |> Enum.filter(fn %{predicate: {:iri, predicate}} ->
-            Updates.QueryAnalyzer.Iri.is_a?(predicate)
+            Iri.is_a?(predicate)
           end)
           |> Enum.map(fn %{object: {:iri, type}} -> type end)
           |> Enum.map(&Map.get(&1, :iri))
-          |> Enum.map(&Updates.QueryAnalyzer.Iri.unwrap_iri_string/1)
+          |> Enum.map(&Iri.unwrap_iri_string/1)
 
         # specified because predicates don't appear in all classes
         implicit_type_definitions =
@@ -87,10 +88,10 @@ defmodule TypeReasoner do
           |> Enum.map(&Map.get(&1, :predicate))
           |> Enum.map(&elem(&1, 1))
           |> Enum.filter(fn predicate ->
-            not Updates.QueryAnalyzer.Iri.is_a?(predicate)
+            not Iri.is_a?(predicate)
           end)
           |> Enum.map(&Map.get(&1, :iri))
-          |> Enum.map(&Updates.QueryAnalyzer.Iri.unwrap_iri_string/1)
+          |> Enum.map(&Iri.unwrap_iri_string/1)
           |> Enum.map(&ModelInfo.predicate_domain/1)
           |> type_range_intersection
 

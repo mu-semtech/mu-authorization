@@ -29,7 +29,7 @@ defmodule ChoiceEmitter do
 
   def remove_empty_solutions(solutions) do
     solutions
-    |> Enum.reject( &match?({:fail},&1) )
+    |> Enum.reject(&match?({:fail}, &1))
   end
 
   defp sort_solutions(solutions) do
