@@ -28,8 +28,8 @@ defmodule Benchmark do
     :fprof.analyse()
   end
 
-  def run_test do
-    query = "PREFIX nmo: <http://oscaf.sourceforge.net/nmo.html#>
+  def query do
+    "PREFIX nmo: <http://oscaf.sourceforge.net/nmo.html#>
     PREFIX toezicht: <http://mu.semte.ch/vocabularies/ext/supervision/>
     PREFIX validation: <http://mu.semte.ch/vocabularies/validation/>
     PREFIX bbcdr: <http://mu.semte.ch/vocabularies/ext/bbcdr/>
@@ -130,7 +130,9 @@ defmodule Benchmark do
     <http://data.lblod.info/inzendingen-voor-toezicht/5B0BF9583D5ABD0008000001> toezicht:hasExtraTaxRates \"false\"^^typedLiterals:boolean.
     }
     }"
+  end
 
+  def run_test do
     query
     |> Parser.parse_query_full()
     |> Updates.QueryAnalyzer.quad_changes(%{

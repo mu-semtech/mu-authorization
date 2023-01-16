@@ -46,10 +46,16 @@ defmodule Delta do
     mu_session_id =
       Plug.Conn.get_req_header(conn, "mu-session-id")
 
+    affected_groups =
+      delta
+      |> Enum.flat_map( &elem(&1,1) )
+      |> Enum.uniq()
+      |> Acl.UserGroups.access_rights_for_quads()
+
     delta
     |> Delta.Message.construct(authorization_groups, origin)
     |> Logging.EnvLog.inspect(:log_delta_messages, label: "Constructed body for clients")
-    |> Delta.Messenger.inform_clients(mu_call_id_trail: mu_call_id_trail, mu_session_id: mu_session_id)
+    |> Delta.Messenger.inform_clients(mu_call_id_trail: mu_call_id_trail, mu_session_id: mu_session_id, affected_groups: affected_groups)
 
     delta
   end

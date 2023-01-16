@@ -28,22 +28,33 @@ defmodule Resource do
   ]
 
   defimpl Acl.GraphSpec.Constraint.Protocol do
-    def matching_quads(%Resource{} = resource, quads, extra_quads \\ []) do
+    def matching_quads(%Resource{} = resource, quads, extra_quads \\ [], ignore_source_graph \\ false) do
       # TODO: we should have the options with authorization_groups so we
       # can collect the types of a resource on a per-user basis.
-      Resource.matching_quads(resource, quads, extra_quads, %{})
+      Resource.matching_quads(resource, quads, extra_quads, %{}, ignore_source_graph)
     end
   end
 
   @doc """
   Yields the matching quads constructed by the supplied Resource.
+
+  ignore_source_graph allows to ignore checking of the graph from which
+  the triples should originate.  This allows the same logic to be
+  applied both in the case where triples are to be redistributed, as
+  well as the case where we want to detect the access rights that
+  belonged to a particular distribution.
   """
-  def matching_quads(resource, quads, extra_quads, options) do
+  def matching_quads(resource, quads, extra_quads, options,
+  ignore_source_graph) do
     # Get all resources of the right type as strings
     matching_resources = find_matching_resources(resource, quads, extra_quads, options)
 
     # Ensure we only have quads from the right graph
-    graph_quads = filter_by_graph(resource, quads) |> ALog.di("Graph filtered quads")
+    graph_quads = if ignore_source_graph do
+      quads
+    else
+      filter_by_graph(resource, quads) |> ALog.di("Graph filtered quads")
+    end
 
     # Limit the relations, as specified in predicates and inverse_predicates
     by_relation =

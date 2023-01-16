@@ -2,7 +2,7 @@ defmodule Delta.Messenger do
   require Logger
   require ALog
 
-  @type call_options :: [mu_call_id_trail: String.t(), mu_session_id: String.t()]
+  @type call_options :: [mu_call_id_trail: String.t(), mu_session_id: String.t(), affected_groups: Acl.allowed_groups()]
 
   @moduledoc """
   Sends constructed messages to all interested clients.
@@ -34,11 +34,12 @@ defmodule Delta.Messenger do
     # TODO we should try to send the message again with exponential
     # backoff if the sending of the message failed.
     headers = [
-      {"Content-Type", "application/json"},
-      {"mu-call-id", Integer.to_string(Enum.random(0..1_000_000_000_000))},
-      {"mu-call-id-trail", options[:mu_call_id_trail]},
-      {"mu-session-id", options[:mu_session_id]}
-    ]
+        {"Content-Type", "application/json"},
+        {"mu-call-id", Integer.to_string(Enum.random(0..1_000_000_000_000))},
+        {"mu-call-id-trail", options[:mu_call_id_trail]},
+        {"mu-session-id", options[:mu_session_id]},
+        {"mu-auth-affected-groups", SparqlServer.Router.AccessGroupSupport.encode_json_access_groups(options[:affected_groups])}
+      ]
 
     # we expect clients to respond to our request
     options = [recv_timeout: 50_000]
