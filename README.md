@@ -400,3 +400,10 @@ Some configuration doesn't fit in previous topics.  These settings are described
 -   Authorization examines the graphs the user has access to when writing triples and only writes to graphs a triple belongs to. If no such graph exists, nothing is written to the endpoint. A 201 status code is returned nonetheless.
 -   Services should always strive to use SEAS to access the database. If session information is not necessary or should not be applied because the service validates access rights in its own way, the header `mu-auth-sudo` should be set to `true` in the SPARQL request sent to the service.
 -   not all services can always use the SEAS because some triple patterns may not be understood by the service's rewrite rules. Note that a service should strive to be compliant with the SEAS service and I have yet to see a case where this is not possible. In a case where it is not possible to use SEAS, the service needs to write it's data to all graphs SEAS would normally write to. This is tough, hence the advice to always use SEAS.
+
+### SPARQL support
+Authorization supports most SPARQL queries, but there are some limitations:
+- comments are not supported (ex. `# this is a comment`)
+- `WITH` is not supported
+- [Graph operations](https://www.w3.org/TR/sparql11-update/#graphManagement) are not supported (ex. `DROP GRAPH <http://my.graph>`)
+
