@@ -404,6 +404,10 @@ Some configuration doesn't fit in previous topics.  These settings are described
 ### SPARQL support
 Authorization supports most SPARQL queries, but there are some limitations:
 - comments are not supported (ex. `# this is a comment`)
+- `DESCRIBE` queries are not supported
+- You should not query graphs directly (mu-auth handles which graphs you access)
+
+Further in "sudo" mode (with direct access to graphs):
 - `WITH` is not supported
 - [Graph operations](https://www.w3.org/TR/sparql11-update/#graphManagement) are not supported (ex. `DROP GRAPH <http://my.graph>`)
 
