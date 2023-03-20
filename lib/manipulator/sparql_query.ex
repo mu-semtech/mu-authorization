@@ -92,6 +92,42 @@ defmodule Manipulators.SparqlQuery do
         ask = %InterpreterTerms.SymbolMatch{symbol: :AskQuery, submatches: [word | rest]} ->
           {:replace_by, %{ask | submatches: [word, dataset_clause | rest]}}
 
+        # CONSTRUCT cases
+        #
+        # 'CONSTRUCT' ( ConstructTemplate DatasetClause* WhereClause SolutionModifier | DatasetClause* 'WHERE' '{' TriplesTemplate? '}' SolutionModifier )
+
+        # Construct with ConstructTemplate
+        #
+        # 'CONSTRUCT' ConstructTemplate DatasetClause* WhereClause SolutionModifier
+        construct_query = %InterpreterTerms.SymbolMatch{
+          symbol: :ConstructQuery,
+          submatches: [
+            word,
+            %InterpreterTerms.SymbolMatch{
+              symbol: :ConstructTemplate
+            } = template
+            | rest
+          ]
+          } ->
+          {:replace_by,
+           %{
+             construct_query
+             | submatches: [
+                 word,
+                 template,
+                 dataset_clause | rest
+               ]
+           }}
+
+        # Construct with TriplesTemplate
+        #
+        # 'CONSTRUCT' DatasetClause* 'WHERE' '{' TriplesTemplate? '}' SolutionModifier
+        construct_query = %InterpreterTerms.SymbolMatch{
+          symbol: :ConstructQuery,
+          submatches: [word | rest]
+        } ->
+          {:replace_by, %{construct_query | submatches: [word, dataset_clause | rest]}}
+
         %InterpreterTerms.SymbolMatch{symbol: :SubSelect} ->
           {:skip}
 
