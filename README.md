@@ -400,3 +400,13 @@ Some configuration doesn't fit in previous topics.  These settings are described
 -   Authorization examines the graphs the user has access to when writing triples and only writes to graphs a triple belongs to. If no such graph exists, nothing is written to the endpoint. A 201 status code is returned nonetheless.
 -   Services should always strive to use SEAS to access the database. If session information is not necessary or should not be applied because the service validates access rights in its own way, the header `mu-auth-sudo` should be set to `true` in the SPARQL request sent to the service.
 -   not all services can always use the SEAS because some triple patterns may not be understood by the service's rewrite rules. Note that a service should strive to be compliant with the SEAS service and I have yet to see a case where this is not possible. In a case where it is not possible to use SEAS, the service needs to write it's data to all graphs SEAS would normally write to. This is tough, hence the advice to always use SEAS.
+#### Sparql comments
+Mu-authorization [does not yet support turtle comments](https://github.com/mu-semtech/mu-authorization/issues/5) like `#comment` and will raise a parsing error if used. A workaround in javascript is to use [string interpolation in template strings](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#string_interpolation), e.g. use
+```js
+`
+... some query ...
+${/* some comment */''}
+... rest of query ...
+`
+```
+ in a string query to add some comments.
