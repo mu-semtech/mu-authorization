@@ -353,6 +353,17 @@ Supported values for `DATABASE_COMPATIBILITY` are:
 - `Raw` : (default) Don't alter queries.
 - `Virtuoso` : Support for Virtuoso.  Currently rewrites DELETE DATA to DELETE WHERE.
 
+#### SPARQL support
+When writing SPARQL queries, you should not query graphs directly (except when in 'sudo'-mode). Mu-authorization will rewrite the query and handle which graphs the user has access to, regardless of the graphs specified in the query.
+
+Mu-authorization implements most of the [SPARQL 1.1 specification](https://www.w3.org/TR/sparql11-query/) but there are some limitations. The following items are not supported by mu-authorization at the moment:
+- [inline comments](https://www.w3.org/TR/sparql11-query/#grammarComments) (ex. `# this is a comment`)
+- [`DESCRIBE` queries](https://www.w3.org/TR/sparql11-query/#describe) (ex. `DESCRIBE <http://example.org/>`)
+- [Graph operations](https://www.w3.org/TR/sparql11-update/#graphManagement) (ex. `DROP GRAPH <http://my.graph>`)
+
+Further in "sudo" mode (with direct access to graphs) the following is not supported:
+- [`WITH` in `INSERT/DELETE` queries](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/#deleteInsert)
+
 
 ### Logging
 Logging can be configured using environment variables. These properties can be set in the environment block in the `docker-compose.yml`.
@@ -400,3 +411,4 @@ Some configuration doesn't fit in previous topics.  These settings are described
 -   Authorization examines the graphs the user has access to when writing triples and only writes to graphs a triple belongs to. If no such graph exists, nothing is written to the endpoint. A 201 status code is returned nonetheless.
 -   Services should always strive to use SEAS to access the database. If session information is not necessary or should not be applied because the service validates access rights in its own way, the header `mu-auth-sudo` should be set to `true` in the SPARQL request sent to the service.
 -   not all services can always use the SEAS because some triple patterns may not be understood by the service's rewrite rules. Note that a service should strive to be compliant with the SEAS service and I have yet to see a case where this is not possible. In a case where it is not possible to use SEAS, the service needs to write it's data to all graphs SEAS would normally write to. This is tough, hence the advice to always use SEAS.
+  
