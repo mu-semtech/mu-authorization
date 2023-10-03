@@ -43,14 +43,16 @@ defmodule Delta do
       |> Kernel.++(Plug.Conn.get_req_header(conn, "mu-call-id"))
       |> Poison.encode!()
 
+    mu_call_scope_id = Plug.Conn.get_req_header(conn, "mu-call-scope-id")
+
     mu_session_id =
       Plug.Conn.get_req_header(conn, "mu-session-id")
 
-    delta
-    |> Delta.Message.construct(authorization_groups, origin)
-    |> Logging.EnvLog.inspect(:log_delta_messages, label: "Constructed body for clients")
-    |> Delta.Messenger.inform_clients(mu_call_id_trail: mu_call_id_trail, mu_session_id: mu_session_id)
 
+    delta
+    |> Delta.Message.construct(authorization_groups, origin, mu_call_scope_id)
+    |> Logging.EnvLog.inspect(:log_delta_messages, label: "Constructed body for clients")
+    |> Delta.Messenger.inform_clients(mu_call_id_trail: mu_call_id_trail, mu_session_id: mu_session_id, mu_call_scope_id: mu_call_scope_id)
     delta
   end
 end

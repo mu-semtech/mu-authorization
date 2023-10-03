@@ -17,9 +17,9 @@ defmodule Delta.Message do
   Constructs a new message which can be sent to the clients based on a
   quad delta.
   """
-  @spec construct(Delta.delta(), AccessGroupSupport.decoded_json_access_groups(), String.t()) ::
+  @spec construct(Delta.delta(), AccessGroupSupport.decoded_json_access_groups(), String.t(), String.t()) ::
           Delta.Message.t()
-  def construct(delta, access_groups, origin) do
+  def construct(delta, access_groups, origin, call_scope) do
     # TODO we should include the current access rigths and an
     # identifier for the originating service.  This would help
     # services ignore content which came from their end and would
@@ -33,6 +33,7 @@ defmodule Delta.Message do
           |> convert_delta_item
           |> add_allowed_groups(access_groups)
           |> add_origin(origin)
+          |> add_call_scope(call_scope)
         end)
     }
 
@@ -60,6 +61,10 @@ defmodule Delta.Message do
 
   defp add_origin(map, origin) do
     Map.put(map, "origin", origin)
+  end
+
+  defp add_call_scope(map, call_scope) do
+    Map.put(map, "call-scope", call_scope)
   end
 
   defp convert_quad(%Quad{graph: graph, subject: subject, predicate: predicate, object: object}) do
