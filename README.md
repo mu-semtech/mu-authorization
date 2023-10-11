@@ -174,6 +174,9 @@ Restart your stack using `docker-compose up -d`.
 You should now be able to retrieve resources of the specified resource types in your application.
 
 ## Reference
+### How logged in users are represented
+For more information on this, see the reference [here](https://github.com/Denperidge-Redpencil/project/blob/master/docs/references/representing-logged-in-users.md)
+
 ### Mounted configuration files
 mu-authorization can receive a configuration file for the [user groups](#user-groups-configuration) as well as for the [delta system](#delta-system).
 
