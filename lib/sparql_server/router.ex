@@ -148,26 +148,29 @@ defmodule SparqlServer.Router do
   end
 
   defp get_query_from_post(conn, body) do
-    if Plug.Conn.get_req_header(conn, "content-type") == ["application/sparql-update"] do
-      {:update, body}
-    else
-      body_params = URI.decode_query(body)
+    cond do
+      Plug.Conn.get_req_header(conn, "content-type") == ["application/sparql-update"] ->
+        {:update, body}
+      Plug.Conn.get_req_header(conn, "content-type") == ["application/sparql-query"] ->
+        {:any, body}
+      true ->
+        body_params = URI.decode_query(body)
 
-      cond do
-        # apparently this can be both :query as well as :update in practice
-        body_params["query"] ->
-          {:any, body_params["query"]}
+        cond do
+          # apparently this can be both :query as well as :update in practice
+          body_params["query"] ->
+            {:any, body_params["query"]}
 
-        body_params["update"] ->
-          {:update, body_params["update"]}
+          body_params["update"] ->
+            {:update, body_params["update"]}
 
-        true ->
-          params =
-            conn.query_string
-            |> URI.decode_query()
+          true ->
+            params =
+              conn.query_string
+              |> URI.decode_query()
 
-          {:any, params["query"]}
-      end
+            {:any, params["query"]}
+        end
     end
   end
 
