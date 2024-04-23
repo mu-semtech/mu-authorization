@@ -245,7 +245,7 @@ An access rule granting access to all users with the role `SuperMegaAdmin` looks
   query: "PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
-    SELECT ?session_group ?session_role WHERE {
+    SELECT ?session_group_id ?session_role WHERE {
       <SESSION_ID> ext:sessionGroup/mu:uuid ?session_group_id;
                    ext:sessionRole ?session_role.
       FILTER( ?session_role = \"SuperMegaAdmin\" )
