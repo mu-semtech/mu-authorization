@@ -262,7 +262,7 @@ A `GraphSpec` object defines which graph is created and which triples are added 
 
 Each of these `GraphSpec` object holds the following properties:
 
-- **graph:** the (base) URI of the graph that should be created. The URI is appended with the results of the `vars` property of the `GroupSpec`'s [access rule](#access-rule). For instance, if the graph URI is `http://myorganization.org/group` and the `vars` array of the access rule is `['group_id', 'group_name']`, the graph being created will be something like `http://myorganization.org/group/9b2a5053-0967-425c-a1ee-c9b9bfe38b81/awesome_admins`.
+- **graph:** the (base) URI of the graph that should be created. The URI is appended with the results of the `vars` property of the `GroupSpec`'s [access rule](#access-rule). For instance, if the base graph URI is `http://myorganization.org/group/` and the `vars` array of the access rule is `['group_id', 'group_name']`, the graph being created will be something like `http://myorganization.org/group/9b2a5053-0967-425c-a1ee-c9b9bfe38b81/awesome_admins`.
 - **constraint:** the [constraint](#constraints) that determines which triples should be sent to/read from the graph.
 
 The `graphs` property of a `GroupSpec` object contains an array of `GraphSpec` objects. I.e. data accessible for a group may be spread across multiple graphs. The `constraint` property defines in which graph a triple is stored.
