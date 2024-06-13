@@ -35,6 +35,7 @@ defmodule Delta.Messenger do
     # backoff if the sending of the message failed.
     headers = [
       {"Content-Type", "application/json"},
+      {"mu-call-scope-id", options[:mu_call_scope_id]},
       {"mu-call-id", Integer.to_string(Enum.random(0..1_000_000_000_000))},
       {"mu-call-id-trail", options[:mu_call_id_trail]},
       {"mu-session-id", options[:mu_session_id]}
