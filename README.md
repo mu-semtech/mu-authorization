@@ -363,7 +363,7 @@ Mu-authorization implements most of the [SPARQL 1.1 specification](https://www.w
 
 Further in "sudo" mode (with direct access to graphs) the following is not supported:
 - [`WITH` in `INSERT/DELETE` queries](https://www.w3.org/TR/2013/REC-sparql11-update-20130321/#deleteInsert)
-
+- `USING` in `INSERT/DELETE` queries
 
 ### Logging
 Logging can be configured using environment variables. These properties can be set in the environment block in the `docker-compose.yml`.
